@@ -204,7 +204,7 @@ if(!users){users=[{id:'u0',name:'Админ',role:'admin',pin:'9999',stores:[],a
   Object.entries(CASHIERS).forEach(([st,arr])=>arr.forEach(nm=>users.push({id:'u'+(n++),name:nm,role:'cashier',pin:'1111',stores:[st],active:true})));store.set('users',users)}
 let promos=store.get('promos',null);
 if(!promos){promos=[{id:'p1',name:'LPP 1+1',type:'pair',pct:0,samePct:30,all:false,suppliers:['ORION WOJCIECH BARANKIEWICZ','Network 360'],groups:[],codes:[],start:'2026-10-10',end:'',stores:[],active:true}];store.set('promos',promos)}
-const APP_VER='2.6';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
+const APP_VER='2.8';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
 let device=store.get('device',{store:'',reg:''});
 let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
 const cfgList=k=>k==='promos'?promos:k==='users'?users:[cfg];
@@ -212,6 +212,14 @@ function applyDevice(){const l=!!device.store;if(l){$('lStore').value=device.sto
 function fillCashiers(){const st=$('lStore').value;$('lCash').innerHTML='<option value="">— сонгох —</option>'+users.filter(u=>u.active&&(!u.stores.length||st==='YV'||u.stores.includes(st))).map(u=>'<option value="'+u.id+'">'+esc(u.name)+(u.role!=='cashier'?' · '+ROLEN[u.role]:st==='YV'&&u.stores.length?' · '+STORES[u.stores[0]]:'')+'</option>').join('')}
 const today=()=>{const d=now();return d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2)};
 function promoState(p,t){t=t||today();if(!p.active)return 'off';if(p.start&&t<p.start)return 'future';if(p.end&&t>p.end)return 'ended';return 'on'}
+function promoWhy(l){
+  const st=S.user&&S.user.store,out=[];
+  promos.forEach(p=>{const ex=p.type==='plist'?plPrice(p,l)!=null:((p.codes||[]).includes(l.code)||(l.bc&&(p.codes||[]).includes(l.bc)));if(!ex||p.name===l.promoName)return;const s=promoState(p);let r='';
+    if(s==='off')r='зогсоосон';else if(s==='future')r=p.start+'-ээс эхэлнэ';else if(s==='ended')r=p.end+'-нд дууссан';
+    else if(p.stores.length&&st&&!p.stores.includes(st))r='зөвхөн '+p.stores.map(x=>STORES[x]||x).join(', ')+' дэлгүүрт';
+    if(r)out.push('«'+p.name+'»: '+r)});
+  return out;
+}
 function activePromos(){const st=S.user&&S.user.store;return promos.filter(p=>promoState(p)==='on'&&(!p.stores.length||!st||p.stores.includes(st)))}
 function plPrice(p,l){if(p.type!=='plist'||!p.prices)return null;const v=p.prices[l.code]!=null?p.prices[l.code]:(l.bc&&p.prices[l.bc]!=null?p.prices[l.bc]:null);return v}
 function promoMatch(p,l){if(p.type==='plist')return plPrice(p,l)!=null;return !!(p.all||p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))}
@@ -386,6 +394,7 @@ function addItem(i){
   if(ex){ex.qty++;S.sel=S.cart.indexOf(ex)}else{S.cart.push({...it,qty:1,disc:0,d5:S.cart.some(l=>l.d5)});S.sel=S.cart.length-1}
   if(it.price<=0)flash('Анхаар: «'+it.name+'» үнэ 0 байна');
   render();
+  const L=S.cart[S.sel];if(L){const w=promoWhy(L);if(w.length)flash('Урамшуулал хэрэгжсэнгүй — '+w.join('; '))}
 }
 function render(){
   const t=computePromo(S.cart);

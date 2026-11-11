@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт 2.6</title>
+<title>VIVI POS хяналт 2.8</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -56,7 +56,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v2.6</span></h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v2.8</span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -66,13 +66,26 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="ver">v2.6</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v2.8</span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
   <span id="live">холбогдож байна…</span>
 </header>
 <main>
   <div class="card hide" id="rqCard" style="border-color:var(--red)"><h2>Буцаалтын хүсэлт — шийдвэр хүлээж байна</h2><div id="cReq"></div></div>
   <div class="kpi" id="kpi"></div>
+  <div class="card"><h2>Борлуулалт бараагаар · нийлүүлэгчээр (ашиг, ашгийн хувь)</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="fSt" class="inp" style="width:auto"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="YV">Явуулын касс</option></select>
+      <select id="fSup" class="inp" style="width:auto;max-width:280px"></select>
+      <select id="fGrp" class="inp" style="width:auto;max-width:200px"></select>
+      <input type="text" id="fQ" class="inp" placeholder="Код эсвэл нэр" style="width:auto;flex:1;min-width:160px">
+      <select id="fMode" class="inp" style="width:auto"><option value="sup">Нийлүүлэгчээр нэгтгэх</option><option value="item">Бараагаар нэгтгэх</option><option value="line">Мөр бүрээр (баримттай)</option></select>
+      <button id="fXl" class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)">Excel татах</button>
+    </div>
+    <div class="kpi" id="fKpi" style="margin-top:10px"></div>
+    <div class="scroll" id="fTbl" style="max-height:520px;overflow:auto;margin-top:8px"></div>
+    <div class="small" id="fNote" style="margin-top:6px"></div>
+  </div>
   <div class="grid">
     <div class="card"><h2>Дэлгүүрээр</h2><div class="scroll" id="cStore"></div></div>
     <div class="card"><h2>Төлбөрийн хэлбэрээр</h2><div class="scroll" id="cPay"></div></div>
@@ -83,6 +96,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   </div>
   <div class="card"><h2>Урамшуулал, хөнгөлөлт (бүх кассад)</h2>
     <div class="small" style="margin-bottom:8px">Энд тохируулсан урамшуулал холбогдсон бүх кассад шууд үйлчилнэ. Дэлгүүр сонгоогүй бол бүх дэлгүүрт.</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><input type="text" id="pChk" class="inp" placeholder="Баркод эсвэл код оруулж, аль урамшуулалд байгааг шалгах" style="flex:1;min-width:220px"><span id="pChkR" class="small"></span></div>
     <div class="scroll" id="cPromo"></div>
     <div style="margin-top:10px"><button id="pNew" class="btn pri">+ Шинэ урамшуулал</button></div>
   </div>
@@ -184,7 +198,7 @@ function tbl(head,rows){return rows.length?'<table><thead><tr>'+head.map((h,i)=>
 function draw(){
   const S=sales.filter(s=>s.type==='sale'),R=sales.filter(s=>s.type==='return');
   const tot=sales.reduce((a,s)=>a+s.total,0),disc=S.reduce((a,s)=>a+(s.discount||0),0),qty=S.reduce((a,s)=>a+(s.qty||0),0);
-  $('kpi').innerHTML=[['Цэвэр борлуулалт',money(tot),1],['Баримт',S.length],['Дундаж баримт',money(S.length?S.reduce((a,s)=>a+s.total,0)/S.length:0)],['Борлуулсан тоо',qty+' ш'],['Буцаалт',R.length+' · '+money(-R.reduce((a,s)=>a+s.total,0))],['И-баримт өгсөн',S.filter(s=>s.ebarimt).length],['Ашиг (өртөгтэй мөрөөр)',(()=>{let a=0,c=0,n=0,m=0;sales.forEach(s=>(s.lines||[]).forEach(l=>{n++;if(costMap.has(l.code)){m++;a+=l.sum;c+=costMap.get(l.code)*l.qty}}));return n?money(a-c)+(a?' · '+Math.round((a-c)/a*100)+'%':'')+(m<n?' ('+m+'/'+n+')':''):'—'})()]]
+  $('kpi').innerHTML=[['Цэвэр борлуулалт',money(tot),1],['Баримт',S.length],['Дундаж баримт',money(S.length?S.reduce((a,s)=>a+s.total,0)/S.length:0)],['Борлуулсан тоо',qty+' ш'],['Буцаалт',R.length+' · '+money(-R.reduce((a,s)=>a+s.total,0))],['И-баримт өгсөн',S.filter(s=>s.ebarimt).length],['Ашиг (өртөгтэй мөрөөр)',(()=>{let a=0,c=0,n=0,m=0;sales.forEach(s=>(s.lines||[]).forEach(l=>{n++;const u=unitCost(l);if(u!=null){m++;a+=l.sum;c+=u*l.qty}}));return n?money(a-c)+(a?' · '+Math.round((a-c)/a*100)+'%':'')+(m<n?' ('+m+'/'+n+')':''):'—'})()]]
     .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
   const max=a=>Math.max(1,...a.map(x=>x.v));
   const bars=(g,name)=>tbl([name,'Баримт','Дүн'],g.map(x=>'<tr><td>'+esc(x.k)+'<div class="bar"><i style="width:'+Math.max(0,x.v)/max(g)*100+'%"></i></div></td><td class="n">'+x.n+'</td><td class="n"><b>'+money(x.v)+'</b></td></tr>'));
@@ -198,14 +212,14 @@ function draw(){
   const A={};audit.filter(a=>a.cashier).forEach(a=>{const r=A[a.cashier]=A[a.cashier]||{c:a.cashier,del:0,canc:0,disc:0,ret:0,v:0},i=a.info||{};
     if(a.type==='line_delete'||a.type==='qty_minus'){r.del++;r.v+=(i.price||0)*(i.qty||1)}else if(a.type==='receipt_cancel'){r.canc++;r.v+=i.total||0}else if((a.type==='manual_discount'&&i.pct>0)||a.type==='disc5_on'){r.disc++;r.v+=i.value||0}else if(a.type==='return'){r.ret++;r.v+=-(i.total||0)}});
   $('cAud').innerHTML=tbl(['Кассчин','Устгасан','Цуцалсан','Хөнгөлөлт','Буцаалт','Дүн'],Object.values(A).filter(r=>r.del+r.canc+r.disc+r.ret).sort((a,b)=>b.v-a.v).map(r=>'<tr><td>'+esc(r.c)+'</td><td class="n'+(r.del>=3?' hot':'')+'">'+r.del+'</td><td class="n'+(r.canc>=2?' hot':'')+'">'+r.canc+'</td><td class="n">'+r.disc+'</td><td class="n">'+r.ret+'</td><td class="n">'+money(r.v)+'</td></tr>'));
-  drawRep();
+  drawRep();drawSup();
   $('cRec').innerHTML=tbl(['Баримт','Кассчин','Төлбөр','Дүн',''],sales.slice().sort((a,b)=>a.iso<b.iso?1:-1).slice(0,200).map(s=>'<tr><td><details><summary>'+esc(s.id)+(s.type==='return'?' <span class="chip r">буцаалт</span>':'')+'<div class="small">'+esc(s.date)+' '+esc((s.time||'').slice(0,5))+' · '+esc(s.storeName)+'</div></summary>'+(s.lines||[]).map(l=>'<div class="small">'+l.qty+' × '+esc(l.name)+' — '+money(l.sum)+(l.pname?' ('+esc(l.pname)+')':'')+'</div>').join('')+'</details></td><td>'+esc(s.cashier)+'</td><td class="small">'+(s.payments||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))).join('<br>')+'</td><td class="n"><b>'+money(s.total)+'</b></td><td class="n"><button class="btn warn" data-del="'+esc(s.uid)+'" style="min-height:32px;padding:3px 10px">Устгах</button></td></tr>'));
 }
 const REPORTS={
  'Борлуулалтын жагсаалт':()=>({head:['№','Баримтын дугаар','Огноо','Хадгалсан огноо','Дэлгүүр','Касс','Барааны тоо хэмжээ','Хөнгөлөлт','Үндсэн дүн','Нийт дүн','Бэлнээр','Картаар','Харилцагч','Зээлээр','И-баримт'],
    rows:sales.slice().sort((a,b)=>a.iso<b.iso?-1:1).map(s=>{const f=k=>(s.payments||[]).filter(p=>p.form===k).reduce((a,p)=>a+p.amount,0);return [s.dayNo,s.id,s.date,s.date+' '+s.time,s.storeName,s.cashier,s.qty,s.discount,s.base,s.total,f('Бэлнээр'),f('Банкаар'),(s.payments||[]).map(p=>p.partner).filter(Boolean).join('; '),f('Зээлээр'),s.ebarimt?'Тийм':'Үгүй']})}),
  'Борлуулалтын жагсаалт /бараагаар/':()=>({head:['№','Баримтын дугаар','Огноо','Байршил','Касс','Бэлтгэн нийлүүлэгчийн нэр','Барааны код','Барааны бүлэг','Барааны нэр','Үндсэн үнэ','Үнэ','Тоо хэмжээ','Хөнгөлөлт','Үндсэн дүн','Нийт дүн','Урамшуулал','Өртөг','Ашиг'],
-   rows:[].concat(...sales.map(s=>(s.lines||[]).map(l=>[s.dayNo,s.id,s.date,s.storeName,s.cashier,l.sup||'',l.code,l.grp||'',l.name,l.base,l.unit,l.qty,l.base*l.qty-l.sum,l.base*l.qty,l.sum,l.pname||'',costMap.has(l.code)?Math.round(costMap.get(l.code)*l.qty):'',costMap.has(l.code)?Math.round(l.sum-costMap.get(l.code)*l.qty):''])))}),
+   rows:[].concat(...sales.map(s=>(s.lines||[]).map(l=>[s.dayNo,s.id,s.date,s.storeName,s.cashier,l.sup||'',l.code,l.grp||'',l.name,l.base,l.unit,l.qty,l.base*l.qty-l.sum,l.base*l.qty,l.sum,l.pname||'',unitCost(l)!=null?Math.round(unitCost(l)*l.qty):'',unitCost(l)!=null?Math.round(l.sum-unitCost(l)*l.qty):''])))}),
  'Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/':()=>({head:['№','Баримтын дугаар','Огноо','Дэлгүүр','Касс','Төлбөрийн хэлбэр','Банкны код','Харилцагчийн нэр','Банкны нэр','Дүн','Хадгалсан огноо','Мөнгө орох огноо'],
    rows:[].concat(...sales.map(s=>(s.payments||[]).map(p=>[s.dayNo,s.id,s.date,s.storeName,s.cashier,p.form,p.bankCode||'',p.partner||'',p.bank||'',p.amount,s.date+' '+s.time,p.expected||''])))}),
  'Борлуулалтын жагсаалт /бэлтгэн нийлүүлэгчээр/':()=>{const o={};sales.forEach(s=>(s.lines||[]).forEach(l=>{const k=l.sup||'—',r=o[k]=o[k]||[k,0,0,0,0];r[1]+=l.qty;r[2]+=l.base*l.qty;r[3]+=l.base*l.qty-l.sum;r[4]+=l.sum}));
@@ -232,6 +246,9 @@ function watchPromos(){db.collection('pos_config').doc('promos').onSnapshot(d=>{
 function drawPromos(){$('cPromo').innerHTML=tbl(['Нэр','Төрөл','Хамрах бараа','Дэлгүүр','Хугацаа','Төлөв'],promos.map((p,i)=>{const s=pState(p);return '<tr class="pr" data-i="'+i+'"><td><b>'+esc(p.name)+'</b></td><td class="n">'+esc(pType(p))+'</td><td class="n small">'+esc(pScope(p))+'</td><td class="n small">'+(p.stores.length?p.stores.map(x=>STN[x]||x).join(', '):'Бүгд')+'</td><td class="n">'+(p.start||'…')+' → '+(p.end||'хугацаагүй')+'</td><td class="n"><span class="chip '+s[1]+'">'+s[0]+'</span></td></tr>'}))}
 $('cPromo').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)editPromo(+tr.dataset.i)};
 $('pNew').onclick=()=>editPromo(null);
+$('pChk').oninput=()=>{const c=$('pChk').value.trim();if(!c)return $('pChkR').textContent='';
+  const hits=promos.filter(p=>p.type==='plist'?(p.prices||{})[c]!=null:(p.codes||[]).includes(c));
+  $('pChkR').innerHTML=hits.length?hits.map(p=>{const s=pState(p);return '<b>'+esc(p.name)+'</b> ('+esc(pType(p))+(p.type==='plist'?': '+Number(p.prices[c]).toLocaleString('en-US')+' ₮':'')+') · '+(p.stores.length?p.stores.map(x=>STN[x]||x).join(', '):'бүх дэлгүүр')+' · '+(p.start||'…')+' → '+(p.end||'хугацаагүй')+' · <span class="chip '+s[1]+'">'+s[0]+'</span>'}).join('<br>'):'<span class="hot">Энэ код кодын жагсаалттай урамшуулалд алга</span> (нийлүүлэгч, бүлгээр тохируулсан урамшуулалд хамаарч болно)'};
 const pClose=()=>{$('pm').classList.add('hide');$('pbox').innerHTML=''};
 const chks=(name,items,sel)=>'<div class="chk">'+items.map(x=>'<label><input type="checkbox" name="'+name+'" value="'+esc(x[0])+'" '+(sel.includes(x[0])?'checked':'')+'> '+esc(x[1])+'</label>').join('')+'</div>';
 const chkd=name=>[...$('pbox').querySelectorAll('input[name="'+name+'"]:checked')].map(x=>x.value);
@@ -452,6 +469,38 @@ $('sXl').onclick=async()=>{if(!stockRows.length)return $('sMsg').textContent='Э
   const A=[['Код','Нэр','Эхний үлдэгдэл','Орлого','Зарлага','Борлуулсан','Буцаалт','Одоогийн үлдэгдэл']].concat(stockRows.map(r=>[r.code,r.name,r.open,r.inn,r.out,r.sold,r.ret,r.now]));
   const ws=XLSX.utils.aoa_to_sheet(A);ws['!cols']=[16,50,10,8,8,10,8,12].map(w=>({wch:w}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Үлдэгдэл');
   XLSX.writeFile(wb,'uldegdel_'+$('sSt').value+'_'+iso(new Date())+'.xlsx')};
+/* ---- борлуулалт бараагаар / нийлүүлэгчээр ---- */
+const ORION='ORION WOJCIECH BARANKIEWICZ';
+// Нэгж өртөг: Smart-ын өртөг; ORION бараа өртөггүй (0) бол 6 500 ₮ гэж тооцно
+function unitCost(l){const c=costMap.get(l.code);if(c>0)return c;if(l.sup===ORION)return 6500;return c==null?null:c}
+let fRows=[],fHead=[];
+['fSt','fSup','fGrp','fMode'].forEach(id=>$(id).onchange=drawSup);$('fQ').oninput=drawSup;
+function drawSup(){
+  const st=$('fSt').value,q=$('fQ').value.trim().toLowerCase(),mode=$('fMode').value;
+  const all=[];sales.forEach(s=>{if(st&&s.store!==st)return;(s.lines||[]).forEach(l=>all.push({s,l}))});
+  const keep=(id,vals,cur,lbl)=>{const v=$(id).value||cur;$(id).innerHTML='<option value="">'+lbl+'</option>'+[...new Set(vals)].filter(Boolean).sort((a,b)=>a.localeCompare(b)).map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('')};
+  keep('fSup',all.map(x=>x.l.sup),'','Бүх нийлүүлэгч');keep('fGrp',all.map(x=>x.l.grp),'','Бүх бүлэг');
+  const sup=$('fSup').value,grp=$('fGrp').value;
+  const L=all.filter(({l})=>(!sup||l.sup===sup)&&(!grp||l.grp===grp)&&(!q||String(l.code).toLowerCase().includes(q)||String(l.name).toLowerCase().includes(q)));
+  let rev=0,cost=0,covRev=0,qty=0,disc=0,miss=0;
+  L.forEach(({l})=>{const c=unitCost(l);rev+=l.sum;qty+=l.qty;disc+=l.base*l.qty-l.sum;if(c!=null){cost+=c*l.qty;covRev+=l.sum}else miss++});
+  const pr=covRev-cost,pct=covRev?Math.round(pr/covRev*1000)/10:null;
+  $('fKpi').innerHTML=[['Борлуулалт',money(rev),1],['Тоо',qty.toLocaleString('en-US')+' ш'],['Хөнгөлөлт',money(disc)],['Өртөг',money(cost)],['Ашиг',money(pr)],['Ашгийн хувь',pct==null?'—':pct+'%']].map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
+  const agg=key=>{const m=new Map();L.forEach(({s,l})=>{const k=key(l);let r=m.get(k);if(!r){r={k,name:l.name,sup:l.sup||'',grp:l.grp||'',qty:0,rev:0,base:0,cost:0,cov:0,rec:new Set()};m.set(k,r)}const c=unitCost(l);r.qty+=l.qty;r.rev+=l.sum;r.base+=l.base*l.qty;r.rec.add(s.id);if(c!=null){r.cost+=c*l.qty;r.cov+=l.sum}});return [...m.values()].sort((a,b)=>b.rev-a.rev)};
+  const pc=r=>r.cov?Math.round((r.cov-r.cost)/r.cov*1000)/10:null,n=v=>Math.round(v);
+  if(mode==='sup'){const A=agg(l=>l.sup||'—');fHead=['Нийлүүлэгч','Баримт','Тоо','Үндсэн дүн','Борлуулалт','Хувь (борлуулалтад)','Өртөг','Ашиг','Ашгийн хувь'];
+    fRows=A.map(r=>[r.k,r.rec.size,r.qty,n(r.base),n(r.rev),rev?Math.round(r.rev/rev*1000)/10:0,n(r.cost),n(r.cov-r.cost),pc(r)]);}
+  else if(mode==='item'){const A=agg(l=>l.code);fHead=['Код','Нэр','Нийлүүлэгч','Тоо','Дундаж үнэ','Борлуулалт','Нэгж өртөг','Өртөг','Ашиг','Ашгийн хувь'];
+    fRows=A.map(r=>[r.k,r.name,r.sup,r.qty,r.qty?n(r.rev/r.qty):0,n(r.rev),r.qty&&r.cov?n(r.cost/r.qty):'',n(r.cost),n(r.cov-r.cost),pc(r)]);}
+  else{fHead=['Баримт','Огноо','Дэлгүүр','Кассчин','Нийлүүлэгч','Код','Нэр','Тоо','Үндсэн үнэ','Үнэ','Хөнгөлөлт','Дүн','Өртөг','Ашиг','Ашгийн хувь','Урамшуулал'];
+    fRows=L.slice().sort((a,b)=>a.s.iso<b.s.iso?1:-1).map(({s,l})=>{const c=unitCost(l),co=c==null?'':n(c*l.qty);return [s.id,s.date+' '+(s.time||'').slice(0,5),s.storeName,s.cashier,l.sup||'',l.code,l.name,l.qty,l.base,l.unit,n(l.base*l.qty-l.sum),l.sum,co,co===''?'':n(l.sum-co),co===''||!l.sum?'':Math.round((l.sum-co)/l.sum*1000)/10,l.pname||'']})}
+  const isN=v=>typeof v==='number',fmtc=(v,i)=>v==null||v===''?'':isN(v)?(/хувь/.test(fHead[i])?v+'%':/Тоо|Баримт/.test(fHead[i])?v.toLocaleString('en-US'):v.toLocaleString('en-US').replace(/,/g,' ')):esc(v);
+  $('fTbl').innerHTML=fRows.length?'<table><thead><tr>'+fHead.map((h,i)=>'<th'+(i&&isN(fRows[0][i])?' class="n"':'')+'>'+h+'</th>').join('')+'</tr></thead><tbody>'+fRows.slice(0,500).map(r=>'<tr'+(mode==='sup'?' class="pr" data-sup="'+esc(r[0])+'"':'')+'>'+r.map((v,i)=>'<td'+(isN(v)?' class="n"':'')+(/Ашгийн хувь/.test(fHead[i])&&isN(v)&&v<10?' style="color:var(--red);font-weight:650"':'')+'>'+fmtc(v,i)+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(fRows.length>500?'<div class="small">Эхний 500 мөр. Бүгдийг Excel-ээр татна.</div>':''):'<div class="small">Өгөгдөл алга</div>';
+  $('fNote').textContent=(miss?miss+' мөрт өртөг алга (ашигт ороогүй). ':'')+'ORION бараа өртөггүй бол 6 500 ₮ гэж тооцсон. Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно.';
+}
+$('fTbl').onclick=e=>{const tr=e.target.closest('tr[data-sup]');if(!tr)return;$('fSup').value=tr.dataset.sup;$('fMode').value='item';drawSup()};
+$('fXl').onclick=async()=>{if(!fRows.length)return;await xlsx();const ws=XLSX.utils.aoa_to_sheet([fHead].concat(fRows));ws['!cols']=fHead.map(h=>({wch:/Нэр|Нийлүүлэгч/.test(h)?36:13}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Борлуулалт');
+  XLSX.writeFile(wb,'borluulalt_'+$('fMode').value+'_'+($('fSt').value||'buh')+'_'+$('d1').value+'_'+$('d2').value+'.xlsx')};
 /* ---- барааны жагсаалт: Smart Excel -> pos_catalog (хэсэгчлэн, өөрчлөгдсөн хэсгийг л бичнэ) ---- */
 let catItems=null,catMeta=null,catCost=null,costMap=new Map(),costInfo='';
 async function xlsx(){if(!window.XLSX)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');return window.XLSX}
@@ -534,7 +583,7 @@ async function smartXlsx(kind){
     if(kind==='b'){title='Борлуулалтын жагсаалт /бараагаар/';
       aoa=[[...Array(19).fill(null),'Smart Logic LLC'],[],[title],['№',null,'Огноо','Байршил','Харилцагч','Бэлтгэн нийлүүлэгчийн нэр',null,'Барааны код','Барааны бүлэг','Барааны нэр','Үндсэн үнэ','Үнэ','Тоо хэмжээ','Хөнгөлөлт','Үндсэн дүн','Тасгийн код','Тасгийн нэр','Нийт дүн','Цэвэр борлуулалт',null,null,'Өртөг','Баримтын дугаар']];
       L.forEach(s=>{aoa.push(['Баримт: '+s.dayNo+' ']);const partner=(s.payments||[]).map(p=>p.partner).filter(Boolean).join('; ')||null;
-        (s.lines||[]).forEach(l=>aoa.push([null,String(s.dayNo),xDay(s),s.storeName,partner,l.sup||null,null,l.code,l.grp||null,l.name,l.base,l.unit,l.qty,l.base*l.qty-l.sum,l.base*l.qty,DEPT[s.store]||null,s.storeName+'-'+String(l.grp||'').replace(/\.$/,''),l.sum,l.sum,null,null,costMap.has(l.code)?Math.round(costMap.get(l.code)*l.qty*100)/100:null,s.id]))});
+        (s.lines||[]).forEach(l=>aoa.push([null,String(s.dayNo),xDay(s),s.storeName,partner,l.sup||null,null,l.code,l.grp||null,l.name,l.base,l.unit,l.qty,l.base*l.qty-l.sum,l.base*l.qty,DEPT[s.store]||null,s.storeName+'-'+String(l.grp||'').replace(/\.$/,''),l.sum,l.sum,null,null,unitCost(l)!=null?Math.round(unitCost(l)*l.qty*100)/100:null,s.id]))});
       cols=[6,4,11,12,14,24,2,15,14,46,10,10,8,10,11,9,18,11,11,2,2,10,15];
     }else{title='Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/';
       aoa=[[...Array(12).fill(null),'Smart Logic LLC'],[],[title],['№','Огноо','Дэлгүүр',null,'Касс','Төлбөрийн хэлбэр','Банкны код','Харилцагчийн нэр','Банкны нэр','Гүйлгээний дугаар','Дүн','Хадгалсан огноо',null,'Баримтын дугаар']];
