@@ -88,6 +88,7 @@ tr.sel td{background:#fff8e1}tr.sel td:first-child{box-shadow:inset 4px 0 0 var(
 .banks .small{color:#d6f0e1!important}
 .hbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.hbar input,.hbar select{min-height:40px;width:auto}.hbar button{min-height:40px;padding:4px 12px}
 .hsum{display:flex;gap:22px;flex-wrap:wrap;margin:8px 0;font-size:14px;color:var(--mut)}.hsum span{white-space:nowrap;display:inline}.box .hsum b{display:inline;margin:0;font-size:17px;color:var(--ink);text-transform:none;letter-spacing:0}
+#exbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:10px 14px;margin-bottom:8px;border-radius:12px;background:#fff4d6;border:2px solid #e8a400;color:#6b4a00;font-size:14px}#exbar .sp{flex:1}#exbar button{min-height:36px;padding:3px 12px}
 .ownonly{display:inline-flex;align-items:center;padding:0 12px;min-height:40px;border-radius:10px;background:#eef6ff;color:var(--blue);font-weight:650;font-size:14px}
 .box.wide{width:min(1240px,100%)}
 tr.ret td{color:var(--red)}tr.hit td{background:#fff7d6}th.own,td.own{background:#eef6ff}.nw{white-space:nowrap}
@@ -145,7 +146,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
   <div id="left">
     <div id="scanrow"><input id="scan" placeholder="Баркод уншуулах эсвэл барааны нэр, код бичээд Enter" autocomplete="off"><button class="ghost" id="bSearch">Хайх</button></div>
     <div id="msg"></div>
-    <div id="cartwrap"><table><thead><tr><th>№</th><th>Бараа</th><th class="n">Тоо</th><th class="n">Үнэ</th><th class="n">Хөнгөлөлт</th><th class="n">Дүн</th></tr></thead><tbody id="cart"></tbody></table></div>
+    <div id="exbar" class="hide"></div><div id="cartwrap"><table><thead><tr><th>№</th><th>Бараа</th><th class="n">Тоо</th><th class="n">Үнэ</th><th class="n">Хөнгөлөлт</th><th class="n">Дүн</th></tr></thead><tbody id="cart"></tbody></table></div>
   </div>
   <div id="right">
     <div id="totbox">
@@ -161,7 +162,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
     </div></div>
     <div class="grp"><h3>Баримт</h3><div class="g">
       <button id="bPark">Түр хадгалах <kbd>F6</kbd></button><button id="bParked">Хадгалсан <span id="pCnt"></span><kbd>F7</kbd></button>
-      <button id="bRet">Буцаалт <kbd>F8</kbd></button><button id="bClear" class="warn">Баримт цуцлах</button><button id="bRep1" style="grid-column:1/3">Сүүлийн баримт дахин хэвлэх <kbd>F9</kbd></button>
+      <button id="bRet">Буцаалт <kbd>F8</kbd></button><button id="bClear" class="warn">Баримт цуцлах</button><button id="bExch">Солилт <kbd>F3</kbd></button><button id="bPfix">Төлбөр засах</button><button id="bRep1" style="grid-column:1/3">Сүүлийн баримт дахин хэвлэх <kbd>F9</kbd></button>
     </div></div>
     <div class="grp"><h3>Ээлж</h3><div class="g">
       <button id="bHist">Борлуулалтын түүх <kbd>F10</kbd></button><button id="bStk">Үлдэгдэл <kbd>F2</kbd></button>
@@ -211,7 +212,7 @@ if(!users){users=[{id:'u0',name:'Админ',role:'admin',pin:'9999',stores:[],a
   Object.entries(CASHIERS).forEach(([st,arr])=>arr.forEach(nm=>users.push({id:'u'+(n++),name:nm,role:'cashier',pin:'1111',stores:[st],active:true})));store.set('users',users)}
 let promos=store.get('promos',null);
 if(!promos){promos=[{id:'p1',name:'LPP 1+1',type:'pair',pct:0,samePct:30,all:false,suppliers:['ORION WOJCIECH BARANKIEWICZ','Network 360'],groups:[],codes:[],start:'2026-10-10',end:'',stores:[],active:true}];store.set('promos',promos)}
-const APP_VER='3.2';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
+const APP_VER='3.4';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
 let device=store.get('device',{store:'',reg:''});
 let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
 const cfgList=k=>k==='promos'?promos:k==='users'?users:[cfg];
@@ -300,7 +301,7 @@ async function cloudInit(){
   }catch(e){fb.err=String(e&&e.message||e)}
   cloudStatus();
 }
-function pending(){return sales.filter(s=>!s.synced).length+audit.filter(a=>!a.synced).length+shiftq.length}
+function pending(){return sales.filter(s=>!s.synced).length+audit.filter(a=>!a.synced).length+shiftq.length+reqq.length}
 function cloudStatus(){
   const n=pending();let t,ok=false;
   if(!fb.ready)t='Үүлгүй · өгөгдөл энэ касс дээр';
@@ -327,7 +328,8 @@ async function cloudSync(){
     sales.filter(s=>!s.synced).slice(0,40).forEach(s=>jobs.push(push('pos_sales',s.uid,s).then(ok=>{if(ok)s.synced=true})));
     audit.filter(a=>!a.synced).slice(0,80).forEach(a=>jobs.push(push('pos_audit',a.uid,a).then(ok=>{if(ok)a.synced=true})));
     shiftq.slice().forEach(q=>jobs.push(push('pos_shifts',q.id,q).then(ok=>{if(ok)shiftq=shiftq.filter(x=>x!==q)})));
-    if(jobs.length){await Promise.all(jobs);store.set('sales',sales);store.set('audit',audit);store.set('shiftq',shiftq)}
+    reqq.slice().forEach(q=>jobs.push(push('pos_requests',q.uid,q).then(ok=>{if(ok)reqq=reqq.filter(x=>x!==q)})));
+    if(jobs.length){await Promise.all(jobs);store.set('sales',sales);store.set('audit',audit);store.set('shiftq',shiftq);store.set('reqq',reqq)}
   }finally{syncing=false;cloudStatus();if(pending()&&fb.user&&navigator.onLine&&!fb.err)cloudSoon()}
 }
 function cloudSoon(){clearTimeout(cloudSoon.h);cloudSoon.h=setTimeout(()=>{fb.err='';cloudSync()},400);cloudStatus()}
@@ -335,7 +337,7 @@ function shiftOut(sh){shiftq=shiftq.filter(q=>q.id!==sh.id);shiftq.push(JSON.par
 function cloudListen(){
   if(cloudListen.on)return;cloudListen.on=true;
   fb.db.collection('pos_catalog').doc('meta').onSnapshot(d=>{if(d.exists)catSync(d.data())},e=>{fb.err='каталог: '+(e&&e.code||e);cloudStatus()});
-  const rqFrom=new Date(Date.now()-30*864e5).toISOString(),rqSt=curAcc();(rqSt?fb.db.collection('pos_requests').where('store','==',rqSt):fb.db.collection('pos_requests').where('created','>=',rqFrom)).onSnapshot(s=>{requests=s.docs.map(d=>d.data()).filter(r=>(r.created||'')>=rqFrom);if($('rqs')&&!$('rq').value)openReturn()},e=>{fb.err=e&&e.code||String(e);cloudStatus()});
+  const rqFrom=new Date(Date.now()-30*864e5).toISOString(),rqSt=curAcc();(rqSt?fb.db.collection('pos_requests').where('store','==',rqSt):fb.db.collection('pos_requests').where('created','>=',rqFrom)).onSnapshot(s=>{requests=s.docs.map(d=>d.data()).filter(r=>(r.created||'')>=rqFrom);applyPayFix();if($('rqs')&&$('pq')&&!$('pq').value)openReturn()},e=>{fb.err=e&&e.code||String(e);cloudStatus()});
   ['promos','users','settings'].forEach(k=>{const ref=fb.db.collection('pos_config').doc(k);ref.onSnapshot(d=>{
     if(d.metadata&&d.metadata.hasPendingWrites)return;
     if(!d.exists){ref.set({list:JSON.parse(JSON.stringify(cfgList(k))),updated:now().toISOString(),by:'анхны тохиргоо'}).catch(()=>{});return}
@@ -431,7 +433,7 @@ function render(){
     return '<tr class="'+(i===S.sel?'sel':'')+'" data-i="'+i+'"><td>'+(i+1)+'</td><td>'+esc(l.name)+'<div class="small">'+esc(l.code)+(l.promoName&&!l.pct?' · '+esc(l.promoName):'')+'</div>'+b+'</td><td class="n">'+l.qty+'</td><td class="n">'+fmt(l.price)+(l.base>l.price?'<div class="small"><s>'+fmt(l.base)+'</s></div>':'')+'</td><td class="n">'+fmt(l.price*l.qty-l.total)+'</td><td class="n"><b>'+fmt(l.total)+'</b></td></tr>'}).join('')
     ||'<tr><td colspan="6" class="empty">Баркод уншуулж эхэлнэ үү<div class="small">эсвэл барааны нэр, кодоор хайна</div></td></tr>';
   $('tQty').textContent=t.qty;$('tBase').textContent=fmt(t.base);$('tDisc').textContent=fmt(t.disc);$('total').textContent=fmt(t.total);
-  $('pCnt').textContent=parked.length?'('+parked.length+')':'';$('bD5').classList.toggle('on5',S.cart.some(l=>l.d5));custCart(t);
+  exchBar();$('pCnt').textContent=parked.length?'('+parked.length+')':'';$('bD5').classList.toggle('on5',S.cart.some(l=>l.d5));custCart(t);
   const s=$('cartwrap').querySelector('tr.sel');if(s)s.scrollIntoView({block:'nearest'});
   return t;
 }
@@ -497,7 +499,7 @@ async function clearCart(){
   S.cart=[];S.sel=-1;S.fromPark=null;render();
 }
 /* ---------- park ---------- */
-function park(){
+function park(){if(S.exch)return flash('Солилтын үед түр хадгалах боломжгүй');
   if(!S.cart.length)return;
   parked.push({id:S.fromPark||('P'+Date.now()),t:now().toISOString(),cashier:S.user.name,cart:S.cart});store.set('parked',parked);
   log('park',{lines:S.cart.length,total:computePromo(S.cart).total});S.cart=[];S.sel=-1;S.fromPark=null;render();flash('Түр хадгаллаа');
@@ -511,6 +513,7 @@ function showParked(){
 }
 /* ---------- payment ---------- */
 function openPay(){
+  if(S.exch)return exchPay();
   const t=computePromo(S.cart);if(!S.cart.length)return;
   const pays=[];let ebar=false;
   const paid=()=>pays.reduce((a,p)=>a+p.amount,0);
@@ -587,8 +590,8 @@ function printReceipt(s,copy){
 function receiptHtml(s,copy,label){
   const pl=s.payments.map(p=>'<tr><td>'+p.form+(p.bank?' ('+esc(p.bank)+')':'')+(p.partner?' ('+esc(p.partner)+')':'')+':</td><td style="text-align:right">'+fmt(p.tendered||p.amount)+'</td></tr>').join('');
   return '<div class="c" style="font-size:9px">Хэвлэсэн огноо: '+dstr(now())+' '+tstr(now())+'</div><div class="c big">VIVI · '+esc(s.storeName)+'</div>'+(label?'<div class="c"><b>'+label+'</b></div>':'')+
-  (s.type==='return'?'<div class="c big">БУЦААЛТ</div>':'')+(copy?'<div class="c">ХУУЛБАР</div>':'')+
-  '<div class="hr"></div><table><tr><td>Огноо: '+s.date+' '+s.time.slice(0,5)+'</td><td style="text-align:right">№: '+s.dayNo+'</td></tr><tr><td>Касс: '+s.reg+' · '+esc(s.cashier)+'</td><td style="text-align:right">'+s.id+'</td></tr>'+(s.ref?'<tr><td colspan="2">Эх баримт: '+s.ref+'</td></tr>':'')+'</table>'+
+  (s.exch&&s.type==='sale'?'<div class="c big">СОЛИЛТ</div>':s.type==='return'?'<div class="c big">БУЦААЛТ</div>':'')+(copy?'<div class="c">ХУУЛБАР</div>':'')+
+  '<div class="hr"></div><table><tr><td>Огноо: '+s.date+' '+s.time.slice(0,5)+'</td><td style="text-align:right">№: '+s.dayNo+'</td></tr><tr><td>Касс: '+s.reg+' · '+esc(s.cashier)+'</td><td style="text-align:right">'+s.id+'</td></tr>'+(s.ref?'<tr><td colspan="2">'+(s.exch?'Солилт, эх баримт: ':'Эх баримт: ')+s.ref+(s.exch&&s.exch.ret?' · буцаалт '+s.exch.ret:'')+'</td></tr>':'')+'</table>'+
   '<div class="hr"></div><table><tr><th style="text-align:left">Бараа</th><th style="text-align:right">Тоо</th><th style="text-align:right">Үнэ</th><th style="text-align:right">Дүн</th></tr>'+
   s.lines.map(l=>'<tr><td>'+esc(l.name.slice(0,26))+(l.promo==='gift'?' (бэлэг)':l.promo==='free'?' (1+1)':l.promo==='same'||l.promo==='pct'?' (хөнгөлөлт)':'')+'</td><td style="text-align:right">'+l.qty+'</td><td style="text-align:right">'+fmt(l.unit)+'</td><td style="text-align:right">'+fmt(l.sum)+'</td></tr>').join('')+
   '</table><div class="hr"></div><table><tr><td>НИЙТ:</td><td style="text-align:right">'+s.qty+' ш</td></tr><tr><td>Нийт хөнгөлөлт:</td><td style="text-align:right">'+fmt(s.discount)+'</td></tr><tr class="big"><td><b>Төлөх дүн:</b></td><td style="text-align:right"><b>'+fmt(s.total)+'</b></td></tr>'+pl+(s.change>0?'<tr><td>Хариулт:</td><td style="text-align:right">'+fmt(s.change)+'</td></tr>':'')+'</table>'+
@@ -599,19 +602,17 @@ function openReturn(){
   const today=dstr(now());
   const list=sales.filter(s=>s.type==='sale'&&s.store===S.user.store).slice(-200).reverse();
   const RS={pending:['хүлээгдэж байна','b30'],approved:['зөвшөөрсөн · дарж гүйцээнэ',''],rejected:['татгалзсан','man']};
-  const rqs=requests.filter(r=>r.store===S.user.store&&RS[r.status]).sort((a,b)=>a.created<b.created?1:-1).slice(0,8);
-  openModal('<h2>Буцаалт — баримт сонгох</h2>'+(rqs.length?'<b>Хүсэлтүүд</b><div class="list"><table><tbody id="rqs">'+rqs.map(r=>'<tr data-u="'+r.uid+'"'+(r.status==='approved'?' style="cursor:pointer"':'')+'><td>'+esc(r.ref)+'<div class="small">'+esc(r.cashier)+' · '+esc((r.flags||[]).join(', '))+'</div></td><td class="n">'+fmt(-r.total)+'</td><td><span class="badge '+RS[r.status][1]+'">'+RS[r.status][0]+'</span>'+(r.note?'<div class="small">'+esc(r.note)+'</div>':'')+'</td></tr>').join('')+'</tbody></table></div><b>Баримтаар хайх</b>':'')+'<input id="rq" autofocus placeholder="Баримтын дугаар (жишээ FC-1-000012)"><div class="list" style="margin-top:8px"><table><tbody id="rl"></tbody></table></div><div class="small" style="margin-top:6px">Smart-ын хуучин баримтын буцаалт дараагийн хувилбарт.</div><div class="rowbtn"><button id="rc">Хаах</button></div>');
-  const draw=()=>{const q=$('rq').value.trim().toLowerCase();$('rl').innerHTML=list.filter(s=>!q||s.id.toLowerCase().includes(q)).map(s=>'<tr data-id="'+s.id+'"><td>'+s.id+'</td><td>'+s.date+' '+s.time.slice(0,5)+'</td><td>'+esc(s.cashier)+'</td><td class="n">'+fmt(s.total)+'</td></tr>').join('')||'<tr><td class="small">Баримт алга</td></tr>'};
-  draw();$('rq').oninput=draw;$('rc').onclick=closeModal;
+  const rqs=requests.filter(r=>r.store===S.user.store&&(!r.kind||r.kind==='return')&&RS[r.status]).sort((a,b)=>a.created<b.created?1:-1).slice(0,8);
+  openModal('<h2>Буцаалт — баримт сонгох</h2>'+(rqs.length?'<b>Хүсэлтүүд</b><div class="list"><table><tbody id="rqs">'+rqs.map(r=>'<tr data-u="'+r.uid+'"'+(r.status==='approved'?' style="cursor:pointer"':'')+'><td>'+esc(r.ref)+'<div class="small">'+esc(r.cashier)+' · '+esc((r.flags||[]).join(', '))+'</div></td><td class="n">'+fmt(-r.total)+'</td><td><span class="badge '+RS[r.status][1]+'">'+RS[r.status][0]+'</span>'+(r.note?'<div class="small">'+esc(r.note)+'</div>':'')+'</td></tr>').join('')+'</tbody></table></div><b>Баримтаар хайх</b>':'')+RCPT_UI+'<div class="small" style="margin-top:6px">Smart-ын хуучин баримтын буцаалт дараагийн хувилбарт.</div><div class="rowbtn"><button id="rc">Хаах</button></div>');$('mbox').classList.add('wide');
+  $('rc').onclick=closeModal;rcptBind(returnLines);
   if($('rqs'))$('rqs').onclick=e=>{const tr=e.target.closest('tr[data-u]'),r=tr&&requests.find(x=>x.uid===tr.dataset.u);if(!r||r.status!=='approved')return;
     r.status='done';fb.db.collection('pos_requests').doc(r.uid).update({status:'done',doneAt:now().toISOString(),doneBy:S.user.name}).catch(()=>{});finishReturn(r,r.uid)};
-  $('rl').onclick=e=>{const tr=e.target.closest('tr[data-id]');if(tr)returnLines(sales.find(s=>s.id===tr.dataset.id))};
 }
 /* Буцаалт: үлдэх бараанд урамшууллыг дахин тооцоод, төлсөн дүнгийн зөрүүг буцаана.
    Жишээ: 1+1-ээр A 35 900 + B 29 900 (үнэгүй) = 35 900. A-г буцаавал B бүтэн үнээр 29 900 болж, 6 000 буцаана. */
 function retState(s){
   const rem=s.lines.map(()=>0);let prior=0;
-  sales.filter(x=>x.type==='return'&&x.ref===s.id).forEach(x=>{prior+=-x.total;x.lines.forEach(l=>{let i=l.src;if(i==null)i=s.lines.findIndex((y,j)=>y.code===l.code&&y.unit===l.unit&&rem[j]<y.qty);if(i>=0)rem[i]+=-l.qty})});
+  const RL=sales.filter(x=>x.type==='return'&&x.ref===s.id);(s._xr||[]).forEach(r=>{if(!RL.some(y=>y.uid===r.uid))RL.push(r)});RL.forEach(x=>{prior+=-x.total;x.lines.forEach(l=>{let i=l.src;if(i==null)i=s.lines.findIndex((y,j)=>y.code===l.code&&y.unit===l.unit&&rem[j]<y.qty);if(i>=0)rem[i]+=-l.qty})});
   return {rem,prior};
 }
 function keptTotal(s,rem){
@@ -692,7 +693,7 @@ async function report(){
   const today=dstr(now()),list=sales.filter(s=>s.date===today),pm=sumPays(list),bc={};
   list.forEach(s=>{const k=s.storeName+' · '+s.cashier;bc[k]=bc[k]||{n:0,t:0};bc[k].n++;bc[k].t+=s.total});
   const au=audit.filter(a=>dstr(new Date(a.t))===today),ac={};au.forEach(a=>ac[a.type]=(ac[a.type]||0)+1);
-  const AN={history_unlock:'Бүх түүхийг менежер нээсэн',history_export:'Түүх Excel-ээр татсан',device_bind:'Кассыг дэлгүүрт бэхэлсэн',cloud_on:'Үүлэнд холбосон',cloud_off:'Үүлээс салгасан',gift_on:'Бэлэг өгсөн',gift_off:'Бэлэг цуцалсан',line_delete:'Мөр устгасан',qty_minus:'Тоо хассан',manual_discount:'Гар хөнгөлөлт',receipt_cancel:'Баримт цуцалсан',park:'Түр хадгалсан',unpark:'Түр хадгалснаас сэргээсэн',return:'Буцаалт',shift_open:'Ээлж нээсэн',shift_close:'Ээлж хаасан',login:'Нэвтэрсэн',promo_save:'Урамшуулал өөрчилсөн',promo_delete:'Урамшуулал устгасан',user_save:'Ажилтан өөрчилсөн',settings_save:'Тохиргоо өөрчилсөн',return_request:'Буцаалтын хүсэлт',disc5_on:'5% хөнгөлөлт өгсөн',reprint:'Баримт дахин хэвлэсэн',disc5_off:'5% хөнгөлөлт цуцалсан'};
+  const AN={exchange:'Солилт',paychange_request:'Төлбөр засах хүсэлт',history_unlock:'Бүх түүхийг менежер нээсэн',history_export:'Түүх Excel-ээр татсан',device_bind:'Кассыг дэлгүүрт бэхэлсэн',cloud_on:'Үүлэнд холбосон',cloud_off:'Үүлээс салгасан',gift_on:'Бэлэг өгсөн',gift_off:'Бэлэг цуцалсан',line_delete:'Мөр устгасан',qty_minus:'Тоо хассан',manual_discount:'Гар хөнгөлөлт',receipt_cancel:'Баримт цуцалсан',park:'Түр хадгалсан',unpark:'Түр хадгалснаас сэргээсэн',return:'Буцаалт',shift_open:'Ээлж нээсэн',shift_close:'Ээлж хаасан',login:'Нэвтэрсэн',promo_save:'Урамшуулал өөрчилсөн',promo_delete:'Урамшуулал устгасан',user_save:'Ажилтан өөрчилсөн',settings_save:'Тохиргоо өөрчилсөн',return_request:'Буцаалтын хүсэлт',disc5_on:'5% хөнгөлөлт өгсөн',reprint:'Баримт дахин хэвлэсэн',disc5_off:'5% хөнгөлөлт цуцалсан'};
   openModal('<h2>Өнөөдрийн тайлан — '+today+'</h2><div class="tiles"><div class="tile y"><div class="l">Нийт борлуулалт</div><div class="v">'+fmt(list.reduce((a,s)=>a+s.total,0))+'</div></div><div class="tile"><div class="l">Баримт</div><div class="v">'+list.filter(s=>s.type==='sale').length+'</div></div><div class="tile"><div class="l">Буцаалт</div><div class="v">'+list.filter(s=>s.type==='return').length+'</div></div><div class="tile"><div class="l">И-баримт өгсөн</div><div class="v">'+list.filter(s=>s.ebarimt).length+'</div></div></div>'+
   '<b>Төлбөрийн хэлбэрээр</b><table>'+(Object.entries(pm).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td class="n">'+fmt(v)+'</td></tr>').join('')||'<tr><td class="small">—</td></tr>')+'</table>'+
   '<b>Дэлгүүр · кассчин</b><table>'+(Object.entries(bc).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td class="n">'+v.n+' баримт</td><td class="n">'+fmt(v.t)+'</td></tr>').join('')||'<tr><td class="small">—</td></tr>')+'</table>'+
@@ -750,6 +751,118 @@ function exceptions(days){
   (rows.map(r=>'<tr><td><b>'+esc(r.cashier)+'</b><div class="small">'+esc(STORES[r.store]||'')+'</div></td><td class="n">'+r.rec+'</td><td class="n">'+fmt(r.sales)+'</td>'+cell(r,'del',r.delV)+cell(r,'minus')+cell(r,'canc',r.cancV)+cell(r,'disc',r.discV)+cell(r,'ret',r.retV)+cell(r,'parkDel')+cell(r,'gift',r.giftV)+'</tr>').join('')||'<tr><td class="small" colspan="10">Энэ хугацаанд бүртгэл алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="exc">Хаах</button></div>');
   $('mbox').querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>exceptions(+b.dataset.d));$('exc').onclick=closeModal;
 }
+/* ---------- Солилт, төлбөрийн хэлбэр засах хүсэлт ----------
+   Солилт: кассчин шууд хийнэ (буцаалт + шинэ борлуулалт, «Солилт» төлбөрөөр холбоно), нягтлан самбарт дараа нь баталгаажуулна.
+   Төлбөрийн хэлбэр засах: хүсэлт илгээнэ, нягтлан баталсны дараа баримтын төлбөр өөрчлөгдөнө. */
+let reqq=store.get('reqq',[]);
+function reqOut(r){reqq.push(JSON.parse(JSON.stringify(r)));store.set('reqq',reqq);cloudSoon()}
+function rqBase(kind){return {uid:uuid(),kind,status:'pending',created:now().toISOString(),store:S.user.store,storeName:STORES[S.user.store],reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid}}
+// Баримт хайх: дугаар, барааны нэр, баркод, модель. Энэ кассын баримт шууд; Enter дарвал дэлгүүрийн бусад кассын баримтыг үүлээс хайна.
+const rcptText=s=>(s._t=s._t||(s.id+' '+(s.lines||[]).map(l=>{const i=IDX.get(l.code),c=i!=null?CAT[i]:null;return l.name+' '+l.code+' '+(c&&c[1]?c[1]:'')+' '+(c&&c[7]||'')}).join(' ')).toLowerCase());
+function rcptHits(s,w){if(!w.length)return '';const L=(s.lines||[]).filter(l=>{const i=IDX.get(l.code),c=i!=null?CAT[i]:null,t=(l.name+' '+l.code+' '+(c&&c[1]?c[1]:'')+' '+(c&&c[7]||'')).toLowerCase();return w.every(x=>t.includes(x))});
+  return L.length?'<div class="small" style="color:var(--blue)">'+L.slice(0,3).map(l=>'▸ '+esc(l.name)+' × '+l.qty).join('<br>')+'</div>':''}
+const RCPT_UI='<div class="hbar"><input id="pq" placeholder="Баримтын дугаар, барааны нэр, баркод эсвэл модель — Enter: дэлгүүрийн бүх кассаас хайна" style="flex:1" autofocus></div><div id="pm2" class="small" style="min-height:18px"></div><div class="list"><table><thead><tr><th>Баримт</th><th>Огноо</th><th>Кассчин</th><th>Төлбөр</th><th class="n">Дүн</th></tr></thead><tbody id="pl"></tbody></table></div>';
+function rcptBind(onPick){
+  const local=sales.filter(s=>s.type==='sale'&&s.store===S.user.store).slice(-300).reverse();let extra=[],cloudDays=0;
+  const words=()=>$('pq').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const draw=()=>{const w=words(),L=extra.concat(local.filter(s=>!extra.some(x=>x.uid===s.uid))).sort((a,b)=>(a.iso||'')<(b.iso||'')?1:-1);
+    const F=L.filter(s=>!w.length||w.every(x=>rcptText(s).includes(x))).slice(0,150);
+    $('pl').innerHTML=F.map(s=>'<tr data-u="'+s.uid+'" style="cursor:pointer"><td>'+esc(s.id)+rcptHits(s,w)+'</td><td class="nw">'+esc(s.date)+' '+esc((s.time||'').slice(0,5))+'</td><td>'+esc(s.cashier)+'</td><td class="small">'+s.payments.map(p=>esc(p.form+(p.bank?' · '+p.bank:''))).join(', ')+'</td><td class="n"><b>'+fmt(s.total)+'</b></td></tr>').join('')||'<tr><td colspan="5" class="empty">Энэ кассаас олдсонгүй — Enter дарж дэлгүүрийн бүх кассаас хайна уу</td></tr>';
+    $('pl').onclick=e=>{const tr=e.target.closest('tr[data-u]');if(!tr)return;const s=F.find(x=>x.uid===tr.dataset.u);if(s)loadRets(s).then(()=>onPick(s))}};
+  $('pq').oninput=draw;
+  $('pq').onkeydown=async e=>{if(e.key!=='Enter')return;const q=$('pq').value.trim();if(!q)return;
+    if(!(fb.ready&&fb.user&&navigator.onLine))return $('pm2').textContent='Үүлэнд холбогдоогүй — зөвхөн энэ кассын баримт харагдана';
+    $('pm2').textContent='Хайж байна…';
+    try{if(/^[a-z]{2}-\d+-\d+$/i.test(q)){const r=await fb.db.collection('pos_sales').where('store','==',S.user.store).where('id','==',q.toUpperCase()).get();
+          const f=r.docs.map(d=>d.data()).filter(s=>s.type==='sale');f.forEach(s=>{if(!extra.some(x=>x.uid===s.uid))extra.push(s)});$('pm2').textContent=f.length?'':'«'+q+'» дугаартай баримт олдсонгүй'}
+        else{const N=Math.min(31,Math.max(7,cfg.returnDays||14));
+          if(cloudDays<N){const days=[];for(let k=0;k<N;k++){const d=now();d.setDate(d.getDate()-k);days.push(dstr(d))}
+            const qs=await Promise.all(days.map(d=>fb.db.collection('pos_sales').where('store','==',S.user.store).where('date','==',d).get()));
+            qs.forEach(r=>r.docs.forEach(x=>{const s=x.data();if(s.type==='sale'&&!extra.some(y=>y.uid===s.uid))extra.push(s)}));cloudDays=N}
+          $('pm2').textContent='Дэлгүүрийн бүх кассын сүүлийн '+N+' хоногийн баримтаас хайлаа'}
+      draw()}catch(er){$('pm2').textContent='Алдаа: '+(er&&er.code||er)}};
+  draw();
+}
+function pickReceipt(title,onPick){openModal('<h2>'+esc(title)+'</h2>'+RCPT_UI+'<div class="rowbtn"><button id="pc">Болих</button></div>');$('mbox').classList.add('wide');$('pc').onclick=closeModal;rcptBind(onPick)}
+// Өөр кассаар хийсэн буцаалтыг үүлээс татаж, давхар буцаалтаас сэргийлнэ
+async function loadRets(s){s._xr=[];if(!(fb.ready&&fb.user&&navigator.onLine))return;
+  try{const r=await fb.db.collection('pos_sales').where('store','==',s.store).where('ref','==',s.id).get();s._xr=r.docs.map(d=>d.data()).filter(x=>x.type==='return')}catch(e){}}
+function openExch(){
+  if(S.exch)return flash('Солилт эхэлсэн байна — дуусгах эсвэл цуцална уу');
+  if(S.cart.length)return flash('Эхлээд одоогийн баримтаа дуусгах эсвэл түр хадгална уу');
+  pickReceipt('Солилт — эх баримт сонгох',exchLines);
+}
+function exchLines(s){
+  const st=retState(s),rows=s.lines.map((l,i)=>({l,i,av:Math.max(0,l.qty-st.rem[i])})),days=Math.floor((Date.now()-new Date(s.iso).getTime())/864e5);
+  openModal('<h2>Солилт — '+esc(s.id)+'</h2><div class="small">Үйлчлүүлэгчийн буцааж өгөх барааг сонгоно. Дараа нь шинэ бараагаа уншуулна.</div>'+(days>cfg.returnDays?'<div class="small" style="color:var(--red)">Баримт '+days+' хоногийн өмнөх — солилтын хугацаа ('+cfg.returnDays+' хоног) хэтэрсэн, менежерийн ПИН шаардана.</div>':'')+
+    '<div class="list"><table><thead><tr><th>Бараа</th><th class="n">Авсан</th><th class="n">Төлсөн</th><th class="n">Буцааж авах</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.l.name)+'<div class="small">'+esc(r.l.code)+(r.l.pname?' · '+esc(r.l.pname):'')+'</div></td><td class="n">'+r.l.qty+(r.av<r.l.qty?'<div class="small">үлдсэн '+r.av+'</div>':'')+'</td><td class="n">'+fmt(r.l.unit)+'</td><td class="n"><input data-r="'+r.i+'" inputmode="numeric" value="0" style="width:70px;text-align:right"'+(r.av?'':' disabled')+'></td></tr>').join('')+'</tbody></table></div>'+
+    '<div class="tiles" style="grid-template-columns:1fr"><div class="tile y"><div class="l">БУЦААЖ АВАХ БАРААНЫ ҮНЭ</div><div class="v" id="xsum">0</div></div></div><div id="xm" class="small" style="color:var(--red);min-height:18px"></div>'+
+    '<div class="rowbtn"><button id="xc">Болих</button><button class="pri" id="xo">Шинэ бараа сонгох →</button></div>');
+  const take=()=>{const t={};rows.forEach(r=>{const q=Math.floor(num($('mbox').querySelector('[data-r="'+r.i+'"]').value));if(q>0)t[r.i]=q});return t};
+  const upd=()=>{const tk=take();$('xm').textContent=rows.some(r=>(tk[r.i]||0)>r.av)?'Боломжит тооноос их байна':'';$('xsum').textContent=fmt(refundFor(s,st,tk))};
+  $('mbox').querySelectorAll('[data-r]').forEach(x=>x.oninput=upd);$('xc').onclick=closeModal;
+  $('xo').onclick=async()=>{const tk=take(),idx=Object.keys(tk).map(Number);
+    if(rows.some(r=>(tk[r.i]||0)>r.av))return;if(!idx.length)return $('xm').textContent='Буцааж авах барааны тоог оруулна уу';
+    let by='';if(days>cfg.returnDays){if(!(await askPin('Солилт: хугацаа хэтэрсэн ('+days+' хоног)')))return;by=askPin.by;askPin.by=''}
+    const credit=refundFor(s,st,tk),w=idx.map(i=>(s.lines[i].price!=null?s.lines[i].price:s.lines[i].base)*tk[i]),W=w.reduce((a,b)=>a+b,0)||1;let left=credit;const lines=[];let qty=0,base=0;
+    idx.forEach((i,j)=>{const a=j===idx.length-1?left:Math.round(credit*w[j]/W);left-=a;const l=s.lines[i];lines.push({...l,src:i,qty:-tk[i],sum:-a});qty-=tk[i];base-=tk[i]*l.base});
+    S.exch={ref:s.id,refUid:s.uid,refDate:s.date,lines,qty,base,credit,by,days};closeModal();render();$('scan').focus();flash('Солилт: шинэ бараагаа уншуулаад «Төлбөр» (F5) дарна уу')};
+}
+function exchBar(){const e=$('exbar');if(!S.exch){e.classList.add('hide');return}
+  e.classList.remove('hide');e.innerHTML='<b>🔄 Солилт</b><span>эх баримт '+esc(S.exch.ref)+'</span><span>буцааж авсан '+(-S.exch.qty)+' ш · <b>'+fmt(S.exch.credit)+' ₮</b></span><span class="sp"></span><span>Шинэ бараагаа уншуулаад «Төлбөр» (F5)</span><button id="exX">Солилт цуцлах</button>';
+  $('exX').onclick=()=>{if(S.cart.length&&!confirm('Сагсыг хоослоод солилтыг цуцлах уу?'))return;S.cart=[];S.sel=-1;S.exch=null;render()}}
+function exchPay(){
+  const x=S.exch,t=computePromo(S.cart);if(!S.cart.length)return flash('Солилтын шинэ бараагаа уншуулна уу');
+  const T=t.total,C=x.credit,D=T-C,opts='<option value="cash">Бэлнээр</option>'+BANKS.map((b,i)=>'<option value="b'+i+'">'+esc(b[0])+'</option>').join('');
+  openModal('<h2>Солилт дуусгах</h2><div class="tiles"><div class="tile"><div class="l">ШИНЭ БАРАА</div><div class="v">'+fmt(T)+'</div></div><div class="tile"><div class="l">БУЦААЖ АВСАН</div><div class="v">'+fmt(C)+'</div></div><div class="tile y"><div class="l">'+(D>0?'ҮЙЛЧЛҮҮЛЭГЧ ТӨЛНӨ':D<0?'ҮЙЛЧЛҮҮЛЭГЧИД БУЦААНА':'ЗӨРҮҮГҮЙ')+'</div><div class="v">'+fmt(Math.abs(D))+'</div></div></div>'+
+    (D!==0?'<label>'+(D>0?'Зөрүү төлөх хэлбэр':'Зөрүү буцаах хэлбэр')+'</label><select id="xf">'+opts+'</select>':'')+
+    '<label>Шалтгаан (жишээ нь: размер таараагүй)</label><input id="xw" autofocus><div id="xm2" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="xb">Буцах</button><button class="pri" id="xok">Солилт дуусгах</button></div>');
+  $('xb').onclick=closeModal;
+  $('xok').onclick=()=>{const why=$('xw').value.trim();if(!why)return $('xw').focus();
+    const fp=v=>{if(v==='cash')return {form:'Бэлнээр'};const b=BANKS[+v.slice(1)],p={form:'Банкаар',bank:b[0],bankCode:b[1]};if(b[2]){p.partnerCode=b[2];p.partner=b[3]}return p};
+    const used=Math.min(C,T),id=uuid(),kind=D===0?'зөрүүгүй':'зөрүүтэй',sp=[],rp=[];
+    if(used)sp.push({form:'Солилт',amount:used});if(D>0)sp.push({...fp($('xf').value),amount:D});
+    if(used)rp.push({form:'Солилт',amount:-used});if(D<0)rp.push({...fp($('xf').value),amount:D});
+    // 1) буцаалт
+    const n=nextNo(),d=now();
+    const ret={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type:'return',ref:x.ref,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:x.lines,qty:x.qty,base:x.base,discount:x.base+C,total:-C,payments:rp.length?rp:[{form:'Солилт',amount:0}],change:0,ebarimt:false,reason:'Солилт: '+why,exch:{id,role:'return'},synced:false};
+    sales.push(ret);
+    // 2) шинэ борлуулалт
+    const sale=makeSale(S.cart,t,sp.length?sp:[{form:'Солилт',amount:0}],0,false,'sale',x.ref);sale.exch={id,role:'sale',ret:ret.id};ret.exch.sale=sale.id;store.set('sales',sales);
+    reqOut({...rqBase('exchange'),uid:id,ref:x.ref,refDate:x.refDate,retId:ret.id,saleId:sale.id,credit:C,newTotal:T,diff:D,diffType:kind,form:D?(sp.concat(rp).find(p=>p.form!=='Солилт')||{}).form+((sp.concat(rp).find(p=>p.bank)||{}).bank?' · '+(sp.concat(rp).find(p=>p.bank)).bank:''):'',reason:why,approver:x.by||'',
+      back:x.lines.map(l=>({code:l.code,name:l.name,qty:-l.qty,sum:-l.sum})),take:sale.lines.map(l=>({code:l.code,name:l.name,qty:l.qty,sum:l.sum}))});
+    log('exchange',{id,ref:x.ref,credit:C,total:T,diff:D,ret:ret.id,sale:sale.id});
+    S.cart=[];S.sel=-1;S.fromPark=null;S.exch=null;closeModal();render();printReceipt(sale);flash('Солилт хийгдлээ ('+kind+'). Нягтлан самбараас баталгаажуулна.');cloudSoon()};
+}
+function openPayFix(){
+  if(S.exch)return flash('Эхлээд солилтоо дуусгана уу');
+  pickReceipt('Төлбөрийн хэлбэр засах — баримт сонгох',payFix);
+}
+function payFix(s){
+  const pend=requests.find(r=>r.kind==='paychange'&&r.saleUid===s.uid&&r.status==='pending')||reqq.find(r=>r.kind==='paychange'&&r.saleUid===s.uid);
+  const opt=p=>{const v=p.form==='Бэлнээр'?'cash':p.form==='Банкаар'?'b'+Math.max(0,BANKS.findIndex(b=>b[0]===p.bank)):p.form==='Зээлээр'?'cr':'x';return v};
+  const sel=v=>'<select class="pfF">'+(v==='cr'?'<option value="cr">Зээлээр (одоогийн)</option>':'')+(v==='x'?'<option value="x">'+'Бусад (одоогийн)</option>':'')+'<option value="cash">Бэлнээр</option>'+BANKS.map((b,i)=>'<option value="b'+i+'">'+esc(b[0])+'</option>').join('')+'</select>';
+  const row=(p)=>'<div class="pfr" style="display:flex;gap:8px;margin:6px 0">'+sel(opt(p)).replace('value="'+opt(p)+'"','value="'+opt(p)+'" selected')+'<input class="pfA" inputmode="numeric" value="'+p.amount+'" style="width:140px;text-align:right"><button class="pfD" title="Мөр хасах">✕</button></div>';
+  openModal('<h2>Төлбөрийн хэлбэр засах — '+esc(s.id)+'</h2><div class="small">'+esc(s.date)+' '+esc((s.time||'').slice(0,5))+' · '+esc(s.cashier)+' · нийт <b>'+fmt(s.total)+' ₮</b>. Нягтлан баталсны дараа баримтын төлбөр өөрчлөгдөнө.</div>'+
+    (pend?'<div class="small" style="color:var(--red)">Энэ баримтад хүлээгдэж буй хүсэлт байна.</div>':'')+
+    '<b>Одоогийн</b><div class="small">'+s.payments.map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))+': '+fmt(p.amount)).join('<br>')+'</div><b>Зөв төлбөр</b><div id="pfL">'+s.payments.map(row).join('')+'</div><button id="pfAdd">+ Мөр нэмэх</button>'+
+    '<div id="pfS" class="small" style="margin-top:6px"></div><label>Шалтгаан</label><input id="pfW"><div id="pfM" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="pfC">Болих</button><button class="pri" id="pfO">Хүсэлт илгээх</button></div>',true);
+  const rowsNow=()=>[...$('pfL').querySelectorAll('.pfr')].map(r=>({v:r.querySelector('.pfF').value,a:Math.round(num(r.querySelector('.pfA').value))}));
+  const upd=()=>{const L=rowsNow(),sum=L.reduce((a,r)=>a+r.a,0);$('pfS').innerHTML='Нийлбэр: <b>'+fmt(sum)+'</b> / '+fmt(s.total)+(sum!==s.total?' <span style="color:var(--red)">— зөрүү '+fmt(s.total-sum)+'</span>':' ✓');
+    $('pfL').querySelectorAll('.pfD').forEach(b=>b.onclick=()=>{b.parentNode.remove();upd()});$('pfL').querySelectorAll('input,select').forEach(x=>x.oninput=x.onchange=upd)};
+  $('pfAdd').onclick=()=>{$('pfL').insertAdjacentHTML('beforeend',row({form:'Бэлнээр',amount:0}));upd()};
+  $('pfC').onclick=closeModal;upd();
+  $('pfO').onclick=()=>{const L=rowsNow().filter(r=>r.a!==0),why=$('pfW').value.trim();
+    if(L.reduce((a,r)=>a+r.a,0)!==s.total)return $('pfM').textContent='Нийлбэр баримтын дүнтэй тэнцэх ёстой';
+    if(!why)return $('pfW').focus();
+    const after=L.map(r=>{if(r.v==='cash')return {form:'Бэлнээр',amount:r.a};if(r.v[0]==='b'){const b=BANKS[+r.v.slice(1)],p={form:'Банкаар',bank:b[0],bankCode:b[1],amount:r.a};if(b[2]){p.partnerCode=b[2];p.partner=b[3]}return p}
+      const old=s.payments.find(p=>opt(p)===r.v)||{};return {...old,amount:r.a}});
+    if(JSON.stringify(after.map(p=>[p.form,p.bank||'',p.amount]))===JSON.stringify(s.payments.map(p=>[p.form,p.bank||'',p.amount])))return $('pfM').textContent='Өөрчлөлт алга';
+    reqOut({...rqBase('paychange'),ref:s.id,saleUid:s.uid,refDate:s.date,refCashier:s.cashier,total:s.total,before:s.payments,after,reason:why});
+    log('paychange_request',{ref:s.id,before:s.payments,after});closeModal();flash('Төлбөр засах хүсэлт илгээгдлээ. Нягтлан баталсны дараа өөрчлөгдөнө.')};
+}
+// Батлагдсан төлбөрийн засварыг энэ кассын хадгалсан баримтад тусгана
+function applyPayFix(){let ch=0;requests.filter(r=>r.kind==='paychange'&&r.status==='approved').forEach(r=>{const s=sales.find(x=>x.uid===r.saleUid);if(s&&s.payFix!==r.uid){s.payments=r.after;s.payFix=r.uid;ch++}});if(ch)store.set('sales',sales)}
 /* ---------- борлуулалтын түүх (кассчинд: өртөг, ашиг харагдахгүй) ---------- */
 const H={rows:[],src:'',range:'',all:false,by:''};
 // Харах эрх: самбарт ажилтан бүрт тохируулна. Тохируулаагүй бол эрхийн түвшнээр.
@@ -972,7 +1085,7 @@ function logout(){if(S.cart.length)return flash('Эхлээд баримтаа �
 $('scan').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();onScan()}};
 $('bSearch').onclick=()=>openSearch($('scan').value.trim());
 $('bPay').onclick=openPay;$('bPlus').onclick=()=>chgQty(1);$('bMinus').onclick=()=>chgQty(-1);$('bDel').onclick=delLine;
-$('bHist').onclick=openHist;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
+$('bHist').onclick=openHist;$('bExch').onclick=openExch;$('bPfix').onclick=openPayFix;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
 document.addEventListener('keydown',e=>{
   if($('sale').classList.contains('hide'))return;
   const m=modalOpen(),pay=m&&$('psave');
@@ -993,6 +1106,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='F7'){e.preventDefault();showParked()}
   else if(k==='F8'){e.preventDefault();openReturn()}
   else if(k==='F10'){e.preventDefault();openHist()}
+  else if(k==='F3'){e.preventDefault();openExch()}
   else if(k==='F2'){e.preventDefault();openStock()}
   else if(k==='Delete'){e.preventDefault();delLine()}
   else if(k==='ArrowDown'){e.preventDefault();S.sel=Math.min(S.cart.length-1,S.sel+1);render()}
