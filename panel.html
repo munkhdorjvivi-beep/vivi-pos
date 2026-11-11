@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт 3.5</title>
+<title>VIVI POS хяналт 3.6</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -28,6 +28,7 @@ main{padding:14px 16px;display:grid;gap:12px;max-width:1200px;margin:0 auto}
 .stt .h{display:flex;justify-content:space-between;gap:6px;font-weight:700;font-size:15px}.stt .v{font-size:26px;font-weight:800;margin:6px 0 4px}
 .stt .m{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;opacity:.85;margin-top:3px}.stt .dot{font-size:11.5px;font-weight:600;opacity:.7}.stt .dot.g{color:#1a7f37;opacity:1}
 .stt .share{height:5px;background:#eee;border-radius:9px;overflow:hidden;margin:2px 0 6px}.stt .share i{display:block;height:100%;background:var(--red)}
+.drng{display:inline-flex;gap:6px;align-items:center}.drng input{font:inherit;min-height:36px;border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fff}
 .btn.qr{min-height:34px;padding:3px 12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
@@ -63,7 +64,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v3.5</span></h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v3.6</span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -73,18 +74,18 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="ver">v3.5</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v3.6</span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
   <span id="who" class="small" style="opacity:.75"></span><button id="logout" class="btn" style="min-height:30px;padding:2px 10px">Гарах</button><span id="live">холбогдож байна…</span>
 </header>
 <main>
   <div class="card hide" id="rqCard" style="border-color:var(--red)"><h2>Буцаалтын хүсэлт — шийдвэр хүлээж байна</h2><div id="cReq"></div></div>
-  <div class="card" style="margin-bottom:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><h2 style="margin:0;flex:1">Дэлгүүрүүд</h2>
+  <div class="card" style="margin-bottom:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><h2 style="margin:0">Дэлгүүрүүд</h2><span id="stPer" class="small" style="flex:1"></span><span class="drng"><label class="small">Огноо</label><input type="date" class="dr1" id="sd1"><span>→</span><input type="date" class="dr2" id="sd2"></span>
     <button class="btn qr" data-q="t">Өнөөдөр</button><button class="btn qr" data-q="y">Өчигдөр</button><button class="btn qr" data-q="w">7 хоног</button><button class="btn qr" data-q="m">Энэ сар</button><button class="btn qr" data-q="pm">Өмнөх сар</button></div>
     <div class="sttiles" id="stTiles"></div><div class="small hot" id="stNote" style="margin-top:6px"></div></div>
   <div class="card hide" id="daysCard" style="margin-bottom:12px"><h2>Өдөр бүрээр · дэлгүүрээр</h2><div class="scroll" id="cDays" style="max-height:420px;overflow:auto"></div></div>
   <div class="kpi" id="kpi"></div>
-  <div class="card"><h2>Борлуулалт бараагаар · нийлүүлэгчээр (ашиг, ашгийн хувь)</h2>
+  <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><h2 style="margin:0;flex:1">Борлуулалт бараагаар · нийлүүлэгчээр (ашиг, ашгийн хувь)</h2><span class="drng"><label class="small">Огноо</label><input type="date" class="dr1" id="fd1"><span>→</span><input type="date" class="dr2" id="fd2"></span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="fSt" class="inp" style="width:auto"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="YV">Явуулын касс</option></select>
       <select id="fSup" class="inp" style="width:auto;max-width:280px"></select>
@@ -157,6 +158,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button id="catRead" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--soft);padding:6px 14px;cursor:pointer">Файл шалгах</button><button id="catUp" disabled style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--red);color:#fff;padding:6px 14px;cursor:pointer;opacity:.5">Үүлэнд илгээх</button></div>
   </div>
   <div class="card"><h2>Тайлан (Smart-тай ижил нэр, багана)</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:var(--soft);border-radius:10px"><b class="small">Тайлангийн хугацаа:</b><span class="drng"><label class="small">Огноо</label><input type="date" class="dr1" id="rd1"><span>→</span><input type="date" class="dr2" id="rd2"></span><span id="rdInfo" class="small"></span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select id="rSel" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px;flex:1;min-width:220px"></select><button id="rDl" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--soft);padding:6px 14px;cursor:pointer">CSV татах</button></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><span class="small">Smart-ын Excel хэлбэрээр (нягтлангийн системд оруулах):</span><select id="xSt" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="YV">Явуулын касс</option></select><button id="xB" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">/бараагаар/ .xlsx</button><button id="xP" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">/төлбөрийн хэлбэрээр/ .xlsx</button><span id="xMsg" class="small"></span></div>
     <div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px">
@@ -224,7 +226,7 @@ function stStat(L){const S=L.filter(s=>s.type==='sale'),R=L.filter(s=>s.type!=='
   return {net,n:S.length,avg:S.length?S.reduce((x,s)=>x+s.total,0)/S.length:0,qty:S.reduce((x,s)=>x+(s.qty||0),0),ret:R.length,retV:-R.reduce((x,s)=>x+s.total,0),pay,mg:a?Math.round((a-c)/a*100):null,last:L.reduce((m,s)=>s.iso>m?s.iso:m,'')}}
 function drawStores(){
   const today=iso(new Date()),single=$('d1').value===$('d2').value,isToday=single&&$('d1').value===today;
-  const open=st=>allShifts.filter(h=>h.store===st&&!h.closed).length;
+  const open=st=>{const last={};allShifts.filter(h=>h.store===st).forEach(h=>{const k=h.reg||'';if(!last[k]||h.opened>last[k].opened)last[k]=h});return Object.values(last).filter(h=>!h.closed).length};
   const tiles=[['',allSales,'Бүх дэлгүүр']].concat(ST_ORDER.filter(st=>st!=='YV'||allSales.some(s=>s.store==='YV')).map(st=>[st,allSales.filter(s=>s.store===st),STN[st]]));
   const tot=allSales.reduce((a,s)=>a+s.total,0)||1;
   $('stTiles').innerHTML=tiles.map(([st,L,nm])=>{const x=stStat(L),o=st?open(st):0;
@@ -243,7 +245,7 @@ function drawStores(){
   $('cDays').innerHTML=tbl(['Огноо'].concat(cols.map(c=>STN[c]),['Нийт']),days.map(d=>{const L=allSales.filter(s=>s.date===d);return '<tr><td>'+esc(d.slice(5))+' <span class="small">'+wd[new Date(d.replace(/\//g,'-')+'T12:00:00').getDay()]+'</span></td>'+cols.map(c=>cell(L.filter(s=>s.store===c))).join('')+cell(L)+'</tr>'}).concat(['<tr style="border-top:2px solid var(--ink)"><td><b>Нийт</b></td>'+cols.map(c=>cell(allSales.filter(s=>s.store===c))).join('')+cell(allSales)+'</tr>']));
 }
 function quickRange(k){const t=new Date(),f=new Date();if(k==='y'){t.setDate(t.getDate()-1);f.setDate(f.getDate()-1)}else if(k==='w')f.setDate(f.getDate()-6);else if(k==='m')f.setDate(1);else if(k==='pm'){f.setMonth(f.getMonth()-1,1);t.setDate(0)}
-  $('d1').value=iso(f);$('d2').value=iso(t);listen()}
+  setRange(iso(f),iso(t))}
 function draw(){
   sales=gSt?allSales.filter(s=>s.store===gSt):allSales;audit=gSt?allAudit.filter(a=>!a.store||a.store===gSt):allAudit;shifts=gSt?allShifts.filter(h=>h.store===gSt):allShifts;
   drawStores();$('stNote').textContent=gSt?'Доорх бүх тайлан зөвхөн '+STN[gSt]+' дэлгүүрээр шүүгдсэн':'';
@@ -728,7 +730,13 @@ document.querySelectorAll('.qr').forEach(b=>b.onclick=()=>quickRange(b.dataset.q
 $('xB').onclick=()=>smartXlsx('b');$('xP').onclick=()=>smartXlsx('p');
 function watchCat(){db.collection('pos_catalog').doc('meta').onSnapshot(d=>{if(d.exists){const m=d.data();catLists={sups:m.sups||[],grps:m.grps||[]}}if(!d.exists)return $('catNow').textContent='Үүлэнд барааны жагсаалт алга. Smart-ын файлаас оруулна уу.';const m=d.data();$('catNow').innerHTML='Үүлэн дэх жагсаалт: <b>'+Number(m.count).toLocaleString('en-US')+'</b> бараа · '+esc(new Date(m.version).toLocaleString('sv-SE').slice(0,16))+' · '+esc(m.by||'')},()=>{})}
 $('d1').value=$('d2').value=iso(new Date());$('a2').value=iso(new Date());$('a1').value=iso(new Date(Date.now()-30*864e5));
-$('d1').onchange=$('d2').onchange=()=>{if(db&&auth.currentUser)listen()};
+// Нэг хугацаа бүх самбар, тайланд: аль ч огнооны талбарт өөрчилбөл бүгд шинэчлэгдэнэ
+function syncDates(){document.querySelectorAll('.dr1').forEach(e=>e.value=$('d1').value);document.querySelectorAll('.dr2').forEach(e=>e.value=$('d2').value);
+  const f=$('d1').value,t=$('d2').value,txt=f===t?f:f+' → '+t;$('stPer').textContent=txt;$('rdInfo').textContent='Доорх бүх тайлан, Excel, CSV, SaleMany энэ хугацаагаар';}
+function setRange(f,t){if(f&&t&&f>t)[f,t]=[t,f];$('d1').value=f;$('d2').value=t;syncDates();if(db&&auth.currentUser)listen()}
+$('d1').onchange=$('d2').onchange=()=>setRange($('d1').value,$('d2').value);
+document.querySelectorAll('.dr1,.dr2').forEach(e=>e.onchange=()=>{const box=e.closest('.drng');setRange(box.querySelector('.dr1').value,box.querySelector('.dr2').value)});
+syncDates();
 init();
 </script>
 </body>
