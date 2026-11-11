@@ -73,6 +73,7 @@ details summary{cursor:pointer}
       <label class="small">1. Smart-ын барааны жагсаалт (Мастер дата → Бараа, Excel)<input type="file" id="fMaster" accept=".xlsx,.xls" style="display:block;margin-top:4px"></label>
       <label class="small">2. Кассын үнэ — заавал биш (хөнгөлөлтийн жагсаалт: «Хөнгөлөлт хассан дүн» баганатай)<input type="file" id="fPrice" accept=".xlsx,.xls" style="display:block;margin-top:4px"></label>
     </div>
+    <label class="small" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="useAT"> Үлдэгдлийн файлын «Кассын үнэ» баганыг (AT) хямдралын жагсаалтаас давуу ашиглах</label>
     <div id="catPrev" class="small" style="margin-top:8px"></div>
     <div id="catMsg" class="small" style="margin-top:8px"></div>
     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button id="catRead" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--soft);padding:6px 14px;cursor:pointer">Файл шалгах</button><button id="catUp" disabled style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--red);color:#fff;padding:6px 14px;cursor:pointer;opacity:.5">Үүлэнд илгээх</button></div>
@@ -168,6 +169,7 @@ $('rDl').onclick=()=>{const r=REPORTS[$('rSel').value](),q=c=>{c=c==null?'':Stri
 /* ---- барааны жагсаалт: Smart Excel -> pos_catalog (хэсэгчлэн, өөрчлөгдсөн хэсгийг л бичнэ) ---- */
 let catItems=null,catMeta=null;
 async function xlsx(){if(!window.XLSX)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');return window.XLSX}
+function allSheets(wb,test){const out=[];for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});for(let h=0;h<Math.min(15,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim()),ix={};row.forEach((k,i)=>{if(k&&!(k in ix))ix[k]=i});const r=test(row,ix);if(r){out.push({rows:a.slice(h+1),ix,sheet:n,col:r});break}}}return out}
 function findSheet(wb,need){for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});for(let h=0;h<Math.min(15,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim());if(need.every(k=>row.includes(k))){const ix={};row.forEach((k,i)=>{if(k&&!(k in ix))ix[k]=i});return {rows:a.slice(h+1),ix,sheet:n}}}}return null}
 const fileBuf=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(f)});
 const sv=v=>v==null?'':String(v).trim(),nm=v=>sv(v).replace(/\s+/g,' ');
@@ -179,10 +181,18 @@ $('catRead').onclick=async()=>{
     out.textContent='Файл уншиж байна… (том файл хэдэн секунд болно)';await xlsx();
     const M=findSheet(XLSX.read(await fileBuf(fm),{type:'array'}),['Код','Барааны нэр','Худалдах үнэ']);
     if(!M)return out.innerHTML='<span class="hot">«Код», «Барааны нэр», «Худалдах үнэ» баганатай хуудас олдсонгүй</span>';
-    const price=new Map();let ps='';
-    if(fp){const P=findSheet(XLSX.read(await fileBuf(fp),{type:'array'}),['Барааны код','Хөнгөлөлт хассан дүн']);
-      if(!P)return out.innerHTML='<span class="hot">Кассын үнийн файлд «Барааны код», «Хөнгөлөлт хассан дүн» багана олдсонгүй</span>';
-      P.rows.forEach(r=>{const c=sv(r[P.ix['Барааны код']]);const v=Number(r[P.ix['Хөнгөлөлт хассан дүн']]);if(c&&isFinite(v)&&r[P.ix['Хөнгөлөлт хассан дүн']]!=null)price.set(c,Math.round(v))});ps=P.sheet}
+    /* Кассын үнэ: 1) (сонговол) үлдэгдлийн файлын «Кассын үнэ» багана, 2) хямдралын жагсаалтууд — тусгай жагсаалт эхэнд, хамгийн том «бүх бараа» хамгийн сүүлд. Эхэлж олдсон үнэ хүчинтэй. */
+    const price=new Map(),src={};let ps='',atMap=new Map(),diff=0;
+    if(fp){const wb=XLSX.read(await fileBuf(fp),{type:'array'});
+      const disc=allSheets(wb,(row,ix)=>('Барааны код' in ix&&'Хөнгөлөлт хассан дүн' in ix)?'Хөнгөлөлт хассан дүн':null).sort((x,y)=>x.rows.length-y.rows.length);
+      const at=allSheets(wb,(row,ix)=>('Код' in ix)?row.find(k=>/Кассын үнэ$/.test(k)&&!/Нийт/.test(k)):null)[0];
+      if(!disc.length&&!at)return out.innerHTML='<span class="hot">Кассын үнийн файлд «Барааны код» + «Хөнгөлөлт хассан дүн», эсвэл «Код» + «Кассын үнэ» багана олдсонгүй</span>';
+      if(at)at.rows.forEach(r=>{const c=sv(r[at.ix['Код']]),v=Number(r[at.ix[at.col]]);if(c&&r[at.ix[at.col]]!=null&&isFinite(v))atMap.set(c,Math.round(v))});
+      const add=(c,v,s)=>{if(!price.has(c)){price.set(c,v);src[s]=(src[s]||0)+1}};
+      if(at&&$('useAT').checked)atMap.forEach((v,c)=>add(c,v,at.sheet+' · '+at.col));
+      const lp=new Map();disc.forEach(d=>d.rows.forEach(r=>{const c=sv(r[d.ix['Барааны код']]),raw=r[d.ix['Хөнгөлөлт хассан дүн']],v=Number(raw);if(c&&raw!=null&&isFinite(v)){add(c,Math.round(v),d.sheet);if(!lp.has(c))lp.set(c,Math.round(v))}}));
+      atMap.forEach((v,c)=>{if(lp.has(c)&&lp.get(c)!==v)diff++});
+      ps=Object.entries(src).map(([k,v])=>k+': '+v.toLocaleString('en-US')).join(' · ')}
     const I=M.ix,g=(r,k)=>I[k]==null?null:r[I[k]],map=new Map();let skip=0,inact=0;
     M.rows.forEach(r=>{const code=sv(g(r,'Код'));if(!code||code===','){skip++;return}
       if(sv(g(r,'Идэвхтэй эсэх'))==='N'||sv(g(r,'Борлуулах бараа эсэх'))==='Unchecked'){inact++;return}
@@ -190,7 +200,7 @@ $('catRead').onclick=async()=>{
       map.set(code,[code,bc&&bc!==code?bc:0,nm(g(r,'Барааны нэр')),base,cash,nm(g(r,'Бэлтгэн нийлүүлэгчийн нэр')),nm(g(r,'Барааны бүлэг'))])});
     catItems=[...map.values()].sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0);
     const cp=catItems.filter(x=>price.has(x[0])).length,low=catItems.filter(x=>x[4]<x[3]).length,zero=catItems.filter(x=>x[4]<=0).length,dup=M.rows.length-skip-inact-catItems.length;
-    out.innerHTML='<table><tbody>'+[['Хуудас',M.sheet+(ps?' · үнэ: '+ps:'')],['Идэвхтэй, борлуулах бараа',catItems.length.toLocaleString('en-US')],['Идэвхгүй / борлуулахгүй (орхисон)',inact.toLocaleString('en-US')],['Давхардсан код',dup],['Кассын үнэ файлаас',fp?cp.toLocaleString('en-US'):'— (үндсэн үнэ ашиглана)'],['Кассын үнэ үндсэн үнээс бага',low.toLocaleString('en-US')],['Үнэ 0 бараа',zero?'<span class="hot">'+zero+'</span>':0]].map(x=>'<tr><td>'+x[0]+'</td><td class="n"><b>'+x[1]+'</b></td></tr>').join('')+'</tbody></table>';
+    out.innerHTML='<table><tbody>'+[['Барааны хуудас',M.sheet],['Кассын үнийн эх сурвалж (эхэлж олдсон нь)',ps||'—'],['Идэвхтэй, борлуулах бараа',catItems.length.toLocaleString('en-US')],['Идэвхгүй / борлуулахгүй (орхисон)',inact.toLocaleString('en-US')],['Давхардсан код',dup],['Кассын үнэ файлаас',fp?cp.toLocaleString('en-US'):'— (үндсэн үнэ ашиглана)'],['Кассын үнэ үндсэн үнээс бага',low.toLocaleString('en-US')],['Үнэ 0 бараа',zero?'<span class="hot">'+zero+'</span>':0],['«Кассын үнэ» (AT) хямдралын жагсаалтаас зөрүүтэй',atMap.size?(diff?'<span class="hot">'+diff.toLocaleString('en-US')+'</span>':0):'—']].map(x=>'<tr><td>'+x[0]+'</td><td class="n"><b>'+x[1]+'</b></td></tr>').join('')+'</tbody></table>';
     if(catItems.length){$('catUp').disabled=false;$('catUp').style.opacity=1}
   }catch(e){out.innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}
 };
