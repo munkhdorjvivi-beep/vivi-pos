@@ -204,7 +204,7 @@ if(!users){users=[{id:'u0',name:'Админ',role:'admin',pin:'9999',stores:[],a
   Object.entries(CASHIERS).forEach(([st,arr])=>arr.forEach(nm=>users.push({id:'u'+(n++),name:nm,role:'cashier',pin:'1111',stores:[st],active:true})));store.set('users',users)}
 let promos=store.get('promos',null);
 if(!promos){promos=[{id:'p1',name:'LPP 1+1',type:'pair',pct:0,samePct:30,all:false,suppliers:['ORION WOJCIECH BARANKIEWICZ','Network 360'],groups:[],codes:[],start:'2026-10-10',end:'',stores:[],active:true}];store.set('promos',promos)}
-const APP_VER='2.3';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
+const APP_VER='2.4';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
 let device=store.get('device',{store:'',reg:''});
 let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
 const cfgList=k=>k==='promos'?promos:k==='users'?users:[cfg];
@@ -328,6 +328,7 @@ function flash(t){$('msg').textContent=t;clearTimeout(flash.h);flash.h=setTimeou
 /* ---------- promo engine ----------
  pair: өөр үнэтэй хос -> үнэтэйг нь төлнө, хямдыг үнэгүй; хосгүй үлдсэн ижил үнэтэй 2+ ширхэг -> samePct% хөнгөлнө.
  gift: бэлэг — жагсаалтын бараа 0 ₮ (бусад урамшууллаас давуу).
+ Дараалал: бэлэг → барааны кодоор тохируулсан хөнгөлөлт → 1+1 → нийлүүлэгч/бүлгийн хөнгөлөлт → 5%.
  pct: хувиар хөнгөлнө. Нэг бараанд нэг л урамшуулал: эхлээд pair, үгүй бол хамгийн их pct. Гар хөнгөлөлттэй мөрөнд урамшуулал орохгүй. */
 function computePromo(cart,ps){
   ps=ps||activePromos();const byPair={};
@@ -335,7 +336,9 @@ function computePromo(cart,ps){
     if(l.disc||l.price<=0)return;
     const gift=ps.find(p=>p.type==='gift'&&promoMatch(p,l));
     if(gift){l.gift=1;l.promoName=gift.name;return}
-    const pair=ps.find(p=>p.type==='pair'&&promoMatch(p,l));
+    // барааны кодоор тусгайлан тохируулсан хөнгөлөлт (%, үнэ, дүн) нийлүүлэгчийн 1+1-ээс давуу
+    const byCode=ps.some(p=>(p.type==='pct'||p.type==='price'||p.type==='amount')&&p.codes.includes(l.code));
+    const pair=byCode?null:ps.find(p=>p.type==='pair'&&promoMatch(p,l));
     if(pair){l.promoName=pair.name;l.progSame=pair.samePct||0;const u=(byPair[pair.id]=byPair[pair.id]||{p:pair,units:[]}).units;for(let k=0;k<l.qty;k++)u.push({li,price:l.price,used:false});return}
     // хувь, тогтмол үнэ, мөнгөн дүн: хамгийн бага үнэ гаргадаг нь хүчинтэй
     let best=null;
