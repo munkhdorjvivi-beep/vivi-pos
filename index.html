@@ -58,6 +58,7 @@ tr.sel td{background:#fff8e1}tr.sel td:first-child{box-shadow:inset 4px 0 0 var(
 .empty{padding:70px 20px!important;text-align:center;color:var(--mut)}
 .badge{display:inline-block;font-size:12px;font-weight:650;border-radius:99px;padding:2px 9px;margin:4px 4px 0 0;background:#dff3e6;color:var(--ok)}
 .badge.b30{background:#e1edfa;color:var(--blue)}.badge.gift{background:#f3e8ff;color:#7a2fb5}.badge.man{background:#fde4e6;color:var(--red)}
+.gbtn{display:inline-block;margin:6px 4px 0 0;padding:6px 14px;border-radius:9px;border:2px solid #7a2fb5;background:#fff;color:#7a2fb5;font:inherit;font-size:14px;font-weight:700;cursor:pointer}.gbtn:hover{background:#f3e8ff}.gbtn.on{background:#7a2fb5;color:#fff}
 /* right */
 #right{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
 #totbox{background:var(--ink);color:#fff;border-radius:12px;padding:16px}
@@ -204,7 +205,7 @@ if(!users){users=[{id:'u0',name:'Админ',role:'admin',pin:'9999',stores:[],a
   Object.entries(CASHIERS).forEach(([st,arr])=>arr.forEach(nm=>users.push({id:'u'+(n++),name:nm,role:'cashier',pin:'1111',stores:[st],active:true})));store.set('users',users)}
 let promos=store.get('promos',null);
 if(!promos){promos=[{id:'p1',name:'LPP 1+1',type:'pair',pct:0,samePct:30,all:false,suppliers:['ORION WOJCIECH BARANKIEWICZ','Network 360'],groups:[],codes:[],start:'2026-10-10',end:'',stores:[],active:true}];store.set('promos',promos)}
-const APP_VER='2.8';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
+const APP_VER='2.9';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
 let device=store.get('device',{store:'',reg:''});
 let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
 const cfgList=k=>k==='promos'?promos:k==='users'?users:[cfg];
@@ -341,10 +342,11 @@ function flash(t){$('msg').textContent=t;clearTimeout(flash.h);flash.h=setTimeou
  pct: хувиар хөнгөлнө. Нэг бараанд нэг л урамшуулал: эхлээд pair, үгүй бол хамгийн их pct. Гар хөнгөлөлттэй мөрөнд урамшуулал орохгүй. */
 function computePromo(cart,ps){
   ps=ps||activePromos();const byPair={};
-  cart.forEach((l,li)=>{l.free=0;l.same=0;l.samePct=0;l.pct=0;l.pu=null;l.ptxt='';l.promoName='';l.progSame=0;l.gift=0;
+  cart.forEach((l,li)=>{l.free=0;l.same=0;l.samePct=0;l.pct=0;l.pu=null;l.ptxt='';l.promoName='';l.progSame=0;l.gift=0;l.giftAvail='';
     if(l.disc||l.price<=0)return;
     const gift=ps.find(p=>p.type==='gift'&&promoMatch(p,l));
-    if(gift){l.gift=1;l.promoName=gift.name;return}
+    if(gift&&(gift.auto||l.giftOn)){l.gift=1;l.promoName=gift.name;return}
+    if(gift)l.giftAvail=gift.name; // кассчин «Бэлэг болгох» дарвал 0 ₮, үгүй бол ердийн үнээр (бусад урамшуулалтай)
     // барааны кодоор тусгайлан тохируулсан хөнгөлөлт (%, үнэ, дүн) нийлүүлэгчийн 1+1-ээс давуу
     const byCode=ps.some(p=>(p.type==='plist'&&plPrice(p,l)!=null)||((p.type==='pct'||p.type==='price'||p.type==='amount')&&(p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))));
     const pair=byCode?null:ps.find(p=>p.type==='pair'&&promoMatch(p,l));
@@ -390,7 +392,7 @@ if(typeof module!=='undefined')module.exports={computePromo};
 /* ---------- cart ---------- */
 function addItem(i){
   const it=item(i);
-  const ex=S.cart.find(l=>l.code===it.code&&!l.disc);
+  const ex=S.cart.find(l=>l.code===it.code&&!l.disc&&!l.giftOn);
   if(ex){ex.qty++;S.sel=S.cart.indexOf(ex)}else{S.cart.push({...it,qty:1,disc:0,d5:S.cart.some(l=>l.d5)});S.sel=S.cart.length-1}
   if(it.price<=0)flash('Анхаар: «'+it.name+'» үнэ 0 байна');
   render();
@@ -402,6 +404,8 @@ function render(){
     let b='';if(l.free)b+='<span class="badge">1+1 үнэгүй ×'+l.free+'</span>';
     if(l.gift)b+='<span class="badge gift">Бэлэг · 0 ₮</span>';if(l.same)b+='<span class="badge b30">−'+l.samePct+'% ×'+l.same+'</span>';if(l.pct)b+='<span class="badge b30">'+(l.promoName==='Кассын хөнгөлөлт'?'5% хөнгөлөлт':esc(l.ptxt)+' · '+esc(l.promoName))+'</span>';
     if(l.disc)b+='<span class="badge man">гараар −'+l.disc+'%</span>';
+    if(l.giftAvail&&!l.gift)b+='<button class="gbtn" data-gift="'+i+'">🎁 Бэлэг болгох</button>';
+    else if(l.gift&&l.giftOn)b+='<button class="gbtn on" data-gift="'+i+'">↩ Худалдаа болгох</button>';
     return '<tr class="'+(i===S.sel?'sel':'')+'" data-i="'+i+'"><td>'+(i+1)+'</td><td>'+esc(l.name)+'<div class="small">'+esc(l.code)+(l.promoName&&!l.pct?' · '+esc(l.promoName):'')+'</div>'+b+'</td><td class="n">'+l.qty+'</td><td class="n">'+fmt(l.price)+(l.base>l.price?'<div class="small"><s>'+fmt(l.base)+'</s></div>':'')+'</td><td class="n">'+fmt(l.price*l.qty-l.total)+'</td><td class="n"><b>'+fmt(l.total)+'</b></td></tr>'}).join('')
     ||'<tr><td colspan="6" class="empty">Баркод уншуулж эхэлнэ үү<div class="small">эсвэл барааны нэр, кодоор хайна</div></td></tr>';
   $('tQty').textContent=t.qty;$('tBase').textContent=fmt(t.base);$('tDisc').textContent=fmt(t.disc);$('total').textContent=fmt(t.total);
@@ -409,7 +413,16 @@ function render(){
   const s=$('cartwrap').querySelector('tr.sel');if(s)s.scrollIntoView({block:'nearest'});
   return t;
 }
-$('cart').addEventListener('click',e=>{const tr=e.target.closest('tr[data-i]');if(tr){S.sel=+tr.dataset.i;render()}});
+$('cart').addEventListener('click',e=>{
+  const g=e.target.closest('[data-gift]');
+  if(g){e.stopPropagation();const i=+g.dataset.gift,l=S.cart[i];if(!l)return;
+    if(!l.giftOn){ // бусад ижил барааг тусдаа мөрөнд үлдээж, бэлгийг 1 ширхгээр салгана
+      if(l.qty>1){l.qty--;S.cart.splice(i+1,0,{...l,qty:1,giftOn:1});S.sel=i+1}else{l.giftOn=1;S.sel=i}
+      log('gift_on',{code:l.code,name:l.name,qty:1,price:l.price});flash('«'+l.name+'» бэлэг болгосон · 0 ₮');
+    }else{l.giftOn=0;S.sel=i;log('gift_off',{code:l.code,name:l.name,qty:l.qty,price:l.price});flash('«'+l.name+'» худалдаанд буцаасан');
+      const o=S.cart.findIndex((x,k)=>k!==i&&x.code===l.code&&!x.disc&&!x.giftOn);if(o>=0){S.cart[o].qty+=l.qty;S.cart.splice(i,1);S.sel=o>i?o-1:o}}
+    render();$('scan').focus();return}
+  const tr=e.target.closest('tr[data-i]');if(tr){S.sel=+tr.dataset.i;render()}});
 function onScan(){
   const q=$('scan').value.trim();$('scan').value='';if(!q)return;
   if(IDX.has(q)){addItem(IDX.get(q));return}
@@ -657,7 +670,7 @@ async function report(){
   const today=dstr(now()),list=sales.filter(s=>s.date===today),pm=sumPays(list),bc={};
   list.forEach(s=>{const k=s.storeName+' · '+s.cashier;bc[k]=bc[k]||{n:0,t:0};bc[k].n++;bc[k].t+=s.total});
   const au=audit.filter(a=>dstr(new Date(a.t))===today),ac={};au.forEach(a=>ac[a.type]=(ac[a.type]||0)+1);
-  const AN={line_delete:'Мөр устгасан',qty_minus:'Тоо хассан',manual_discount:'Гар хөнгөлөлт',receipt_cancel:'Баримт цуцалсан',park:'Түр хадгалсан',unpark:'Түр хадгалснаас сэргээсэн',return:'Буцаалт',shift_open:'Ээлж нээсэн',shift_close:'Ээлж хаасан',login:'Нэвтэрсэн',promo_save:'Урамшуулал өөрчилсөн',promo_delete:'Урамшуулал устгасан',user_save:'Ажилтан өөрчилсөн',settings_save:'Тохиргоо өөрчилсөн',return_request:'Буцаалтын хүсэлт',disc5_on:'5% хөнгөлөлт өгсөн',reprint:'Баримт дахин хэвлэсэн',disc5_off:'5% хөнгөлөлт цуцалсан'};
+  const AN={gift_on:'Бэлэг өгсөн',gift_off:'Бэлэг цуцалсан',line_delete:'Мөр устгасан',qty_minus:'Тоо хассан',manual_discount:'Гар хөнгөлөлт',receipt_cancel:'Баримт цуцалсан',park:'Түр хадгалсан',unpark:'Түр хадгалснаас сэргээсэн',return:'Буцаалт',shift_open:'Ээлж нээсэн',shift_close:'Ээлж хаасан',login:'Нэвтэрсэн',promo_save:'Урамшуулал өөрчилсөн',promo_delete:'Урамшуулал устгасан',user_save:'Ажилтан өөрчилсөн',settings_save:'Тохиргоо өөрчилсөн',return_request:'Буцаалтын хүсэлт',disc5_on:'5% хөнгөлөлт өгсөн',reprint:'Баримт дахин хэвлэсэн',disc5_off:'5% хөнгөлөлт цуцалсан'};
   openModal('<h2>Өнөөдрийн тайлан — '+today+'</h2><div class="tiles"><div class="tile y"><div class="l">Нийт борлуулалт</div><div class="v">'+fmt(list.reduce((a,s)=>a+s.total,0))+'</div></div><div class="tile"><div class="l">Баримт</div><div class="v">'+list.filter(s=>s.type==='sale').length+'</div></div><div class="tile"><div class="l">Буцаалт</div><div class="v">'+list.filter(s=>s.type==='return').length+'</div></div><div class="tile"><div class="l">И-баримт өгсөн</div><div class="v">'+list.filter(s=>s.ebarimt).length+'</div></div></div>'+
   '<b>Төлбөрийн хэлбэрээр</b><table>'+(Object.entries(pm).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td class="n">'+fmt(v)+'</td></tr>').join('')||'<tr><td class="small">—</td></tr>')+'</table>'+
   '<b>Дэлгүүр · кассчин</b><table>'+(Object.entries(bc).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td class="n">'+v.n+' баримт</td><td class="n">'+fmt(v.t)+'</td></tr>').join('')||'<tr><td class="small">—</td></tr>')+'</table>'+
@@ -698,8 +711,8 @@ function custThanks(s){
 function exceptions(days){
   days=days||1;const from=new Date();from.setHours(0,0,0,0);from.setDate(from.getDate()-(days-1));
   const inP=iso=>new Date(iso)>=from,R={};
-  const row=(st,c)=>R[st+'|'+c]=R[st+'|'+c]||{store:st,cashier:c,rec:0,sales:0,del:0,delV:0,minus:0,canc:0,cancV:0,disc:0,discV:0,ret:0,retV:0,park:0,parkDel:0};
-  sales.filter(s=>inP(s.iso)).forEach(s=>{const r=row(s.store,s.cashier);if(s.type==='sale'){r.rec++;r.sales+=s.total}else{r.ret++;r.retV+=-s.total}});
+  const row=(st,c)=>R[st+'|'+c]=R[st+'|'+c]||{store:st,cashier:c,rec:0,sales:0,del:0,delV:0,minus:0,canc:0,cancV:0,disc:0,discV:0,ret:0,retV:0,park:0,parkDel:0,gift:0,giftV:0};
+  sales.filter(s=>inP(s.iso)).forEach(s=>{const r=row(s.store,s.cashier);if(s.type==='sale'){r.rec++;r.sales+=s.total;(s.lines||[]).forEach(x=>{if(x.promo==='gift'){r.gift+=x.qty;r.giftV+=(x.price||0)*x.qty}})}else{r.ret++;r.retV+=-s.total}});
   audit.filter(a=>inP(a.t)&&a.cashier).forEach(a=>{const r=row(a.store,a.cashier),i=a.info||{};
     if(a.type==='line_delete'){r.del++;r.delV+=(i.price||0)*(i.qty||0);if(i.parked)r.parkDel++}
     else if(a.type==='qty_minus'){r.minus++;r.delV+=i.price||0;if(i.parked)r.parkDel++}
@@ -707,12 +720,12 @@ function exceptions(days){
     else if((a.type==='manual_discount'&&i.pct>0)||a.type==='disc5_on'){r.disc++;r.discV+=i.value||0}
     else if(a.type==='park')r.park++});
   const rows=Object.values(R).sort((a,b)=>(b.delV+b.cancV+b.discV+b.retV)-(a.delV+a.cancV+a.discV+a.retV));
-  const K=['del','minus','canc','disc','ret','parkDel'],med={};
+  const K=['del','minus','canc','disc','ret','parkDel','gift'],med={};
   K.forEach(k=>{const v=rows.filter(r=>r.rec>0).map(r=>r[k]/r.rec).sort((a,b)=>a-b);med[k]=v.length?v[Math.floor(v.length/2)]:0});
   const cell=(r,k,v)=>{const hot=r[k]>=3&&r.rec>0&&r[k]/r.rec>Math.max(2*med[k],0.05);return '<td class="n"'+(hot?' style="background:#fde4e6;color:var(--red);font-weight:700"':'')+'>'+r[k]+(v!=null&&r[k]?'<div class="small">'+fmt(v)+'</div>':'')+'</td>'};
   openModal('<h2>Хяналтын тайлан</h2><div class="tabs">'+[[1,'Өнөөдөр'],[7,'7 хоног'],[30,'30 хоног']].map(x=>'<button data-d="'+x[0]+'" class="'+(x[0]===days?'on':'')+'">'+x[1]+'</button>').join('')+'</div><div class="small" style="margin:8px 0">Улаанаар: 3-аас олон удаа бөгөөд бусад кассчны дунджаас 2 дахин их. Дүн нь төгрөгөөр.</div>'+
-  '<div class="list" style="max-height:56vh"><table><thead><tr><th>Дэлгүүр · кассчин</th><th class="n">Баримт</th><th class="n">Борлуулалт</th><th class="n">Мөр устгасан</th><th class="n">Тоо хассан</th><th class="n">Баримт цуцалсан</th><th class="n">Хөнгөлөлт (гар, 5%)</th><th class="n">Буцаалт</th><th class="n">Түр хадгалснаас хассан</th></tr></thead><tbody>'+
-  (rows.map(r=>'<tr><td><b>'+esc(r.cashier)+'</b><div class="small">'+esc(STORES[r.store]||'')+'</div></td><td class="n">'+r.rec+'</td><td class="n">'+fmt(r.sales)+'</td>'+cell(r,'del',r.delV)+cell(r,'minus')+cell(r,'canc',r.cancV)+cell(r,'disc',r.discV)+cell(r,'ret',r.retV)+cell(r,'parkDel')+'</tr>').join('')||'<tr><td class="small" colspan="9">Энэ хугацаанд бүртгэл алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="exc">Хаах</button></div>');
+  '<div class="list" style="max-height:56vh"><table><thead><tr><th>Дэлгүүр · кассчин</th><th class="n">Баримт</th><th class="n">Борлуулалт</th><th class="n">Мөр устгасан</th><th class="n">Тоо хассан</th><th class="n">Баримт цуцалсан</th><th class="n">Хөнгөлөлт (гар, 5%)</th><th class="n">Буцаалт</th><th class="n">Түр хадгалснаас хассан</th><th class="n">Бэлэг өгсөн</th></tr></thead><tbody>'+
+  (rows.map(r=>'<tr><td><b>'+esc(r.cashier)+'</b><div class="small">'+esc(STORES[r.store]||'')+'</div></td><td class="n">'+r.rec+'</td><td class="n">'+fmt(r.sales)+'</td>'+cell(r,'del',r.delV)+cell(r,'minus')+cell(r,'canc',r.cancV)+cell(r,'disc',r.discV)+cell(r,'ret',r.retV)+cell(r,'parkDel')+cell(r,'gift',r.giftV)+'</tr>').join('')||'<tr><td class="small" colspan="10">Энэ хугацаанд бүртгэл алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="exc">Хаах</button></div>');
   $('mbox').querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>exceptions(+b.dataset.d));$('exc').onclick=closeModal;
 }
 /* ---------- settings (админ) ---------- */
