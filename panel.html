@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт 3.2</title>
+<title>VIVI POS хяналт 3.3</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -56,7 +56,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v3.2</span></h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v3.3</span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -66,9 +66,9 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="ver">v3.2</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v3.3</span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
-  <span id="live">холбогдож байна…</span>
+  <span id="who" class="small" style="opacity:.75"></span><button id="logout" class="btn" style="min-height:30px;padding:2px 10px">Гарах</button><span id="live">холбогдож байна…</span>
 </header>
 <main>
   <div class="card hide" id="rqCard" style="border-color:var(--red)"><h2>Буцаалтын хүсэлт — шийдвэр хүлээж байна</h2><div id="cReq"></div></div>
@@ -172,9 +172,11 @@ async function init(){
   try{
     if(!window.firebase)for(const m of ['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+FB_VER+'/firebase-'+m+'-compat.js');
     firebase.initializeApp(FB_CONFIG);auth=firebase.auth();db=firebase.firestore();
-    auth.onAuthStateChanged(u=>{if(u&&/^kasa-/i.test(u.email||'')){$('lm').textContent='Энэ бол дэлгүүрийн кассын бүртгэл. Хяналтын самбарт panel@… бүртгэлээр нэвтэрнэ үү.';auth.signOut();return}$('login').classList.toggle('hide',!!u);$('app').classList.toggle('hide',!u);if(u){listen();setTimeout(autoStock,3000)}});
+    auth.onAuthStateChanged(u=>{if(u&&(u.email||'').toLowerCase()!==PANEL_EMAIL){$('lm').innerHTML='<b>'+esc(u.email||'')+'</b> — энэ бүртгэлээр хяналтын самбарт орох эрхгүй. <b>'+PANEL_EMAIL+'</b> бүртгэлээр нэвтэрнэ үү.';$('le').value=PANEL_EMAIL;$('lp').value='';auth.signOut();return}if(u)$('who').textContent=u.email;$('login').classList.toggle('hide',!!u);$('app').classList.toggle('hide',!u);if(u){listen();setTimeout(autoStock,3000)}});
   }catch(e){$('lm').textContent=e.message||String(e)}
 }
+const PANEL_EMAIL='panel@vivi-pos-test.mn';
+$('logout').onclick=()=>{auth.signOut().then(()=>location.reload())};
 $('lg').onclick=()=>{$('lm').textContent='Нэвтэрч байна…';auth.signInWithEmailAndPassword($('le').value.trim(),$('lp').value).catch(e=>{$('lm').textContent='Нэвтэрсэнгүй: '+(e.code||e)})};
 $('lp').onkeydown=e=>{if(e.key==='Enter')$('lg').click()};
 function drawReq(){
