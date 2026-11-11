@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт 2.1</title>
+<title>VIVI POS хяналт 2.2</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -56,7 +56,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v2.1</span></h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v2.2</span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -66,7 +66,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="ver">v2.1</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v2.2</span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
   <span id="live">холбогдож байна…</span>
 </header>
@@ -120,7 +120,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <details style="margin-top:10px"><summary class="small">Хөдөлгөөний жагсаалт</summary><div class="scroll" id="mList" style="max-height:300px;overflow:auto"></div></details>
   </div>
   <div class="card"><h2>Барааны жагсаалт (бүх кассад)</h2>
-    <div class="small" id="catNow">Үүлэн дэх жагсаалт: шалгаж байна…</div><div class="small" id="costNow"></div>
+    <div class="small" id="catNow">Үүлэн дэх жагсаалт: шалгаж байна…</div><div class="small" id="costNow" style="font-weight:650"></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:8px">
       <label class="small">1. Smart-ын барааны жагсаалт (Мастер дата → Бараа, Excel)<input type="file" id="fMaster" accept=".xlsx,.xls" style="display:block;margin-top:4px"></label>
       <label class="small">2. Кассын үнэ — заавал биш (хөнгөлөлтийн жагсаалт: «Хөнгөлөлт хассан дүн» баганатай)<input type="file" id="fPrice" accept=".xlsx,.xls" style="display:block;margin-top:4px"></label>
@@ -484,7 +484,7 @@ async function writeChunks(col,rows,metaExtra,prog){
   return {w,n:chunks.length};
 }
 async function loadCost(){
-  try{const m=await db.collection('pos_cost').doc('meta').get();if(!m.exists){costInfo='Өртөг: үүлэнд алга';return}
+  try{const m=await db.collection('pos_cost').doc('meta').get();if(!m.exists){costInfo='Өртөг: үүлэнд алга — тайланд өртөг гарахгүй. Барааны жагсаалтаа (master + үнэ) дахин илгээнэ үү.';const el=$('costNow');if(el){el.textContent=costInfo;el.className='small hot'}return}
     const meta=m.data(),mp=new Map();for(const c of meta.chunks){const d=await db.collection('pos_cost').doc(c.id).get();if(d.exists)JSON.parse(d.data().d).forEach(x=>mp.set(x[0],x[1]))}
     costMap=mp;costInfo='Өртөг: '+mp.size.toLocaleString('en-US')+' бараа · '+new Date(meta.version).toLocaleString('sv-SE').slice(0,16);
   }catch(e){costInfo='Өртөг уншсангүй: '+(e.code||e.message||e)}
@@ -525,7 +525,7 @@ async function smartXlsx(kind){
     const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=cols.map(w=>({wch:w}));
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Sheet');
     const nm=(kind==='b'?'borluulalt_baraagaar':'borluulalt_tulbur')+'_'+(st||'buh')+'_'+$('d1').value+(($('d2').value!==$('d1').value)?'_'+$('d2').value:'')+'.xlsx';
-    XLSX.writeFile(wb,nm);$('xMsg').textContent=nm+' · '+(aoa.length-4)+' мөр';
+    XLSX.writeFile(wb,nm);$('xMsg').innerHTML=esc(nm)+' · '+(aoa.length-4)+' мөр'+(kind==='b'&&!costMap.size?' · <span class="hot">Өртөг хоосон: үүлэнд өртөг алга. «Барааны жагсаалт» хэсгээс файлаа дахин илгээнэ үү.</span>':'');
   }catch(e){$('xMsg').textContent='Алдаа: '+(e.message||e)}
 }
 $('xB').onclick=()=>smartXlsx('b');$('xP').onclick=()=>smartXlsx('p');
