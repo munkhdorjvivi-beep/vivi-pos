@@ -57,7 +57,7 @@ td.n,th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 tr.sel td{background:#fff8e1}tr.sel td:first-child{box-shadow:inset 4px 0 0 var(--red)}
 .empty{padding:70px 20px!important;text-align:center;color:var(--mut)}
 .badge{display:inline-block;font-size:12px;font-weight:650;border-radius:99px;padding:2px 9px;margin:4px 4px 0 0;background:#dff3e6;color:var(--ok)}
-.badge.b30{background:#e1edfa;color:var(--blue)}.badge.man{background:#fde4e6;color:var(--red)}
+.badge.b30{background:#e1edfa;color:var(--blue)}.badge.gift{background:#f3e8ff;color:#7a2fb5}.badge.man{background:#fde4e6;color:var(--red)}
 /* right */
 #right{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
 #totbox{background:var(--ink);color:#fff;border-radius:12px;padding:16px}
@@ -204,7 +204,7 @@ if(!users){users=[{id:'u0',name:'Админ',role:'admin',pin:'9999',stores:[],a
   Object.entries(CASHIERS).forEach(([st,arr])=>arr.forEach(nm=>users.push({id:'u'+(n++),name:nm,role:'cashier',pin:'1111',stores:[st],active:true})));store.set('users',users)}
 let promos=store.get('promos',null);
 if(!promos){promos=[{id:'p1',name:'LPP 1+1',type:'pair',pct:0,samePct:30,all:false,suppliers:['ORION WOJCIECH BARANKIEWICZ','Network 360'],groups:[],codes:[],start:'2026-10-10',end:'',stores:[],active:true}];store.set('promos',promos)}
-const APP_VER='1.6';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
+const APP_VER='2.0';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
 let device=store.get('device',{store:'',reg:''});
 let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
 const cfgList=k=>k==='promos'?promos:k==='users'?users:[cfg];
@@ -242,7 +242,7 @@ async function catSync(meta){
     meta.chunks.forEach(c=>{if(local[c.id]&&local[c.id].hash===c.hash)ch[c.id]=local[c.id]});
     let n=0;
     for(const c of need){const d=await fb.db.collection('pos_catalog').doc(c.id).get();if(!d.exists)throw new Error('chunk '+c.id);const v=d.data();ch[c.id]={hash:v.hash,d:v.d};n++;$('tSync').textContent='Барааны жагсаалт татаж байна '+n+'/'+need.length}
-    const it=assemble(meta,ch);if(!it)throw new Error('бүрэн бус');
+    const it=assemble(meta,ch);if(!it)throw new Error('бүрэн бус');if(!it.length)throw new Error('хоосон жагсаалт');
     try{await idb.replace({meta,...ch})}catch(e){}
     setCatalog(it,meta);catInfo.meta=meta.version;
     if(need.length&&S.user)flash('Барааны жагсаалт шинэчлэгдлээ: '+it.length.toLocaleString('en-US'));
@@ -327,11 +327,14 @@ function flash(t){$('msg').textContent=t;clearTimeout(flash.h);flash.h=setTimeou
 
 /* ---------- promo engine ----------
  pair: өөр үнэтэй хос -> үнэтэйг нь төлнө, хямдыг үнэгүй; хосгүй үлдсэн ижил үнэтэй 2+ ширхэг -> samePct% хөнгөлнө.
+ gift: бэлэг — жагсаалтын бараа 0 ₮ (бусад урамшууллаас давуу).
  pct: хувиар хөнгөлнө. Нэг бараанд нэг л урамшуулал: эхлээд pair, үгүй бол хамгийн их pct. Гар хөнгөлөлттэй мөрөнд урамшуулал орохгүй. */
 function computePromo(cart,ps){
   ps=ps||activePromos();const byPair={};
-  cart.forEach((l,li)=>{l.free=0;l.same=0;l.samePct=0;l.pct=0;l.promoName='';l.progSame=0;
+  cart.forEach((l,li)=>{l.free=0;l.same=0;l.samePct=0;l.pct=0;l.promoName='';l.progSame=0;l.gift=0;
     if(l.disc||l.price<=0)return;
+    const gift=ps.find(p=>p.type==='gift'&&promoMatch(p,l));
+    if(gift){l.gift=1;l.promoName=gift.name;return}
     const pair=ps.find(p=>p.type==='pair'&&promoMatch(p,l));
     if(pair){l.promoName=pair.name;l.progSame=pair.samePct||0;const u=(byPair[pair.id]=byPair[pair.id]||{p:pair,units:[]}).units;for(let k=0;k<l.qty;k++)u.push({li,price:l.price,used:false});return}
     ps.forEach(p=>{if(p.type==='pct'&&promoMatch(p,l)&&p.pct>l.pct){l.pct=p.pct;l.promoName=p.name}});
@@ -351,7 +354,8 @@ function computePromo(cart,ps){
   cart.forEach(l=>{
     const full=l.qty-l.free-l.same,su=Math.round(l.price*(1-l.samePct/100)),pu=Math.round(l.price*(1-l.pct/100));
     l.parts=[];
-    if(l.disc){l.total=Math.round(l.price*l.qty*(1-l.disc/100));l.parts.push({qty:l.qty,unit:Math.round(l.price*(1-l.disc/100)),sum:l.total,promo:'manual',pname:'гар −'+l.disc+'%'})}
+    if(l.gift){l.total=0;l.parts.push({qty:l.qty,unit:0,sum:0,promo:'gift',pname:l.promoName})}
+    else if(l.disc){l.total=Math.round(l.price*l.qty*(1-l.disc/100));l.parts.push({qty:l.qty,unit:Math.round(l.price*(1-l.disc/100)),sum:l.total,promo:'manual',pname:'гар −'+l.disc+'%'})}
     else if(l.pct){l.total=pu*l.qty;l.parts.push({qty:l.qty,unit:pu,sum:l.total,promo:'pct',pname:l.promoName})}
     else{l.total=full*l.price+l.same*su;
       if(full)l.parts.push({qty:full,unit:l.price,sum:full*l.price,promo:'',pname:''});
@@ -375,7 +379,7 @@ function render(){
   const t=computePromo(S.cart);
   $('cart').innerHTML=S.cart.map((l,i)=>{
     let b='';if(l.free)b+='<span class="badge">1+1 үнэгүй ×'+l.free+'</span>';
-    if(l.same)b+='<span class="badge b30">−'+l.samePct+'% ×'+l.same+'</span>';if(l.pct)b+='<span class="badge b30">'+(l.promoName==='Кассын хөнгөлөлт'?'5% хөнгөлөлт':'−'+l.pct+'% '+esc(l.promoName))+'</span>';
+    if(l.gift)b+='<span class="badge gift">Бэлэг · 0 ₮</span>';if(l.same)b+='<span class="badge b30">−'+l.samePct+'% ×'+l.same+'</span>';if(l.pct)b+='<span class="badge b30">'+(l.promoName==='Кассын хөнгөлөлт'?'5% хөнгөлөлт':'−'+l.pct+'% '+esc(l.promoName))+'</span>';
     if(l.disc)b+='<span class="badge man">гараар −'+l.disc+'%</span>';
     return '<tr class="'+(i===S.sel?'sel':'')+'" data-i="'+i+'"><td>'+(i+1)+'</td><td>'+esc(l.name)+'<div class="small">'+esc(l.code)+(l.promoName&&!l.pct?' · '+esc(l.promoName):'')+'</div>'+b+'</td><td class="n">'+l.qty+'</td><td class="n">'+fmt(l.price)+(l.base>l.price?'<div class="small"><s>'+fmt(l.base)+'</s></div>':'')+'</td><td class="n">'+fmt(l.price*l.qty-l.total)+'</td><td class="n"><b>'+fmt(l.total)+'</b></td></tr>'}).join('')
     ||'<tr><td colspan="6" class="empty">Баркод уншуулж эхэлнэ үү<div class="small">эсвэл барааны нэр, кодоор хайна</div></td></tr>';
@@ -530,7 +534,7 @@ function receiptHtml(s,copy,label){
   (s.type==='return'?'<div class="c big">БУЦААЛТ</div>':'')+(copy?'<div class="c">ХУУЛБАР</div>':'')+
   '<div class="hr"></div><table><tr><td>Огноо: '+s.date+' '+s.time.slice(0,5)+'</td><td style="text-align:right">№: '+s.dayNo+'</td></tr><tr><td>Касс: '+s.reg+' · '+esc(s.cashier)+'</td><td style="text-align:right">'+s.id+'</td></tr>'+(s.ref?'<tr><td colspan="2">Эх баримт: '+s.ref+'</td></tr>':'')+'</table>'+
   '<div class="hr"></div><table><tr><th style="text-align:left">Бараа</th><th style="text-align:right">Тоо</th><th style="text-align:right">Үнэ</th><th style="text-align:right">Дүн</th></tr>'+
-  s.lines.map(l=>'<tr><td>'+esc(l.name.slice(0,26))+(l.promo==='free'?' (1+1)':l.promo==='same'||l.promo==='pct'?' (хөнгөлөлт)':'')+'</td><td style="text-align:right">'+l.qty+'</td><td style="text-align:right">'+fmt(l.unit)+'</td><td style="text-align:right">'+fmt(l.sum)+'</td></tr>').join('')+
+  s.lines.map(l=>'<tr><td>'+esc(l.name.slice(0,26))+(l.promo==='gift'?' (бэлэг)':l.promo==='free'?' (1+1)':l.promo==='same'||l.promo==='pct'?' (хөнгөлөлт)':'')+'</td><td style="text-align:right">'+l.qty+'</td><td style="text-align:right">'+fmt(l.unit)+'</td><td style="text-align:right">'+fmt(l.sum)+'</td></tr>').join('')+
   '</table><div class="hr"></div><table><tr><td>НИЙТ:</td><td style="text-align:right">'+s.qty+' ш</td></tr><tr><td>Нийт хөнгөлөлт:</td><td style="text-align:right">'+fmt(s.discount)+'</td></tr><tr class="big"><td><b>Төлөх дүн:</b></td><td style="text-align:right"><b>'+fmt(s.total)+'</b></td></tr>'+pl+(s.change>0?'<tr><td>Хариулт:</td><td style="text-align:right">'+fmt(s.change)+'</td></tr>':'')+'</table>'+
   '<div class="hr"></div><div class="c"><b>БАЯРЛАЛАА, ДАХИН ҮЙЛЧЛҮҮЛЭЭРЭЙ!</b></div>';
 }
@@ -660,7 +664,7 @@ function custCart(t){
   g('st').textContent=S.user?STORES[S.user.store]:'';
   const empty=!S.cart.length;g('big').className=empty?'':'h';g('cl').className=empty?'h':'';g('ft').className=empty?'h':'';
   if(empty){g('big').innerHTML='<h1>Тавтай морил</h1><p>VIVI-д тавтай морилно уу</p>';return}
-  g('cl').innerHTML=S.cart.slice(-9).map(l=>'<div class="r"><div class="n">'+esc(l.name)+(l.free?'<span class="bd">1+1 үнэгүй ×'+l.free+'</span>':'')+(l.same?'<span class="bd">−'+l.samePct+'%</span>':'')+(l.pct?'<span class="bd">−'+l.pct+'%</span>':'')+'</div><div class="q">'+l.qty+' × '+fmt(l.price)+'</div><div class="s">'+fmt(l.total)+'</div></div>').join('');
+  g('cl').innerHTML=S.cart.slice(-9).map(l=>'<div class="r"><div class="n">'+esc(l.name)+(l.gift?'<span class="bd">Бэлэг</span>':'')+(l.free?'<span class="bd">1+1 үнэгүй ×'+l.free+'</span>':'')+(l.same?'<span class="bd">−'+l.samePct+'%</span>':'')+(l.pct?'<span class="bd">−'+l.pct+'%</span>':'')+'</div><div class="q">'+l.qty+' × '+fmt(l.price)+'</div><div class="s">'+fmt(l.total)+'</div></div>').join('');
   g('tt').textContent=fmt(t.total)+' ₮';g('sv').textContent=t.disc>0?'Таны хэмнэлт: '+fmt(t.disc)+' ₮':'';
 }
 function custThanks(s){
@@ -700,38 +704,49 @@ const STL=Object.entries(STORES);
 async function settings(){if(S.cart.length)return flash('Эхлээд одоогийн баримтаа дуусгана уу');if(await askPin('Тохиргоо','admin')){const by=askPin.by;askPin.by='';settings.by=by;openSettings('promo')}}
 function openSettings(tab){
   let body;
-  if(tab==='promo')body='<div class="list"><table><thead><tr><th>Нэр</th><th>Төрөл</th><th>Хамрах бараа</th><th>Хугацаа</th><th>Төлөв</th></tr></thead><tbody>'+(promos.map((p,i)=>{const s=PST[promoState(p)];return '<tr data-i="'+i+'"><td><b>'+esc(p.name)+'</b></td><td class="nw">'+(p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):'−'+p.pct+'%')+'</td><td class="small">'+esc(scopeText(p))+(p.stores.length?' · '+p.stores.map(s=>STORES[s]).join(', '):'')+'</td><td class="nw">'+(p.start||'…')+' → '+(p.end||'хугацаагүй')+'</td><td><span class="badge '+s[1]+'">'+s[0]+'</span></td></tr>'}).join('')||'<tr><td class="small">Урамшуулал алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="sNew">+ Шинэ урамшуулал</button><button id="sX">Хаах</button></div>';
-  else body='<div class="list"><table><thead><tr><th>Нэр</th><th>Эрх</th><th>Дэлгүүр</th><th>Төлөв</th></tr></thead><tbody>'+users.map((u,i)=>'<tr data-i="'+i+'"><td><b>'+esc(u.name)+'</b></td><td>'+ROLEN[u.role]+'</td><td class="small">'+(u.stores.length?u.stores.map(s=>STORES[s]).join(', '):'Бүх дэлгүүр')+'</td><td><span class="badge '+(u.active?'':'man')+'">'+(u.active?'Идэвхтэй':'Идэвхгүй')+'</span>'+(u.pin==='1111'?' <span class="badge b30">анхны ПИН</span>':'')+'</td></tr>').join('')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="sNew">+ Шинэ ажилтан</button><button id="sX">Хаах</button></div>';
+  if(tab==='promo')body='<div class="list"><table><thead><tr><th>Нэр</th><th>Төрөл</th><th>Хамрах бараа</th><th>Хугацаа</th><th>Төлөв</th></tr></thead><tbody>'+(promos.map((p,i)=>{const s=PST[promoState(p)];return '<tr data-i="'+i+'"><td><b>'+esc(p.name)+'</b></td><td class="nw">'+(p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):p.type==='gift'?'Бэлэг · 0 ₮':'−'+p.pct+'%')+'</td><td class="small">'+esc(scopeText(p))+(p.stores.length?' · '+p.stores.map(s=>STORES[s]).join(', '):'')+'</td><td class="nw">'+(p.start||'…')+' → '+(p.end||'хугацаагүй')+'</td><td><span class="badge '+s[1]+'">'+s[0]+'</span></td></tr>'}).join('')||'<tr><td class="small">Урамшуулал алга</td></tr>')+'</tbody></table></div><div class="small" style="margin-top:8px">Урамшууллыг хяналтын самбараас (panel) нэмж, засна. Энд зөвхөн харагдана.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
+  else body='<div class="list"><table><thead><tr><th>Нэр</th><th>Эрх</th><th>Дэлгүүр</th><th>Төлөв</th></tr></thead><tbody>'+users.map((u,i)=>'<tr data-i="'+i+'"><td><b>'+esc(u.name)+'</b></td><td>'+ROLEN[u.role]+'</td><td class="small">'+(u.stores.length?u.stores.map(s=>STORES[s]).join(', '):'Бүх дэлгүүр')+'</td><td><span class="badge '+(u.active?'':'man')+'">'+(u.active?'Идэвхтэй':'Идэвхгүй')+'</span>'+(u.pin==='1111'?' <span class="badge b30">анхны ПИН</span>':'')+'</td></tr>').join('')+'</tbody></table></div><div class="small" style="margin-top:8px">Ажилтан, ПИН-ийг хяналтын самбараас (panel) нэмж, засна. Энд зөвхөн харагдана.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
   if(tab==='dev')body='<div class="small">Энэ компьютерийг нэг дэлгүүр, нэг кассад бэхэлж, баримтын хувийн тоог тохируулна. Бэхэлсэн бол нэвтрэх үед дэлгүүр, касс сонгох боломжгүй. Тохиргоо зөвхөн энэ компьютер дээр хадгалагдана.</div><div class="frm"><div><label>Дэлгүүр</label><select id="v_st"><option value="">— бэхлэхгүй —</option>'+STL.map(x=>'<option value="'+x[0]+'">'+esc(x[1])+'</option>').join('')+'</select></div><div><label>Касс №</label><select id="v_rg">'+[1,2,3,4,5,6].map(n=>'<option>'+n+'</option>').join('')+'</select></div><div><label>Баримт хэвлэх хувь</label><select id="v_cp"><option>1</option><option>2</option><option>3</option></select></div></div><div class="frm"><div><label>Хувь хоорондын хүлээлт (секунд)</label><select id="v_gap"><option value="1500">1,5</option><option value="2500">2,5</option><option value="4000">4</option><option value="6000">6</option></select></div></div><label class="inl"><input type="checkbox" id="v_oj"> Бүх хувийг нэг даалгавраар хэвлэх (хайчлахгүй, нэг урт цаас)</label><div id="c_msg" class="small" style="color:var(--ok);min-height:18px"></div><div class="rowbtn"><button class="pri" id="v_ok">Хадгалах</button><button id="sX">Хаах</button></div>';
-  if(tab==='ret')body='<div class="frm"><div><label>Буцаалт, солилт хийх хугацаа (хоног)</label><input id="c_days" inputmode="numeric" value="'+cfg.returnDays+'"></div><div><label>Хүсэлт шаардах дүнгийн босго (₮)</label><input id="c_lim" inputmode="numeric" value="'+cfg.returnLimit+'"></div></div><label class="inl" style="margin-top:10px"><input type="checkbox" id="c_pin" '+(cfg.returnPin?'checked':'')+'> Энгийн буцаалтад ч менежерийн ПИН шаардах</label><div class="small" style="margin-top:8px">Хугацаандаа, босгоос бага дүнтэй буцаалтыг кассчин өөрөө хийнэ. Хугацаа хэтэрсэн эсвэл босгоос их дүнтэй бол хүсэлт илгээж, нягтлан/захирал хяналтын самбараас зөвшөөрнө. Бүх буцаалт тайланд бүртгэгдэнэ.</div><div id="c_msg" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button class="pri" id="c_ok">Хадгалах</button><button id="sX">Хаах</button></div>';
-  openModal('<h2>Тохиргоо</h2><div class="tabs"><button data-t="promo" class="'+(tab==='promo'?'on':'')+'">Урамшуулал, хөнгөлөлт</button><button data-t="users" class="'+(tab==='users'?'on':'')+'">Ажилтнууд, ПИН</button><button data-t="ret" class="'+(tab==='ret'?'on':'')+'">Буцаалт</button><button data-t="dev" class="'+(tab==='dev'?'on':'')+'">Энэ касс</button></div>'+(users.some(u=>u.active&&u.role!=='cashier'&&(u.pin==='9999'||u.pin==='1111'))?'<div class="small" style="color:var(--red);font-weight:650;margin-top:8px">Анхаар: менежер/админы ПИН анхны утгаараа (9999) байна. «Ажилтнууд, ПИН» цэснээс солино уу.</div>':'')+'<div class="small" style="margin:8px 0">'+(fb.user?'Тохиргоо үүлэнд хадгалагдаж, холбогдсон бүх кассад зэрэг үйлчилнэ.':'Үүлэнд холбоогүй тул тохиргоо зөвхөн энэ касс дээр хадгалагдана.')+'</div>'+body);
+  if(tab==='ret')body='<table><tr><td>Буцаалт, солилт хийх хугацаа</td><td class="n"><b>'+cfg.returnDays+' хоног</b></td></tr><tr><td>Хүсэлт шаардах дүнгийн босго</td><td class="n"><b>'+fmt(cfg.returnLimit)+' ₮</b></td></tr><tr><td>Энгийн буцаалтад менежерийн ПИН</td><td class="n"><b>'+(cfg.returnPin?'Тийм':'Үгүй')+'</b></td></tr></table><div class="small" style="margin-top:8px">Буцаалтын тохиргоог хяналтын самбараас (panel) өөрчилнө.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
+  openModal('<h2>Тохиргоо</h2><div class="tabs"><button data-t="promo" class="'+(tab==='promo'?'on':'')+'">Урамшуулал (харах)</button><button data-t="users" class="'+(tab==='users'?'on':'')+'">Ажилтнууд (харах)</button><button data-t="ret" class="'+(tab==='ret'?'on':'')+'">Буцаалт (харах)</button><button data-t="dev" class="'+(tab==='dev'?'on':'')+'">Энэ касс</button></div>'+(users.some(u=>u.active&&u.role!=='cashier'&&(u.pin==='9999'||u.pin==='1111'))?'<div class="small" style="color:var(--red);font-weight:650;margin-top:8px">Анхаар: менежер/админы ПИН анхны утгаараа (9999) байна. Хяналтын самбараас солино уу.</div>':'')+'<div class="small" style="margin:8px 0">'+(fb.user?'Тохиргоо үүлэнд хадгалагдаж, холбогдсон бүх кассад зэрэг үйлчилнэ.':'Үүлэнд холбоогүй тул тохиргоо зөвхөн энэ касс дээр хадгалагдана.')+'</div>'+body);
   $('mbox').querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>openSettings(b.dataset.t));
   $('sX').onclick=()=>{closeModal();render()};
   if(tab==='dev'){$('v_st').value=device.store||'';$('v_rg').value=device.reg||'1';$('v_cp').value=String(device.copies||2);$('v_oj').checked=!!device.oneJob;$('v_gap').value=String(device.printGap||2500);$('v_ok').onclick=()=>{const b={...device};device={store:$('v_st').value,reg:$('v_rg').value,copies:Number($('v_cp').value),oneJob:$('v_oj').checked,printGap:Number($('v_gap').value)};store.set('device',device);log('settings_save',{by:settings.by,device_before:b,device:device});$('c_msg').textContent='Хадгаллаа. Дараагийн нэвтрэлтээс үйлчилнэ.'};return}
-  if(tab==='ret'){$('c_ok').onclick=()=>{const d=num($('c_days').value),l=num($('c_lim').value);
-    if(!cfgOnline())return $('c_msg').textContent='Тохиргоо өөрчлөхөд интернэт холболт хэрэгтэй';
-    if(!(d>=0&&d<=365))return $('c_msg').textContent='Хоног 0–365 байна';if(l<0)return $('c_msg').textContent='Босго 0-ээс бага байж болохгүй';
-    const before={...cfg};cfg={returnDays:Math.floor(d),returnLimit:Math.round(l),returnPin:$('c_pin').checked};store.set('cfg',cfg);cloudConfig('settings');log('settings_save',{by:settings.by,before,after:cfg});$('c_msg').style.color='var(--ok)';$('c_msg').textContent='Хадгаллаа'};return}
-  $('sNew').onclick=()=>tab==='promo'?editPromo(null):editUser(null);
-  $('mbox').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)(tab==='promo'?editPromo:editUser)(+tr.dataset.i)};
+  if(tab==='promo'||tab==='users'||tab==='ret')return;
+  $('sNew').onclick=()=>editUser(null);
+  $('mbox').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)editUser(+tr.dataset.i)};
+}
+async function codesFromFile(f){
+  if(!window.XLSX)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('Excel уншигч ачаалагдсангүй (интернэт хэрэгтэй)'));document.head.appendChild(s)});
+  const buf=await f.arrayBuffer(),wb=XLSX.read(buf,{type:'array'}),out=[];
+  for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:null});
+    for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim());let ci=row.indexOf('Код');if(ci<0)ci=row.indexOf('Барааны код');if(ci<0)ci=row.indexOf('Баар код');
+      if(ci>=0){for(let r=h+1;r<a.length;r++){const v=a[r]&&a[r][ci]!=null?String(a[r][ci]).trim():'';if(v&&/^[0-9A-Za-z\-]+$/.test(v))out.push(v)}break}}}
+  if(!out.length)throw new Error('«Код», «Баар код» эсвэл «Барааны код» багана олдсонгүй');
+  return [...new Set(out)];
 }
 function editPromo(i){
   const p=i==null?{id:'p'+Date.now(),name:'',type:'pct',pct:10,samePct:30,all:false,suppliers:[],groups:[],codes:[],start:today(),end:'',stores:[],active:true}:JSON.parse(JSON.stringify(promos[i]));
   openModal('<h2>'+(i==null?'Шинэ урамшуулал':'Урамшуулал засах')+'</h2><div class="frm">'+
   '<div><label>Нэр</label><input id="e_name" value="'+esc(p.name)+'" autofocus></div>'+
-  '<div><label>Төрөл</label><select id="e_type"><option value="pct">Хувиар хөнгөлөх</option><option value="pair">1+1 (хямд нь үнэгүй)</option></select></div>'+
+  '<div><label>Төрөл</label><select id="e_type"><option value="pct">Хувиар хөнгөлөх</option><option value="pair">1+1 (хямд нь үнэгүй)</option><option value="gift">Бэлэг (үнэ 0 ₮)</option></select></div>'+
   '<div id="e_pctw"><label>Хөнгөлөлтийн хувь</label><input id="e_pct" inputmode="numeric" value="'+(p.pct||'')+'"></div>'+
   '<div id="e_samew"><label>Ижил үнэтэй 2+ ширхэгт хөнгөлөх хувь (0 = үгүй)</label><input id="e_same" inputmode="numeric" value="'+p.samePct+'"></div>'+
   '<div><label>Эхлэх огноо</label><input type="date" id="e_start" value="'+p.start+'"></div>'+
   '<div><label>Дуусах огноо</label><input type="date" id="e_end" value="'+p.end+'"><label class="inl"><input type="checkbox" id="e_noend" '+(p.end?'':'checked')+'> Дуусах огноогүй</label></div></div>'+
   '<label>Хамрах бараа</label><label class="inl"><input type="checkbox" id="e_all" '+(p.all?'checked':'')+'> Бүх бараа</label>'+
-  '<div id="e_scope"><div class="small">Нийлүүлэгч</div>'+checks('sup',SUPS.map(x=>[x,x]),p.suppliers)+'<div class="small">Барааны бүлэг</div>'+checks('grp',GRPS.map(x=>[x,x]),p.groups)+'<div class="small">Барааны код (мөр бүрт нэг, эсвэл таслалаар)</div><textarea id="e_codes" rows="3">'+esc(p.codes.join('\n'))+'</textarea></div>'+
+  '<div id="e_scope"><div class="small">Нийлүүлэгч</div>'+checks('sup',SUPS.map(x=>[x,x]),p.suppliers)+'<div class="small">Барааны бүлэг</div>'+checks('grp',GRPS.map(x=>[x,x]),p.groups)+'<div class="small">Барааны код (мөр бүрт нэг, эсвэл таслалаар)</div><textarea id="e_codes" rows="3">'+esc(p.codes.join('\n'))+'</textarea><label class="small" style="display:flex;gap:8px;align-items:center;margin-top:6px">Excel-ээс код нэмэх («Код», «Баар код» эсвэл «Барааны код» баганатай файл)<input type="file" id="e_file" accept=".xlsx,.xls,.csv"></label><div id="e_fmsg" class="small"></div></div>'+
   '<label>Дэлгүүр (сонгоогүй бол бүх дэлгүүр)</label>'+checks('st',STL,p.stores)+
   '<label class="inl" style="margin-top:12px"><input type="checkbox" id="e_act" '+(p.active?'checked':'')+'> Идэвхтэй</label>'+
   '<div id="e_msg" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn">'+(i==null?'':'<button class="warn" id="e_del" style="margin-right:auto">Устгах</button>')+'<button id="e_c">Болих</button><button class="pri" id="e_ok">Хадгалах</button></div>');
   $('e_type').value=p.type;
-  const sync=()=>{const pair=$('e_type').value==='pair';$('e_pctw').classList.toggle('hide',pair);$('e_samew').classList.toggle('hide',!pair);$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
+  const sync=()=>{const ty=$('e_type').value,pair=ty==='pair';$('e_pctw').classList.toggle('hide',ty!=='pct');$('e_samew').classList.toggle('hide',!pair);$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
   ['e_type','e_noend','e_all'].forEach(id=>$(id).onchange=sync);sync();
+  $('e_file').onchange=async()=>{const f=$('e_file').files[0];if(!f)return;$('e_fmsg').textContent='Уншиж байна…';
+    try{const codes=await codesFromFile(f),cur=new Set($('e_codes').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)),add=codes.filter(c=>!cur.has(c));
+      add.forEach(c=>cur.add(c));$('e_codes').value=[...cur].join('\n');const found=codes.filter(c=>IDX.has(c)).length;
+      $('e_fmsg').innerHTML=codes.length+' код олдлоо, '+add.length+' шинээр нэмэгдсэн. Барааны жагсаалтад: '+found+(found<codes.length?' <span style="color:var(--red)">('+(codes.length-found)+' нь жагсаалтад алга)</span>':'');
+    }catch(e){$('e_fmsg').textContent='Алдаа: '+(e.message||e)}};
   $('e_c').onclick=()=>openSettings('promo');
   if(i!=null)$('e_del').onclick=()=>{log('promo_delete',{by:settings.by,promo:promos[i]});promos.splice(i,1);store.set('promos',promos);cloudConfig('promos');openSettings('promo')};
   $('e_ok').onclick=()=>{
@@ -740,6 +755,7 @@ function editPromo(i){
     if(!cfgOnline())return err('Тохиргоо өөрчлөхөд интернэт холболт хэрэгтэй');
     if(!n.name)return err('Нэр оруулна уу');
     if(n.type==='pct'){n.pct=num($('e_pct').value);if(!(n.pct>0&&n.pct<=100))return err('Хөнгөлөлтийн хувь 1–100 байна')}
+    else if(n.type==='gift'){if(n.all)return err('Бэлэг урамшууллыг «Бүх бараа»-нд тохируулах боломжгүй')}
     else{n.samePct=num($('e_same').value);if(n.samePct<0||n.samePct>100)return err('Хувь 0–100 байна')}
     if(!n.start)return err('Эхлэх огноо оруулна уу');
     if(!$('e_noend').checked&&!n.end)return err('Дуусах огноо оруулах эсвэл «Дуусах огноогүй»-г сонгоно уу');
