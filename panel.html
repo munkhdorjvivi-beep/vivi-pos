@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт 2.2</title>
+<title>VIVI POS хяналт 2.3</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -56,7 +56,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v2.2</span></h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v2.3</span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -66,7 +66,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="ver">v2.2</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v2.3</span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
   <span id="live">холбогдож байна…</span>
 </header>
@@ -226,7 +226,7 @@ let promos=[],catLists={sups:[],grps:[]};
 const STN={FC:'Food city',DR:'Драгон',NS:'Нийслэл',YV:'Явуулын касс'};
 const todayIso=()=>iso(new Date());
 function pState(p){const t=todayIso();if(!p.active)return ['Зогсоосон','r'];if(p.start&&t<p.start)return ['Эхлээгүй','b'];if(p.end&&t>p.end)return ['Дууссан','r'];return ['Идэвхтэй','']}
-function pType(p){return p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):p.type==='gift'?'Бэлэг · 0 ₮':'−'+p.pct+'%'}
+function pType(p){return p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):p.type==='gift'?'Бэлэг · 0 ₮':p.type==='price'?'Тогтмол үнэ '+Number(p.price).toLocaleString('en-US').replace(/,/g,' ')+' ₮':p.type==='amount'?'−'+Number(p.amount).toLocaleString('en-US').replace(/,/g,' ')+' ₮':'−'+p.pct+'%'}
 function pScope(p){if(p.all)return 'Бүх бараа';const a=[];if(p.suppliers.length)a.push('Нийлүүлэгч: '+p.suppliers.join(', '));if(p.groups.length)a.push('Бүлэг: '+p.groups.join(', '));if(p.codes.length)a.push(p.codes.length+' барааны код');return a.join(' · ')||'—'}
 function watchPromos(){db.collection('pos_config').doc('promos').onSnapshot(d=>{promos=d.exists&&Array.isArray(d.data().list)?d.data().list:[];drawPromos()},e=>{$('cPromo').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'})}
 function drawPromos(){$('cPromo').innerHTML=tbl(['Нэр','Төрөл','Хамрах бараа','Дэлгүүр','Хугацаа','Төлөв'],promos.map((p,i)=>{const s=pState(p);return '<tr class="pr" data-i="'+i+'"><td><b>'+esc(p.name)+'</b></td><td class="n">'+esc(pType(p))+'</td><td class="n small">'+esc(pScope(p))+'</td><td class="n small">'+(p.stores.length?p.stores.map(x=>STN[x]||x).join(', '):'Бүгд')+'</td><td class="n">'+(p.start||'…')+' → '+(p.end||'хугацаагүй')+'</td><td class="n"><span class="chip '+s[1]+'">'+s[0]+'</span></td></tr>'}))}
@@ -245,8 +245,10 @@ function editPromo(i){
   const sups=[...new Set([...catLists.sups,...p.suppliers])],grps=[...new Set([...catLists.grps,...p.groups])];
   $('pbox').innerHTML='<h2 style="margin:0 0 6px">'+(i==null?'Шинэ урамшуулал':'Урамшуулал засах')+'</h2><div class="frm">'+
   '<div><label class="f">Нэр</label><input type="text" id="e_name" value="'+esc(p.name)+'"></div>'+
-  '<div><label class="f">Төрөл</label><select id="e_type"><option value="pct">Хувиар хөнгөлөх</option><option value="pair">1+1 (хямд нь үнэгүй)</option><option value="gift">Бэлэг (үнэ 0 ₮)</option></select></div>'+
+  '<div><label class="f">Төрөл</label><select id="e_type"><option value="pct">Хувиар хөнгөлөх (%)</option><option value="price">Тогтмол үнэ (₮)</option><option value="amount">Мөнгөн дүнгээр хөнгөлөх (−₮)</option><option value="pair">1+1 (хямд нь үнэгүй)</option><option value="gift">Бэлэг (үнэ 0 ₮)</option></select></div>'+
   '<div id="e_pctw"><label class="f">Хөнгөлөлтийн хувь</label><input type="number" id="e_pct" value="'+(p.pct||'')+'"></div>'+
+  '<div id="e_pricew"><label class="f">Шинэ үнэ, нэг ширхэг (₮)</label><input type="number" id="e_price" value="'+(p.price||'')+'"></div>'+
+  '<div id="e_amtw"><label class="f">Хөнгөлөх дүн, нэг ширхэгт (₮)</label><input type="number" id="e_amt" value="'+(p.amount||'')+'"></div>'+
   '<div id="e_samew"><label class="f">Ижил үнэтэй 2+ ширхэгт хөнгөлөх хувь (0 = үгүй)</label><input type="number" id="e_same" value="'+p.samePct+'"></div>'+
   '<div><label class="f">Эхлэх огноо</label><input type="date" id="e_start" value="'+p.start+'"></div>'+
   '<div><label class="f">Дуусах огноо</label><input type="date" id="e_end" value="'+p.end+'"><label class="inl"><input type="checkbox" id="e_noend" '+(p.end?'':'checked')+'> Дуусах огноогүй</label></div></div>'+
@@ -259,7 +261,7 @@ function editPromo(i){
   '<label class="inl" style="margin-top:10px"><input type="checkbox" id="e_act" '+(p.active?'checked':'')+'> Идэвхтэй</label>'+
   '<div id="e_msg" class="small hot" style="min-height:18px;margin-top:6px"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'+(i==null?'':'<button class="btn warn" id="e_del" style="margin-right:auto">Устгах</button>')+'<button class="btn" id="e_c">Болих</button><button class="btn pri" id="e_ok">Хадгалах</button></div>';
   $('pm').classList.remove('hide');$('e_type').value=p.type;
-  const sync=()=>{const ty=$('e_type').value;$('e_pctw').classList.toggle('hide',ty!=='pct');$('e_samew').classList.toggle('hide',ty!=='pair');$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
+  const sync=()=>{const ty=$('e_type').value;$('e_pctw').classList.toggle('hide',ty!=='pct');$('e_pricew').classList.toggle('hide',ty!=='price');$('e_amtw').classList.toggle('hide',ty!=='amount');$('e_samew').classList.toggle('hide',ty!=='pair');$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
   ['e_type','e_noend','e_all'].forEach(id=>$(id).onchange=sync);sync();
   $('e_file').onchange=async()=>{const f=$('e_file').files[0];if(!f)return;$('e_fmsg').textContent='Уншиж байна…';
     try{const codes=await codesFromFile(f),cur=new Set($('e_codes').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)),add=codes.filter(c=>!cur.has(c));add.forEach(c=>cur.add(c));$('e_codes').value=[...cur].join('\n');$('e_fmsg').textContent=codes.length+' код олдлоо, '+add.length+' шинээр нэмэгдсэн.'}
@@ -274,6 +276,8 @@ function editPromo(i){
     const err=m=>{$('e_msg').textContent=m};
     if(!n.name)return err('Нэр оруулна уу');
     if(n.type==='pct'){n.pct=Number($('e_pct').value);if(!(n.pct>0&&n.pct<=100))return err('Хөнгөлөлтийн хувь 1–100 байна')}
+    else if(n.type==='price'){n.price=Math.round(Number($('e_price').value));if(!(n.price>=0&&$('e_price').value!==''))return err('Шинэ үнэ оруулна уу')}
+    else if(n.type==='amount'){n.amount=Math.round(Number($('e_amt').value));if(!(n.amount>0))return err('Хөнгөлөх дүн оруулна уу')}
     else if(n.type==='pair'){n.samePct=Number($('e_same').value)||0;if(n.samePct<0||n.samePct>100)return err('Хувь 0–100 байна')}
     else if(n.all)return err('Бэлэг урамшууллыг «Бүх бараа»-нд тохируулах боломжгүй');
     if(!n.start)return err('Эхлэх огноо оруулна уу');
