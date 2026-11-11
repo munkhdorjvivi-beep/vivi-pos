@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт 2.5</title>
+<title>VIVI POS хяналт 2.6</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -56,7 +56,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v2.5</span></h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v2.6</span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -66,7 +66,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="ver">v2.5</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v2.6</span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
   <span id="live">холбогдож байна…</span>
 </header>
@@ -235,11 +235,17 @@ $('pNew').onclick=()=>editPromo(null);
 const pClose=()=>{$('pm').classList.add('hide');$('pbox').innerHTML=''};
 const chks=(name,items,sel)=>'<div class="chk">'+items.map(x=>'<label><input type="checkbox" name="'+name+'" value="'+esc(x[0])+'" '+(sel.includes(x[0])?'checked':'')+'> '+esc(x[1])+'</label>').join('')+'</div>';
 const chkd=name=>[...$('pbox').querySelectorAll('input[name="'+name+'"]:checked')].map(x=>x.value);
+async function readPl(f){await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],a=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}),m={};let skip=0,dup=0;
+  a.forEach(r=>{if(!r)return;let c=r[0],v=r[1];if(c==null||v==null||v===''){if(c!=null)skip++;return}c=typeof c==='number'?String(Math.round(c)):String(c).trim();v=typeof v==='number'?v:Number(String(v).replace(/[\s,₮]/g,''));
+    if(!/^[0-9A-Za-z\-]+$/.test(c)||!isFinite(v)||v<0){skip++;return}if(m[c]!=null)dup++;m[c]=Math.round(v)});
+  return {m,skip,dup,n:Object.keys(m).length}}
+function plMsg(r){return '<b>'+r.n+'</b> бараа уншлаа'+(r.skip?' · '+r.skip+' мөр алгассан (гарчиг эсвэл буруу)':'')+(r.dup?' · <span class="hot">'+r.dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'. Жишээ: '+Object.entries(r.m).slice(0,3).map(x=>esc(x[0])+' → '+x[1].toLocaleString('en-US')+' ₮').join(', ')}
 async function codesFromFile(f){await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'}),out=[];
   for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:null});
     for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim());let ci=row.indexOf('Код');if(ci<0)ci=row.indexOf('Барааны код');if(ci<0)ci=row.indexOf('Баар код');
       if(ci>=0){for(let r=h+1;r<a.length;r++){const v=a[r]&&a[r][ci]!=null?String(a[r][ci]).trim():'';if(v&&/^[0-9A-Za-z\-]+$/.test(v))out.push(v)}break}}}
-  if(!out.length)throw new Error('«Код», «Баар код» эсвэл «Барааны код» багана олдсонгүй');return [...new Set(out)]}
+  if(!out.length){const a=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:null});a.forEach(r=>{if(!r||r[0]==null)return;const v=typeof r[0]==='number'?String(Math.round(r[0])):String(r[0]).trim();if(/^[0-9A-Za-z\-]{4,}$/.test(v))out.push(v)})}
+  if(!out.length)throw new Error('Код олдсонгүй (A баганад эсвэл «Код» гарчигтай баганад байх ёстой)');return [...new Set(out)]}
 function editPromo(i){
   const p=i==null?{id:'p'+Date.now(),name:'',type:'pct',pct:10,samePct:30,all:false,suppliers:[],groups:[],codes:[],start:todayIso(),end:'',stores:[],active:true}:JSON.parse(JSON.stringify(promos[i]));
   const sups=[...new Set([...catLists.sups,...p.suppliers])],grps=[...new Set([...catLists.grps,...p.groups])];
@@ -266,17 +272,14 @@ function editPromo(i){
   const sync=()=>{const ty=$('e_type').value;$('e_pctw').classList.toggle('hide',ty!=='pct');$('e_pricew').classList.toggle('hide',ty!=='price');$('e_plw').classList.toggle('hide',ty!=='plist');$('e_scw').classList.toggle('hide',ty==='plist');$('e_amtw').classList.toggle('hide',ty!=='amount');$('e_samew').classList.toggle('hide',ty!=='pair');$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
   ['e_type','e_noend','e_all'].forEach(id=>$(id).onchange=sync);sync();
   $('e_file').onchange=async()=>{const f=$('e_file').files[0];if(!f)return;$('e_fmsg').textContent='Уншиж байна…';
-    try{const codes=await codesFromFile(f),cur=new Set($('e_codes').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)),add=codes.filter(c=>!cur.has(c));add.forEach(c=>cur.add(c));$('e_codes').value=[...cur].join('\n');$('e_fmsg').textContent=codes.length+' код олдлоо, '+add.length+' шинээр нэмэгдсэн.'}
+    try{const pr=await readPl(f);
+      if(pr.n&&$('e_type').value!=='pct'&&$('e_type').value!=='amount'){$('e_type').value='plist';sync();$('e_pl').value=Object.entries(pr.m).map(x=>x[0]+'\t'+x[1]).join('\n');$('e_plmsg').innerHTML='Файлд код + үнэ байсан тул «Үнийн жагсаалт» төрөлд шилжүүллээ. '+plMsg(pr);$('e_fmsg').textContent='';return}
+      const codes=await codesFromFile(f),cur=new Set($('e_codes').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)),add=codes.filter(c=>!cur.has(c));add.forEach(c=>cur.add(c));$('e_codes').value=[...cur].join('\n');$('e_fmsg').textContent=codes.length+' код олдлоо, '+add.length+' шинээр нэмэгдсэн.'}
     catch(e){$('e_fmsg').textContent='Алдаа: '+(e.message||e)}};
   const parsePl=txt=>{const m={},bad=[];txt.split(/\r?\n/).forEach((ln,i)=>{const s=ln.trim();if(!s)return;const a=s.split(/[\t;,]+|\s{2,}|\s(?=\S+$)/).map(x=>x.trim()).filter(Boolean);const c=a[0],v=Number(String(a[a.length-1]).replace(/\s/g,''));if(a.length>=2&&/^[0-9A-Za-z\-]+$/.test(c)&&isFinite(v)&&v>=0)m[c]=Math.round(v);else bad.push(i+1)});return {m,bad}};
   $('e_plf').onchange=async()=>{const f=$('e_plf').files[0];if(!f)return;$('e_plmsg').textContent='Уншиж байна…';
-    try{await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],a=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}),m={};let skip=0,dup=0;
-      a.forEach(r=>{if(!r)return;let c=r[0],v=r[1];if(c==null||v==null||v===''){if(c!=null)skip++;return}c=typeof c==='number'?String(Math.round(c)):String(c).trim();v=typeof v==='number'?v:Number(String(v).replace(/[\s,₮]/g,''));
-        if(!/^[0-9A-Za-z\-]+$/.test(c)||!isFinite(v)||v<0){skip++;return}if(m[c]!=null)dup++;m[c]=Math.round(v)});
-      const n=Object.keys(m).length;if(!n)throw new Error('A баганад баркод, B баганад үнэ олдсонгүй');
-      $('e_pl').value=Object.entries(m).map(x=>x[0]+'\t'+x[1]).join('\n');
-      $('e_plmsg').innerHTML='<b>'+n+'</b> бараа уншлаа'+(skip?' · '+skip+' мөр алгассан (гарчиг эсвэл буруу)':'')+(dup?' · <span class="hot">'+dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'. Жишээ: '+Object.entries(m).slice(0,3).map(x=>esc(x[0])+' → '+x[1].toLocaleString('en-US')+' ₮').join(', ');
-    }catch(e){$('e_plmsg').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
+    try{const r=await readPl(f);if(!r.n)throw new Error('A баганад баркод, B баганад үнэ олдсонгүй');$('e_pl').value=Object.entries(r.m).map(x=>x[0]+'\t'+x[1]).join('\n');$('e_plmsg').innerHTML=plMsg(r)}
+    catch(e){$('e_plmsg').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
   $('e_c').onclick=pClose;
   const save=async(list,type,info)=>{await db.collection('pos_config').doc('promos').set({list,updated:new Date().toISOString(),by:auth.currentUser.email||''});
     const uid=Date.now().toString(36)+Math.random().toString(36).slice(2,8);await db.collection('pos_audit').doc(uid).set({uid,t:new Date().toISOString(),type,approver:auth.currentUser.email||'',cashier:'',store:'',reg:'',info})};
