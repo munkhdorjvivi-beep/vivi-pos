@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт</title>
+<title>VIVI POS хяналт 1.2</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -12,6 +12,7 @@ body{font:15px/1.4 var(--font);color:var(--ink);background:var(--bg)}
 header{background:var(--ink);color:#fff;padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;top:0;z-index:2}
 header b{background:var(--red);padding:3px 10px 3px 12px;border-radius:6px;letter-spacing:.14em;font-size:17px}
 header .sp{flex:1}
+header .ver{font-size:13px;color:#aab1bd;font-weight:600}
 header input{font:inherit;padding:6px 8px;border-radius:8px;border:0;min-height:36px}
 #live{font-size:13px;border:1px solid rgba(255,255,255,.3);border-radius:99px;padding:3px 10px;white-space:nowrap}
 #live.on{border-color:rgba(110,220,150,.6);color:#8be3ae}
@@ -43,7 +44,7 @@ details summary{cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт</h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v1.2</span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -52,7 +53,7 @@ details summary{cursor:pointer}
 </div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v1.2</span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
   <span id="live">холбогдож байна…</span>
 </header>
@@ -141,8 +142,8 @@ function draw(){
   $('cHour').innerHTML=H.length?H.map(x=>'<div style="display:flex;gap:8px;align-items:center;margin:3px 0"><span class="small" style="width:44px">'+x.k+'</span><div class="bar" style="flex:1;height:14px;margin:0"><i style="width:'+x.v/max(H)*100+'%"></i></div><span class="n" style="min-width:110px">'+money(x.v)+'</span></div>').join(''):'<div class="small">Өгөгдөл алга</div>';
   $('cShift').innerHTML=tbl(['Ээлж','Төлөв','Зөрүү','Тушаах'],shifts.sort((a,b)=>a.opened<b.opened?1:-1).map(h=>'<tr><td>'+esc(STORES[h.store]||h.store||'')+' · Касс '+esc(h.reg||'')+'<div class="small">'+esc(h.openedBy||'')+' · '+new Date(h.opened).toTimeString().slice(0,5)+'</div></td><td class="n">'+(h.closed?'<span class="chip b">хаагдсан</span>':'<span class="chip">нээлттэй</span>')+'</td><td class="n'+(h.closed&&h.diff?' hot':'')+'">'+(h.closed?money(h.diff):'—')+'</td><td class="n">'+(h.closed?money(h.counted-h.float):'—')+'</td></tr>'));
   const A={};audit.filter(a=>a.cashier).forEach(a=>{const r=A[a.cashier]=A[a.cashier]||{c:a.cashier,del:0,canc:0,disc:0,ret:0,v:0},i=a.info||{};
-    if(a.type==='line_delete'||a.type==='qty_minus'){r.del++;r.v+=(i.price||0)*(i.qty||1)}else if(a.type==='receipt_cancel'){r.canc++;r.v+=i.total||0}else if(a.type==='manual_discount'&&i.pct>0){r.disc++;r.v+=i.value||0}else if(a.type==='return'){r.ret++;r.v+=-(i.total||0)}});
-  $('cAud').innerHTML=tbl(['Кассчин','Устгасан','Цуцалсан','Гар хөнг.','Буцаалт','Дүн'],Object.values(A).filter(r=>r.del+r.canc+r.disc+r.ret).sort((a,b)=>b.v-a.v).map(r=>'<tr><td>'+esc(r.c)+'</td><td class="n'+(r.del>=3?' hot':'')+'">'+r.del+'</td><td class="n'+(r.canc>=2?' hot':'')+'">'+r.canc+'</td><td class="n">'+r.disc+'</td><td class="n">'+r.ret+'</td><td class="n">'+money(r.v)+'</td></tr>'));
+    if(a.type==='line_delete'||a.type==='qty_minus'){r.del++;r.v+=(i.price||0)*(i.qty||1)}else if(a.type==='receipt_cancel'){r.canc++;r.v+=i.total||0}else if((a.type==='manual_discount'&&i.pct>0)||a.type==='disc5_on'){r.disc++;r.v+=i.value||0}else if(a.type==='return'){r.ret++;r.v+=-(i.total||0)}});
+  $('cAud').innerHTML=tbl(['Кассчин','Устгасан','Цуцалсан','Хөнгөлөлт','Буцаалт','Дүн'],Object.values(A).filter(r=>r.del+r.canc+r.disc+r.ret).sort((a,b)=>b.v-a.v).map(r=>'<tr><td>'+esc(r.c)+'</td><td class="n'+(r.del>=3?' hot':'')+'">'+r.del+'</td><td class="n'+(r.canc>=2?' hot':'')+'">'+r.canc+'</td><td class="n">'+r.disc+'</td><td class="n">'+r.ret+'</td><td class="n">'+money(r.v)+'</td></tr>'));
   drawRep();
   $('cRec').innerHTML=tbl(['Баримт','Кассчин','Төлбөр','Дүн'],sales.slice().sort((a,b)=>a.iso<b.iso?1:-1).slice(0,40).map(s=>'<tr><td><details><summary>'+esc(s.id)+(s.type==='return'?' <span class="chip r">буцаалт</span>':'')+'<div class="small">'+esc(s.date)+' '+esc((s.time||'').slice(0,5))+' · '+esc(s.storeName)+'</div></summary>'+(s.lines||[]).map(l=>'<div class="small">'+l.qty+' × '+esc(l.name)+' — '+money(l.sum)+(l.pname?' ('+esc(l.pname)+')':'')+'</div>').join('')+'</details></td><td>'+esc(s.cashier)+'</td><td class="small">'+(s.payments||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))).join('<br>')+'</td><td class="n"><b>'+money(s.total)+'</b></td></tr>'));
 }
