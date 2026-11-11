@@ -2,6 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
+<meta name="vivi-ver" content="3.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -88,6 +89,7 @@ tr.sel td{background:#fff8e1}tr.sel td:first-child{box-shadow:inset 4px 0 0 var(
 .banks .small{color:#d6f0e1!important}
 .hbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.hbar input,.hbar select{min-height:40px;width:auto}.hbar button{min-height:40px;padding:4px 12px}
 .hsum{display:flex;gap:22px;flex-wrap:wrap;margin:8px 0;font-size:14px;color:var(--mut)}.hsum span{white-space:nowrap;display:inline}.box .hsum b{display:inline;margin:0;font-size:17px;color:var(--ink);text-transform:none;letter-spacing:0}
+#updBar{display:flex;gap:10px;align-items:center;padding:8px 14px;margin-bottom:8px;border-radius:12px;background:#e1edfa;color:var(--blue);font-size:14px}#updBar button{min-height:34px;padding:3px 12px}#updBar b{display:inline;margin:0;font-size:inherit;color:inherit}
 #exbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:10px 14px;margin-bottom:8px;border-radius:12px;background:#fff4d6;border:2px solid #e8a400;color:#6b4a00;font-size:14px}#exbar .sp{flex:1}#exbar button{min-height:36px;padding:3px 12px}
 .ownonly{display:inline-flex;align-items:center;padding:0 12px;min-height:40px;border-radius:10px;background:#eef6ff;color:var(--blue);font-weight:650;font-size:14px}
 .box.wide{width:min(1240px,100%)}
@@ -146,7 +148,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
   <div id="left">
     <div id="scanrow"><input id="scan" placeholder="Баркод уншуулах эсвэл барааны нэр, код бичээд Enter" autocomplete="off"><button class="ghost" id="bSearch">Хайх</button></div>
     <div id="msg"></div>
-    <div id="exbar" class="hide"></div><div id="cartwrap"><table><thead><tr><th>№</th><th>Бараа</th><th class="n">Тоо</th><th class="n">Үнэ</th><th class="n">Хөнгөлөлт</th><th class="n">Дүн</th></tr></thead><tbody id="cart"></tbody></table></div>
+    <div id="updBar" class="hide"></div><div id="exbar" class="hide"></div><div id="cartwrap"><table><thead><tr><th>№</th><th>Бараа</th><th class="n">Тоо</th><th class="n">Үнэ</th><th class="n">Хөнгөлөлт</th><th class="n">Дүн</th></tr></thead><tbody id="cart"></tbody></table></div>
   </div>
   <div id="right">
     <div id="totbox">
@@ -212,7 +214,7 @@ if(!users){users=[{id:'u0',name:'Админ',role:'admin',pin:'9999',stores:[],a
   Object.entries(CASHIERS).forEach(([st,arr])=>arr.forEach(nm=>users.push({id:'u'+(n++),name:nm,role:'cashier',pin:'1111',stores:[st],active:true})));store.set('users',users)}
 let promos=store.get('promos',null);
 if(!promos){promos=[{id:'p1',name:'LPP 1+1',type:'pair',pct:0,samePct:30,all:false,suppliers:['ORION WOJCIECH BARANKIEWICZ','Network 360'],groups:[],codes:[],start:'2026-10-10',end:'',stores:[],active:true}];store.set('promos',promos)}
-const APP_VER='3.4';document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
+const APP_VER=document.querySelector('meta[name=vivi-ver]').content;document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
 let device=store.get('device',{store:'',reg:''});
 let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
 const cfgList=k=>k==='promos'?promos:k==='users'?users:[cfg];
@@ -863,6 +865,18 @@ function payFix(s){
 }
 // Батлагдсан төлбөрийн засварыг энэ кассын хадгалсан баримтад тусгана
 function applyPayFix(){let ch=0;requests.filter(r=>r.kind==='paychange'&&r.status==='approved').forEach(r=>{const s=sales.find(x=>x.uid===r.saleUid);if(s&&s.payFix!==r.uid){s.payments=r.after;s.payFix=r.uid;ch++}});if(ch)store.set('sales',sales)}
+/* ---- Шинэ хувилбар шалгах. GitHub Pages хуудсыг 10 минут кэшлэдэг тул файлын толгойг кэшгүй татаж хувилбарыг харьцуулна ---- */
+const verNewer=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false};
+let updVer='',updAt=0;
+async function verCheck(force){
+  if(location.protocol==='file:'||(!force&&Date.now()-updAt<5*60e3))return;updAt=Date.now();
+  try{const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',headers:{Range:'bytes=0-2047'}});const t=(await r.text()).slice(0,4000),m=/name="vivi-ver" content="([\d.]+)"/.exec(t);
+    if(m&&verNewer(m[1],APP_VER)){updVer=m[1];updShow()}}catch(e){}}
+async function updGo(){try{await fetch(location.pathname,{cache:'reload'})}catch(e){}location.replace(location.pathname+location.hash)}
+setInterval(()=>verCheck(),15*60e3);window.addEventListener('focus',()=>verCheck());setTimeout(()=>verCheck(true),8000);
+// Касс: нэвтрэх дэлгэц дээр шууд шинэчилнэ; борлуулалтын үед сагс хоосон болмогц хуудсын дээр мэдэгдэнэ
+function updShow(){if(!S.user&&!S.cart.length)return updGo();const e=$('updBar');e.classList.remove('hide');e.innerHTML='Шинэ хувилбар <b>'+esc(updVer)+'</b> бэлэн (одоо '+esc(APP_VER)+'). Баримтаа дуусгаад шинэчилнэ үү. <button id="updB">Шинэчлэх</button>';
+  $('updB').onclick=()=>{if(S.cart.length||S.exch)return flash('Эхлээд баримтаа дуусгана уу');updGo()}}
 /* ---------- борлуулалтын түүх (кассчинд: өртөг, ашиг харагдахгүй) ---------- */
 const H={rows:[],src:'',range:'',all:false,by:''};
 // Харах эрх: самбарт ажилтан бүрт тохируулна. Тохируулаагүй бол эрхийн түвшнээр.
@@ -1080,7 +1094,7 @@ $('sGo').onclick=()=>{
   const d=now();S.shift={id:S.user.store+'-'+S.user.reg+'-'+d.getFullYear()+pad(d.getMonth()+1,2)+pad(d.getDate(),2)+'-'+pad(d.getHours(),2)+pad(d.getMinutes(),2),opened:d.toISOString(),openedBy:S.user.name,float:num($('sFloat').value)};
   store.set('shift_'+S.user.store+'-'+S.user.reg,S.shift);shiftOut({...S.shift,store:S.user.store,reg:S.user.reg});log('shift_open',{id:S.shift.id,float:S.shift.float});header();show('sale');render();$('scan').focus();
 };
-function logout(){if(S.cart.length)return flash('Эхлээд баримтаа дуусгах эсвэл түр хадгална уу');S.user=null;applyDevice();fillCashiers();show('login');$('lCash').focus()}
+function logout(){if(S.cart.length)return flash('Эхлээд баримтаа дуусгах эсвэл түр хадгална уу');S.user=null;applyDevice();fillCashiers();show('login');$('lCash').focus();if(updVer)updGo()}
 /* ---------- wiring ---------- */
 $('scan').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();onScan()}};
 $('bSearch').onclick=()=>openSearch($('scan').value.trim());

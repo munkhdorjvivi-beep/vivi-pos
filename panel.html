@@ -2,8 +2,9 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
+<meta name="vivi-ver" content="3.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт 3.8</title>
+<title>VIVI POS хяналт</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -72,7 +73,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v3.8</span></h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v<span class="appver"></span></span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -82,7 +83,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="ver">v3.8</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v<span class="appver"></span></span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
   <span id="who" class="small" style="opacity:.75"></span><button id="logout" class="btn" style="min-height:30px;padding:2px 10px">Гарах</button><span id="live">холбогдож байна…</span>
 </header>
@@ -204,6 +205,18 @@ async function init(){
     auth.onAuthStateChanged(u=>{if(u&&(u.email||'').toLowerCase()!==PANEL_EMAIL){$('lm').innerHTML='<b>'+esc(u.email||'')+'</b> — энэ бүртгэлээр хяналтын самбарт орох эрхгүй. <b>'+PANEL_EMAIL+'</b> бүртгэлээр нэвтэрнэ үү.';$('le').value=PANEL_EMAIL;$('lp').value='';auth.signOut();return}if(u)$('who').textContent=u.email;$('login').classList.toggle('hide',!!u);$('app').classList.toggle('hide',!u);if(u){listen();setTimeout(autoStock,3000)}});
   }catch(e){$('lm').textContent=e.message||String(e)}
 }
+const APP_VER=document.querySelector('meta[name=vivi-ver]').content;document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS хяналт '+APP_VER;
+/* ---- Шинэ хувилбар шалгах. GitHub Pages хуудсыг 10 минут кэшлэдэг тул файлын толгойг кэшгүй татаж хувилбарыг харьцуулна ---- */
+const verNewer=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false};
+let updVer='',updAt=0;
+async function verCheck(force){
+  if(location.protocol==='file:'||(!force&&Date.now()-updAt<5*60e3))return;updAt=Date.now();
+  try{const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',headers:{Range:'bytes=0-2047'}});const t=(await r.text()).slice(0,4000),m=/name="vivi-ver" content="([\d.]+)"/.exec(t);
+    if(m&&verNewer(m[1],APP_VER)){updVer=m[1];updShow()}}catch(e){}}
+async function updGo(){try{await fetch(location.pathname,{cache:'reload'})}catch(e){}location.replace(location.pathname+location.hash)}
+setInterval(()=>verCheck(),15*60e3);window.addEventListener('focus',()=>verCheck());setTimeout(()=>verCheck(true),8000);
+function updShow(){let e=$('updBar');if(!e){e=document.createElement('div');e.id='updBar';e.style.cssText='position:sticky;top:0;z-index:50;background:#e1edfa;color:var(--blue);padding:8px 16px;text-align:center;font-size:14px';document.body.insertBefore(e,document.body.firstChild)}
+  e.innerHTML='Самбарын шинэ хувилбар <b>'+esc(updVer)+'</b> бэлэн (одоо '+esc(APP_VER)+'). <button id="updB" class="btn pri" style="min-height:30px;padding:2px 12px;margin-left:8px">Шинэчлэх</button>';$('updB').onclick=updGo}
 const PANEL_EMAIL='panel@vivi-pos-test.mn';
 $('logout').onclick=()=>{auth.signOut().then(()=>location.reload())};
 $('lg').onclick=()=>{$('lm').textContent='Нэвтэрч байна…';auth.signInWithEmailAndPassword($('le').value.trim(),$('lp').value).catch(e=>{$('lm').textContent='Нэвтэрсэнгүй: '+(e.code||e)})};
