@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VIVI POS хяналт 3.7</title>
+<title>VIVI POS хяналт 3.8</title>
 <style>
 /* Layout: ink header with date range, KPI row, then cards that stack to one column on a phone. */
 :root{color-scheme:light;--ink:#15181d;--mut:#69707d;--line:#dfe2e7;--bg:#eef0f3;--card:#fff;--red:#c1121f;--ok:#17804a;--blue:#1d5fa8;--soft:#f6f7f9;--font:"Segoe UI","Noto Sans",Roboto,Arial,sans-serif}
@@ -29,6 +29,14 @@ main{padding:14px 16px;display:grid;gap:12px;max-width:1200px;margin:0 auto}
 .stt .m{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;opacity:.85;margin-top:3px}.stt .dot{font-size:11.5px;font-weight:600;opacity:.7}.stt .dot.g{color:#1a7f37;opacity:1}
 .stt .share{height:5px;background:#eee;border-radius:9px;overflow:hidden;margin:2px 0 6px}.stt .share i{display:block;height:100%;background:var(--red)}
 .drng{display:inline-flex;gap:6px;align-items:center}.drng input{font:inherit;min-height:36px;border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fff}
+.xt th{padding:0}.xfb{font:inherit;font-size:11px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);background:none;border:0;padding:8px 8px;cursor:pointer;width:100%;text-align:inherit;white-space:nowrap}
+.xfb span{opacity:.6;margin-left:2px}.xfb:hover{background:#eef}.xfb.on{color:var(--blue);background:#e1edfa}.xfb.on span,.xfb.srt span{opacity:1}
+.xt tfoot td{position:sticky;bottom:0;background:var(--soft);border-top:2px solid var(--ink)}
+.xfpop{position:absolute;z-index:99;width:290px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.2);padding:10px;font-size:13px}
+.xfpop input#xfQ{width:100%;box-sizing:border-box;font:inherit;min-height:34px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin:6px 0}
+.xfs{display:flex;gap:6px;margin-top:6px}.xfs button,.xfbtn button{font:inherit;font-size:12.5px;flex:1;min-height:32px;border:1px solid var(--line);border-radius:8px;background:var(--soft);cursor:pointer}
+.xfl{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 6px;margin:4px 0}.xfl label,.xfa{display:block;padding:2px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xfbtn{display:flex;gap:6px;margin-top:6px}.xfbtn .pri{background:var(--red);color:#fff;border-color:var(--red)}
 .btn.qr{min-height:34px;padding:3px 12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
@@ -64,7 +72,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </head>
 <body>
 <div id="login">
-  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v3.7</span></h1>
+  <h1 style="margin:0 0 4px;font-size:22px">VIVI POS хяналт <span style="font-size:14px;color:var(--mut)">v3.8</span></h1>
   <div class="small">Туршилтын үүл: vivi-pos-test</div>
   <input id="le" type="email" placeholder="И-мэйл" autocomplete="username">
   <input id="lp" type="password" placeholder="Нууц үг" autocomplete="current-password">
@@ -74,7 +82,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
 <div id="app" class="hide">
 <header>
-  <b>VIVI</b><span>POS хяналт</span><span class="ver">v3.7</span><span class="sp"></span>
+  <b>VIVI</b><span>POS хяналт</span><span class="ver">v3.8</span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2">
   <span id="who" class="small" style="opacity:.75"></span><button id="logout" class="btn" style="min-height:30px;padding:2px 10px">Гарах</button><span id="live">холбогдож байна…</span>
 </header>
@@ -160,7 +168,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   </div>
   <div class="card"><h2>Тайлан (Smart-тай ижил нэр, багана)</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:var(--soft);border-radius:10px"><b class="small">Тайлангийн хугацаа:</b><span class="drng"><label class="small">Огноо</label><input type="date" class="dr1" id="rd1"><span>→</span><input type="date" class="dr2" id="rd2"></span><span id="rdInfo" class="small"></span></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select id="rSel" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px;flex:1;min-width:220px"></select><button id="rDl" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--soft);padding:6px 14px;cursor:pointer">CSV татах</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select id="rSel" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px;flex:1;min-width:220px"></select><button id="rDl" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--soft);padding:6px 14px;cursor:pointer">CSV татах</button><button id="rXl" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">Excel татах</button></div><div id="rInfo" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><span class="small">Smart-ын Excel хэлбэрээр (нягтлангийн системд оруулах):</span><select id="xSt" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="YV">Явуулын касс</option></select><button id="xB" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">/бараагаар/ .xlsx</button><button id="xP" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">/төлбөрийн хэлбэрээр/ .xlsx</button><span id="xMsg" class="small"></span></div>
     <div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>Санхүүгийн програм руу (SaleMany загвар):</b>
@@ -309,11 +317,57 @@ const REPORTS={
    rows:[].concat(...sales.filter(s=>s.type==='sale').map(s=>(s.lines||[]).filter(l=>l.promo&&l.promo!=='manual').map(l=>[l.pname||l.promo,s.id,s.date,s.storeName,s.cashier,l.code,l.name,l.qty,l.base*l.qty,l.base*l.qty-l.sum,l.sum])))})
 };
 $('rSel').innerHTML=Object.keys(REPORTS).map(k=>'<option>'+k+'</option>').join('');
-function drawRep(){const r=REPORTS[$('rSel').value](),isN=v=>typeof v==='number';
-  $('cRep').innerHTML=r.rows.length?'<table><thead><tr>'+r.head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+r.rows.slice(0,200).map(x=>'<tr>'+x.map(v=>'<td'+(isN(v)?' class="n"':'')+'>'+(isN(v)?v.toLocaleString('en-US').replace(/,/g,' '):esc(v))+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(r.rows.length>200?'<div class="small">Эхний 200 мөр. Бүгдийг файлаар татна.</div>':'')+'<div class="small" style="margin-top:6px">Нийт '+r.rows.length+' мөр</div>':'<div class="small">Өгөгдөл алга</div>'}
-$('rSel').onchange=drawRep;
-$('rDl').onclick=()=>{const r=REPORTS[$('rSel').value](),q=c=>{c=c==null?'':String(c);return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c};
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+[r.head].concat(r.rows).map(x=>x.map(q).join(',')).join('\r\n')],{type:'text/csv'}));a.download=$('rSel').value.replace(/[\/ ]+/g,'_')+'_'+$('d1').value+'_'+$('d2').value+'.csv';document.body.appendChild(a);a.click();a.remove()};
+/* ---- Тайлангийн хүснэгт: Excel шиг баганаар шүүх, эрэмбэлэх. CSV/Excel татахад шүүсэн мөрүүд л орно ---- */
+const XF={};
+const xfKey=v=>v==null||v===''?'(хоосон)':typeof v==='number'?String(v):String(v);
+const xfCmp=(a,b)=>{const n=typeof a==='number'&&typeof b==='number';return n?a-b:String(a==null?'':a).localeCompare(String(b==null?'':b),'mn',{numeric:true})};
+function repData(){const k=$('rSel').value,r=REPORTS[k](),st=XF[k]=XF[k]||{f:{},sort:null};
+  let L=r.rows.filter(row=>Object.entries(st.f).every(([c,set])=>!set||set.has(xfKey(row[c]))));
+  if(st.sort){const [c,d]=st.sort;L=L.slice().sort((a,b)=>xfCmp(a[c],b[c])*d)}
+  return {k,r,st,L}}
+function drawRep(){const {r,st,L}=repData(),isN=v=>typeof v==='number',nf=v=>v.toLocaleString('en-US',{maximumFractionDigits:2}).replace(/,/g,' ');
+  const numCol=r.head.map((h,c)=>r.rows.length&&r.rows.every(x=>x[c]==null||x[c]===''||isN(x[c]))&&r.rows.some(x=>isN(x[c])));
+  const sums=r.head.map((h,c)=>numCol[c]?L.reduce((a,x)=>a+(isN(x[c])?x[c]:0),0):null);
+  const act=Object.values(st.f).filter(Boolean).length;
+  $('rInfo').innerHTML=(act||st.sort?'<span class="chip r">'+(act?act+' багана шүүсэн':'эрэмбэлсэн')+'</span> <button id="rClr" class="btn" style="min-height:30px;padding:2px 10px">Шүүлтүүр арилгах</button> ':'')+'<span class="small">'+L.length+' / '+r.rows.length+' мөр</span>';
+  if($('rClr'))$('rClr').onclick=()=>{st.f={};st.sort=null;drawRep()};
+  $('cRep').innerHTML=r.rows.length?'<table class="xt"><thead><tr>'+r.head.map((h,c)=>'<th'+(numCol[c]?' class="n"':'')+'><button class="xfb'+(st.f[c]?' on':'')+(st.sort&&st.sort[0]===c?' srt':'')+'" data-c="'+c+'">'+esc(h)+' <span>'+(st.sort&&st.sort[0]===c?(st.sort[1]>0?'▲':'▼'):'')+(st.f[c]?'⛃':'▾')+'</span></button></th>').join('')+'</tr></thead><tbody>'+
+    L.slice(0,500).map(x=>'<tr>'+x.map(v=>'<td'+(isN(v)?' class="n"':'')+'>'+(isN(v)?nf(v):esc(v))+'</td>').join('')+'</tr>').join('')+'</tbody>'+
+    (L.length?'<tfoot><tr>'+sums.map((v,c)=>'<td class="n"><b>'+(c===0?'Нийт':v!=null&&!/№|дугаар|огноо|код/i.test(r.head[c])?nf(v):'')+'</b></td>').join('')+'</tr></tfoot>':'')+'</table>'+
+    (L.length>500?'<div class="small">Эхний 500 мөр харагдаж байна. Бүгдийг файлаар татна ('+L.length+' мөр).</div>':'')+(!L.length?'<div class="small" style="padding:10px">Шүүлтүүрт тохирох мөр алга</div>':'')
+    :'<div class="small">Өгөгдөл алга</div>';
+  $('cRep').querySelectorAll('.xfb').forEach(b=>b.onclick=e=>{e.stopPropagation();xfOpen(+b.dataset.c,b)});
+}
+function xfOpen(c,btn){
+  xfClose();const {r,st}=repData(),cnt=new Map();
+  // бусад баганын шүүлтүүрийг тооцож, энэ баганын боломжит утгууд
+  r.rows.filter(row=>Object.entries(st.f).every(([k,set])=>+k===c||!set||set.has(xfKey(row[k])))).forEach(row=>{const k=xfKey(row[c]);cnt.set(k,(cnt.get(k)||0)+1)});
+  const vals=[...cnt.keys()].sort((a,b)=>xfCmp(isFinite(a)&&a!==''?+a:a,isFinite(b)&&b!==''?+b:b)),cur=st.f[c];
+  const box=document.createElement('div');box.id='xfPop';box.className='xfpop';
+  box.innerHTML='<b>'+esc(r.head[c])+'</b><div class="xfs"><button data-s="1">A→Я, 1→9 ▲</button><button data-s="-1">Я→A, 9→1 ▼</button></div><input id="xfQ" placeholder="Хайх…"><label class="xfa"><input type="checkbox" id="xfAll"> (Бүгдийг сонгох)</label><div class="xfl" id="xfL"></div><div class="xfbtn"><button id="xfX">Болих</button><button id="xfC">Арилгах</button><button id="xfO" class="pri">OK</button></div>';
+  document.body.appendChild(box);const R=btn.getBoundingClientRect();box.style.left=Math.max(8,Math.min(innerWidth-300,R.left+scrollX))+'px';box.style.top=(R.bottom+scrollY+4)+'px';
+  const sel=new Set(cur?[...cur].filter(v=>cnt.has(v)):vals);
+  const list=()=>{const q=$('xfQ').value.trim().toLowerCase(),V=vals.filter(v=>!q||v.toLowerCase().includes(q)).slice(0,1000);
+    $('xfL').innerHTML=V.map(v=>'<label><input type="checkbox" value="'+esc(v)+'"'+(sel.has(v)?' checked':'')+'> '+esc(v)+' <span class="small">('+cnt.get(v)+')</span></label>').join('')+(vals.length>1000&&!q?'<div class="small">Эхний 1000 утга — хайлтаар нарийсгана уу</div>':'');
+    $('xfAll').checked=V.every(v=>sel.has(v));
+    $('xfL').querySelectorAll('input').forEach(x=>x.onchange=()=>{x.checked?sel.add(x.value):sel.delete(x.value);$('xfAll').checked=V.every(v=>sel.has(v))});
+    $('xfAll').onchange=()=>{V.forEach(v=>$('xfAll').checked?sel.add(v):sel.delete(v));list()}};
+  $('xfQ').oninput=()=>{const q=$('xfQ').value.trim().toLowerCase();if(q){sel.clear();vals.filter(v=>v.toLowerCase().includes(q)).forEach(v=>sel.add(v))}list()};
+  list();$('xfQ').focus();
+  box.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{st.sort=[c,+b.dataset.s];xfClose();drawRep()});
+  $('xfX').onclick=xfClose;$('xfC').onclick=()=>{delete st.f[c];xfClose();drawRep()};
+  $('xfO').onclick=()=>{if(sel.size===vals.length)delete st.f[c];else st.f[c]=new Set(sel);xfClose();drawRep()};
+  $('xfQ').onkeydown=e=>{if(e.key==='Enter')$('xfO').click();if(e.key==='Escape')xfClose()};
+  box.onclick=e=>e.stopPropagation();
+}
+function xfClose(){const p=$('xfPop');if(p)p.remove()}
+document.addEventListener('click',xfClose);
+$('rSel').onchange=()=>{xfClose();drawRep()};
+const repName=()=>$('rSel').value.replace(/[\/ ]+/g,'_').replace(/_+$/,'')+'_'+$('d1').value+($('d2').value!==$('d1').value?'_'+$('d2').value:'');
+$('rDl').onclick=()=>{const {r,L}=repData(),q=c=>{c=c==null?'':String(c);return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+[r.head].concat(L).map(x=>x.map(q).join(',')).join('\r\n')],{type:'text/csv'}));a.download=repName()+'.csv';document.body.appendChild(a);a.click();a.remove()};
+$('rXl').onclick=async()=>{try{await xlsx();const {r,L}=repData(),ws=XLSX.utils.aoa_to_sheet([r.head].concat(L));ws['!cols']=r.head.map(h=>({wch:Math.max(8,Math.min(40,String(h).length+4))}));ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:L.length,c:r.head.length-1}})};
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Тайлан');XLSX.writeFile(wb,repName()+'.xlsx')}catch(e){alert('Алдаа: '+(e.message||e))}};
 /* ---- урамшуулал: pos_config/promos {list} — кассууд шууд уншина ---- */
 let promos=[],catLists={sups:[],grps:[]};
 const STN={FC:'Food city',DR:'Драгон',NS:'Нийслэл',YV:'Явуулын касс'};
