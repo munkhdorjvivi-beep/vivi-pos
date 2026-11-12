@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.0">
+<meta name="vivi-ver" content="5.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -252,7 +252,13 @@ function promoWhy(l){
 }
 function activePromos(){const st=S.user&&S.user.store;return promos.filter(p=>promoState(p)==='on'&&(!p.stores.length||!st||p.stores.includes(st)))}
 function plPrice(p,l){if(p.type!=='plist'||!p.prices)return null;const v=p.prices[l.code]!=null?p.prices[l.code]:(l.bc&&p.prices[l.bc]!=null?p.prices[l.bc]:null);return v}
-function promoMatch(p,l){if(p.type==='plist')return plPrice(p,l)!=null;return !!(p.all||p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))}
+function promoBase(p,l){if(p.type==='plist')return plPrice(p,l)!=null;return !!(p.all||p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))}
+// Үл хамаарах: тодорхой код, нийлүүлэгч; «өөр урамшуулалтай бараа» (жишээ нь Black Friday −50% нь 1+1, тусгай үнэтэй бараанд хэрэглэгдэхгүй)
+function promoMatch(p,l){if(!promoBase(p,l))return false;
+  if(p.excl&&p.excl.length&&(p.excl.includes(l.code)||(l.bc&&p.excl.includes(l.bc))))return false;
+  if(p.exSup&&p.exSup.length&&p.exSup.includes(l.sup))return false;
+  if(p.exOther&&activePromos().some(q=>q.id!==p.id&&q.type!=='gift'&&!q.exOther&&promoBase(q,l)&&!(q.excl&&(q.excl.includes(l.code)||(l.bc&&q.excl.includes(l.bc))))&&!(q.exSup&&q.exSup.includes(l.sup))))return false;
+  return true}
 /* ---------- catalog index ---------- */
 let IDX,NAMES,catInfo={src:'file',count:CAT.length,version:'2026/11/10'};
 function buildIndex(){IDX=new Map();CAT.forEach((r,i)=>{IDX.set(r[0],i);if(r[1])IDX.set(r[1],i)});NAMES=CAT.map(r=>(r[2]+' '+r[0]+' '+(r[1]||'')+' '+(r[7]||'')).toLowerCase())}

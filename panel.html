@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.6">
+<meta name="vivi-ver" content="5.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -685,7 +685,7 @@ const STOCK_SRC={ON:'FC'}; // онлайн дэлгүүрийн борлуула
 const todayIso=()=>iso(new Date());
 function pState(p){const t=todayIso();if(!p.active)return ['Зогсоосон','r'];if(p.start&&t<p.start)return ['Эхлээгүй','b'];if(p.end&&t>p.end)return ['Дууссан','r'];return ['Идэвхтэй','']}
 function pType(p){return p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):p.type==='gift'?(p.auto?'Бэлэг · автоматаар 0 ₮':'Бэлэг · кассчин сонгоно'):p.type==='plist'?'Үнийн жагсаалт · '+Object.keys(p.prices||{}).length+' бараа':p.type==='price'?'Тогтмол үнэ '+Number(p.price).toLocaleString('en-US').replace(/,/g,' ')+' ₮':p.type==='amount'?'−'+Number(p.amount).toLocaleString('en-US').replace(/,/g,' ')+' ₮':'−'+p.pct+'%'}
-function pScope(p){if(p.type==='plist')return Object.keys(p.prices||{}).length+' бараа (Excel)';if(p.all)return 'Бүх бараа';const a=[];if(p.suppliers.length)a.push('Нийлүүлэгч: '+p.suppliers.join(', '));if(p.groups.length)a.push('Бүлэг: '+p.groups.join(', '));if(p.codes.length)a.push(p.codes.length+' барааны код');return a.join(' · ')||'—'}
+function pScope(p){if(p.type==='plist')return Object.keys(p.prices||{}).length+' бараа (Excel)';const x=[];if((p.excl||[]).length)x.push((p.excl||[]).length+' код');if((p.exSup||[]).length)x.push(p.exSup.join(', '));if(p.exOther)x.push('өөр урамшуулалтай бараа');const xs=x.length?' · үл хамаарах: '+x.join(', '):'';if(p.all)return 'Бүх бараа'+xs;const a=[];if(p.suppliers.length)a.push('Нийлүүлэгч: '+p.suppliers.join(', '));if(p.groups.length)a.push('Бүлэг: '+p.groups.join(', '));if(p.codes.length)a.push(p.codes.length+' барааны код');return (a.join(' · ')||'—')+xs}
 function watchPromos(){db.collection('pos_config').doc('promos').onSnapshot(d=>{promos=d.exists&&Array.isArray(d.data().list)?d.data().list:[];drawPromos()},e=>{$('cPromo').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'})}
 function drawPromos(){$('cPromo').innerHTML=tbl(['Нэр','Төрөл','Хамрах бараа','Дэлгүүр','Хугацаа','Төлөв'],promos.map((p,i)=>{const s=pState(p);return '<tr class="pr" data-i="'+i+'"><td><b>'+esc(p.name)+'</b></td><td class="n">'+esc(pType(p))+'</td><td class="n small">'+esc(pScope(p))+'</td><td class="n small">'+(p.stores.length?p.stores.map(x=>STN[x]||x).join(', '):'Бүгд')+'</td><td class="n">'+(p.start||'…')+' → '+(p.end||'хугацаагүй')+'</td><td class="n"><span class="chip '+s[1]+'">'+s[0]+'</span></td></tr>'}))}
 $('cPromo').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)editPromo(+tr.dataset.i)};
@@ -702,11 +702,14 @@ async function readPl(f){await xlsx();const wb=XLSX.read(await fileBuf(f),{type:
   return {m,skip,dup,n:Object.keys(m).length}}
 function plMsg(r){return '<b>'+r.n+'</b> бараа уншлаа'+(r.skip?' · '+r.skip+' мөр алгассан (гарчиг эсвэл буруу)':'')+(r.dup?' · <span class="hot">'+r.dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'. Жишээ: '+Object.entries(r.m).slice(0,3).map(x=>esc(x[0])+' → '+x[1].toLocaleString('en-US')+' ₮').join(', ')}
 async function codesFromFile(f){await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'}),out=[];
-  for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:null});
-    for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim());let ci=row.indexOf('Код');if(ci<0)ci=row.indexOf('Барааны код');if(ci<0)ci=row.indexOf('Баар код');
-      if(ci>=0){for(let r=h+1;r<a.length;r++){const v=a[r]&&a[r][ci]!=null?String(a[r][ci]).trim():'';if(v&&/^[0-9A-Za-z\-]+$/.test(v))out.push(v)}break}}}
-  if(!out.length){const a=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:null});a.forEach(r=>{if(!r||r[0]==null)return;const v=typeof r[0]==='number'?String(Math.round(r[0])):String(r[0]).trim();if(/^[0-9A-Za-z\-]{4,}$/.test(v))out.push(v)})}
-  if(!out.length)throw new Error('Код олдсонгүй (A баганад эсвэл «Код» гарчигтай баганад байх ёстой)');return [...new Set(out)]}
+  // Баркод тоогоор хадгалагдсан бол (5.90123E+12 гэж харагддаг) бүтэн тоо болгоно
+  const cv=v=>v==null?'':typeof v==='number'?String(Math.round(v)):String(v).trim();
+  const HD=['код','барааны код','баар код','баркод','бар код','barcode','kod','ean'];
+  for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
+    for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(x=>cv(x).toLowerCase());let ci=-1;for(const k of HD){ci=row.indexOf(k);if(ci>=0)break}
+      if(ci>=0){for(let r=h+1;r<a.length;r++){const v=cv(a[r]&&a[r][ci]);if(v&&/^[0-9A-Za-z\-]+$/.test(v))out.push(v)}break}}}
+  if(!out.length){const a=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:null});a.forEach(r=>{const v=cv(r&&r[0]);if(/^[0-9A-Za-z\-]{4,}$/.test(v))out.push(v)})}
+  if(!out.length)throw new Error('Код олдсонгүй (A баганад эсвэл «Код»/«Баркод» гарчигтай баганад байх ёстой)');return [...new Set(out)]}
 function editPromo(i){
   const p=i==null?{id:'p'+Date.now(),name:'',type:'pct',pct:10,samePct:30,all:false,suppliers:[],groups:[],codes:[],start:todayIso(),end:'',stores:[],active:true}:JSON.parse(JSON.stringify(promos[i]));
   const sups=[...new Set([...catLists.sups,...p.suppliers])],grps=[...new Set([...catLists.grps,...p.groups])];
@@ -727,11 +730,16 @@ function editPromo(i){
   '<div class="small" style="margin-top:6px">Барааны бүлэг</div>'+(grps.length?chks('grp',grps.map(x=>[x,x]),p.groups):'<div class="small">—</div>')+
   '<div class="small" style="margin-top:6px">Барааны код (мөр бүрт нэг)</div><textarea id="e_codes" rows="4">'+esc(p.codes.join('\n'))+'</textarea>'+
   '<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">Excel-ээс код нэмэх («Код», «Баар код» эсвэл «Барааны код» баганатай)<input type="file" id="e_file" accept=".xlsx,.xls,.csv"></label><div id="e_fmsg" class="small"></div></div>'+
+  '<div id="e_exw" style="margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:10px"><label class="f" style="margin-top:0">Үл хамаарах бараа (урамшуулал эдгээрт хэрэглэгдэхгүй)</label>'+
+  '<label class="inl"><input type="checkbox" id="e_exo" '+(p.exOther?'checked':'')+'> Өөр идэвхтэй урамшуулалтай бараа (1+1, тусгай үнэ, үнийн жагсаалт, хувийн хөнгөлөлт) — тэр урамшууллаараа үлдэнэ</label>'+
+  '<div class="small" style="margin-top:6px">Үл хамаарах нийлүүлэгч</div>'+(sups.length?chks('xsup',sups.map(x=>[x,x]),p.exSup||[]):'<div class="small">—</div>')+
+  '<div class="small" style="margin-top:6px">Үл хамаарах барааны код (мөр бүрт нэг)</div><textarea id="e_excl" rows="4">'+esc((p.excl||[]).join('\n'))+'</textarea>'+
+  '<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">Excel-ээс үл хамаарах код нэмэх («Код», «Баар код» баганатай)<input type="file" id="e_exf" accept=".xlsx,.xls,.csv"></label><div id="e_exmsg" class="small"></div></div>'+
   '</div><label class="f">Дэлгүүр (сонгоогүй бол бүх дэлгүүр)</label>'+chks('st',Object.entries(STN),p.stores)+
   '<label class="inl" style="margin-top:10px"><input type="checkbox" id="e_act" '+(p.active?'checked':'')+'> Идэвхтэй</label>'+
   '<div id="e_msg" class="small hot" style="min-height:18px;margin-top:6px"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'+(i==null?'':'<button class="btn warn" id="e_del" style="margin-right:auto">Устгах</button>')+'<button class="btn" id="e_c">Болих</button><button class="btn pri" id="e_ok">Хадгалах</button></div>';
   $('pm').classList.remove('hide');$('e_type').value=p.type;
-  const sync=()=>{const ty=$('e_type').value;$('e_pctw').classList.toggle('hide',ty!=='pct');$('e_pricew').classList.toggle('hide',ty!=='price');$('e_plw').classList.toggle('hide',ty!=='plist');$('e_scw').classList.toggle('hide',ty==='plist');$('e_amtw').classList.toggle('hide',ty!=='amount');$('e_samew').classList.toggle('hide',ty!=='pair');$('e_autow').classList.toggle('hide',ty!=='gift');$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
+  const sync=()=>{const ty=$('e_type').value;$('e_pctw').classList.toggle('hide',ty!=='pct');$('e_pricew').classList.toggle('hide',ty!=='price');$('e_plw').classList.toggle('hide',ty!=='plist');$('e_scw').classList.toggle('hide',ty==='plist');$('e_amtw').classList.toggle('hide',ty!=='amount');$('e_samew').classList.toggle('hide',ty!=='pair');$('e_autow').classList.toggle('hide',ty!=='gift');$('e_exw').classList.toggle('hide',ty==='gift'||ty==='plist');$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
   ['e_type','e_noend','e_all'].forEach(id=>$(id).onchange=sync);sync();
   $('e_file').onchange=async()=>{const f=$('e_file').files[0];if(!f)return;$('e_fmsg').textContent='Уншиж байна…';
     try{const pr=await readPl(f);
@@ -742,6 +750,9 @@ function editPromo(i){
   $('e_plf').onchange=async()=>{const f=$('e_plf').files[0];if(!f)return;$('e_plmsg').textContent='Уншиж байна…';
     try{const r=await readPl(f);if(!r.n)throw new Error('A баганад баркод, B баганад үнэ олдсонгүй');$('e_pl').value=Object.entries(r.m).map(x=>x[0]+'\t'+x[1]).join('\n');$('e_plmsg').innerHTML=plMsg(r)}
     catch(e){$('e_plmsg').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
+  $('e_exf').onchange=async()=>{const f=$('e_exf').files[0];if(!f)return;$('e_exmsg').textContent='Уншиж байна…';
+    try{const codes=await codesFromFile(f),cur=new Set($('e_excl').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)),add=codes.filter(c=>!cur.has(c));add.forEach(c=>cur.add(c));$('e_excl').value=[...cur].join('\n');$('e_exmsg').textContent=codes.length+' код олдлоо, '+add.length+' шинээр нэмэгдсэн.'}
+    catch(e){$('e_exmsg').textContent='Алдаа: '+(e.message||e)}};
   $('e_c').onclick=pClose;
   const save=async(list,type,info)=>{await db.collection('pos_config').doc('promos').set({list,updated:new Date().toISOString(),by:auth.currentUser.email||''});
     const uid=Date.now().toString(36)+Math.random().toString(36).slice(2,8);await db.collection('pos_audit').doc(uid).set({uid,t:new Date().toISOString(),type,approver:auth.currentUser.email||'',cashier:'',store:'',reg:'',info})};
@@ -749,6 +760,7 @@ function editPromo(i){
     try{const L=promos.slice();const old=L.splice(i,1)[0];await save(L,'promo_delete',{by:auth.currentUser.email,promo:old});pClose()}catch(e){$('e_msg').textContent='Алдаа: '+(e.code||e)}};
   $('e_ok').onclick=async()=>{
     const n={id:p.id,name:$('e_name').value.trim(),type:$('e_type').value,pct:0,samePct:0,all:$('e_all').checked,suppliers:chkd('sup'),groups:chkd('grp'),codes:[...new Set($('e_codes').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean))],start:$('e_start').value,end:$('e_noend').checked?'':$('e_end').value,stores:chkd('st'),active:$('e_act').checked};if(n.type==='gift'&&$('e_auto').checked)n.auto=true;
+    if(n.type!=='gift'&&n.type!=='plist'){n.excl=[...new Set($('e_excl').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean))];n.exSup=chkd('xsup');n.exOther=$('e_exo').checked}
     const err=m=>{$('e_msg').textContent=m};
     if(!n.name)return err('Нэр оруулна уу');
     if(n.type==='pct'){n.pct=Number($('e_pct').value);if(!(n.pct>0&&n.pct<=100))return err('Хөнгөлөлтийн хувь 1–100 байна')}
