@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="4.4">
+<meta name="vivi-ver" content="4.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -390,6 +390,8 @@ function cloudSoon(){clearTimeout(cloudSoon.h);cloudSoon.h=setTimeout(()=>{fb.er
 function shiftOut(sh){shiftq=shiftq.filter(q=>q.id!==sh.id);shiftq.push(JSON.parse(JSON.stringify(sh)));store.set('shiftq',shiftq);cloudSoon()}
 function cloudListen(){
   if(cloudListen.on)return;cloudListen.on=true;movListen();itxListen();devListen();
+  // Явуулын кассын одоогийн аян (самбараас тохируулна)
+  fb.db.collection('pos_config').doc('trip').onSnapshot(d=>{const v=d.exists?String(d.data().name||'').trim():'';if(v!==TRIP){TRIP=v;store.set('trip',v);if(S.user)header()}},()=>{});
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
   fb.db.collection('pos_catalog').doc('meta').onSnapshot(d=>{if(d.exists)catSync(d.data())},e=>{fb.err='каталог: '+(e&&e.code||e);cloudStatus()});
   const rqFrom=new Date(Date.now()-30*864e5).toISOString(),rqSt=curAcc();(rqSt?fb.db.collection('pos_requests').where('store','==',rqSt):fb.db.collection('pos_requests').where('created','>=',rqFrom)).onSnapshot(s=>{requests=s.docs.map(d=>d.data()).filter(r=>(r.created||'')>=rqFrom);applyPayFix();if($('rqs')&&$('pq')&&!$('pq').value)openReturn()},e=>{fb.err=e&&e.code||String(e);cloudStatus()});
@@ -622,7 +624,7 @@ function makeSale(cart,t,pays,change,ebar,type,ref){
   // хариултыг бэлэн мөнгөнөөс хасаж цэвэр дүнг хадгална
   const net=pays.map(p=>({...p}));let ch=change;
   for(const p of net){if(p.form==='Бэлнээр'&&ch>0){const x=Math.min(ch,p.amount);p.tendered=p.amount;p.amount-=x;ch-=x}}
-  const sale={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type,ref:ref||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,
+  const sale={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type,ref:ref||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,
     lines,qty:t.qty,base:t.base,discount:t.disc,total:t.total,payments:net,change,ebarimt:!!ebar,synced:false};
   sales.push(sale);store.set('sales',sales);cloudSoon();return sale;
 }
@@ -683,6 +685,10 @@ function keptTotal(s,rem){
     else fixed+=k*l.unit});
   return fixed+(cart.length?computePromo(cart,Object.values(P)).total:0);
 }
+// Буцаах дүнг мөрүүдэд төлсөн дүнгээр нь хуваана (1+1-ээр үнэгүй авсан бараа 0 ₮ авна).
+// Хос задарснаас нэмэгдсэн дүнг (үлдсэн бараа үнэгүй болсон) кассын үнээр хуваана.
+function retSplit(s,idx,tk,refund){const paid=idx.map(i=>Math.max(0,s.lines[i].unit*tk[i])),P=paid.reduce((a,b)=>a+b,0),kp=idx.map(i=>(s.lines[i].price!=null?s.lines[i].price:s.lines[i].base)*tk[i]),K=kp.reduce((a,b)=>a+b,0)||1;
+  return refund<=P&&P>0?paid.map(x=>x*refund/P):paid.map((x,j)=>x+(refund-P)*kp[j]/K)}
 function refundFor(s,st,tk){const rm=st.rem.map((r,i)=>r+(tk[i]||0));return Math.max(0,Math.round((s.total-st.prior)-keptTotal(s,rm)))}
 function returnLines(s){
   const st=retState(s),crP=s.payments.find(p=>p.form==='Зээлээр');
@@ -700,8 +706,8 @@ function returnLines(s){
     const tk=take(),idx=Object.keys(tk).map(Number),lines=[];let qty=0,base=0;
     if(rows.some(r=>(tk[r.i]||0)>r.av))return $('rm').textContent='Боломжит тооноос их байна';
     if(!idx.length)return $('rm').textContent='Буцаах тоо оруулна уу';
-    const refund=refundFor(s,st,tk),w=idx.map(i=>(s.lines[i].price!=null?s.lines[i].price:s.lines[i].base)*tk[i]),W=w.reduce((a,b)=>a+b,0)||1;let left=refund;
-    idx.forEach((i,j)=>{const a=j===idx.length-1?left:Math.round(refund*w[j]/W);left-=a;const l=s.lines[i];lines.push({...l,src:i,qty:-tk[i],sum:-a});qty-=tk[i];base-=tk[i]*l.base});
+    const refund=refundFor(s,st,tk),w=retSplit(s,idx,tk,refund);let left=refund;
+    idx.forEach((i,j)=>{const a=j===idx.length-1?left:Math.round(w[j]);left-=a;const l=s.lines[i];lines.push({...l,src:i,qty:-tk[i],sum:-a||0});qty-=tk[i];base-=tk[i]*l.base});
     const tot=refund?-refund:0;
     const why=$('rw').value.trim();if(!why)return $('rw').focus();
     const pay=rfPay($('rf').value,s),form=pay.form+(pay.bank?' · '+pay.bank:pay.partner?' · '+pay.partner:'');
@@ -728,7 +734,7 @@ function rfPay(v,s){if(v==='cash')return {form:'Бэлнээр'};if(v==='cr'){co
   const b=BANKS[+v.slice(1)],p={form:'Банкаар',bank:b[0],bankCode:b[1]};if(b[2]){p.partnerCode=b[2];p.partner=b[3]}return p}
 function finishReturn(r,reqUid){
   const n=nextNo(),d=now();
-  const sale={uid:uuid(),id:n.no,dayNo:n.day,type:'return',ref:r.ref,refUid:r.refUid||null,refStore:r.refStore||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{...(r.pay||{form:r.form}),amount:r.total}],change:0,ebarimt:false,reason:r.reason,request:reqUid||null,synced:false};
+  const sale={uid:uuid(),id:n.no,dayNo:n.day,type:'return',ref:r.ref,refUid:r.refUid||null,refStore:r.refStore||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{...(r.pay||{form:r.form}),amount:r.total}],change:0,ebarimt:false,reason:r.reason,request:reqUid||null,synced:false};
   sales.push(sale);store.set('sales',sales);cloudSoon();log('return',{ref:r.ref,total:r.total,why:r.reason,request:reqUid||''});closeModal();printReceipt(sale);
 }
 /* ---------- shift / reports ---------- */
@@ -994,8 +1000,8 @@ function exchLines(s){
   $('xo').onclick=async()=>{const tk=take(),idx=Object.keys(tk).map(Number);
     if(rows.some(r=>(tk[r.i]||0)>r.av))return;if(!idx.length)return $('xm').textContent='Буцааж авах барааны тоог оруулна уу';
     let by='';if(days>cfg.returnDays){if(!(await askPin('Солилт: хугацаа хэтэрсэн ('+days+' хоног)')))return;by=askPin.by;askPin.by=''}
-    const credit=refundFor(s,st,tk),w=idx.map(i=>(s.lines[i].price!=null?s.lines[i].price:s.lines[i].base)*tk[i]),W=w.reduce((a,b)=>a+b,0)||1;let left=credit;const lines=[];let qty=0,base=0;
-    idx.forEach((i,j)=>{const a=j===idx.length-1?left:Math.round(credit*w[j]/W);left-=a;const l=s.lines[i];lines.push({...l,src:i,qty:-tk[i],sum:-a});qty-=tk[i];base-=tk[i]*l.base});
+    const credit=refundFor(s,st,tk),w=retSplit(s,idx,tk,credit);let left=credit;const lines=[];let qty=0,base=0;
+    idx.forEach((i,j)=>{const a=j===idx.length-1?left:Math.round(w[j]);left-=a;const l=s.lines[i];lines.push({...l,src:i,qty:-tk[i],sum:-a||0});qty-=tk[i];base-=tk[i]*l.base});
     S.exch={ref:s.id,refUid:s.uid,refStore:s.store,refDate:s.date,lines,qty,base,credit,by,days};closeModal();render();$('scan').focus();flash('Солилт: шинэ бараагаа уншуулаад «Төлбөр» (F5) дарна уу')};
 }
 function exchBar(){const e=$('exbar');if(!S.exch){e.classList.add('hide');return}
@@ -1015,7 +1021,7 @@ function exchPay(){
     if(used)rp.push({form:'Солилт',amount:-used});if(D<0)rp.push({...fp($('xf').value),amount:D});
     // 1) буцаалт
     const n=nextNo(),d=now();
-    const ret={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type:'return',ref:x.ref,refUid:x.refUid,refStore:x.refStore||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:x.lines,qty:x.qty,base:x.base,discount:x.base+C,total:-C,payments:rp.length?rp:[{form:'Солилт',amount:0}],change:0,ebarimt:false,reason:'Солилт: '+why,exch:{id,role:'return'},synced:false};
+    const ret={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type:'return',ref:x.ref,refUid:x.refUid,refStore:x.refStore||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:x.lines,qty:x.qty,base:x.base,discount:x.base+C,total:-C,payments:rp.length?rp:[{form:'Солилт',amount:0}],change:0,ebarimt:false,reason:'Солилт: '+why,exch:{id,role:'return'},synced:false};
     sales.push(ret);
     // 2) шинэ борлуулалт
     const sale=makeSale(S.cart,t,sp.length?sp:[{form:'Солилт',amount:0}],0,false,'sale',x.ref);sale.exch={id,role:'sale',ret:ret.id};ret.exch.sale=sale.id;store.set('sales',sales);
@@ -1269,7 +1275,10 @@ function editUser(i){
 }
 /* ---------- login / shift ---------- */
 function show(id){['login','shiftopen','sale'].forEach(x=>$(x).classList.toggle('hide',x!==id));$('top').classList.toggle('hide',id==='login')}
-function header(){$('tStore').textContent=STORES[S.user.store]+' · Касс '+S.user.reg+(DEVDOC&&DEVDOC.name?' · '+DEVDOC.name:'');$('tCash').textContent=S.user.name;$('tShift').textContent=S.shift?'Ээлж '+S.shift.id:''}
+var TRIP=(()=>{try{return JSON.parse(localStorage.getItem('vivipos_trip'))||''}catch(e){return ''}})();
+// Явуулын кассын баримт бүрт аяны нэр (жишээ «Дархан 2026-12»); бусад дэлгүүрт хоосон
+function tripNow(){return S.user&&S.user.store==='YV'&&TRIP?TRIP:null}
+function header(){$('tStore').textContent=STORES[S.user.store]+(S.user.store==='YV'?' · '+(TRIP||'аян тохируулаагүй'):'')+' · Касс '+S.user.reg+(DEVDOC&&DEVDOC.name?' · '+DEVDOC.name:'');$('tCash').textContent=S.user.name;$('tShift').textContent=S.shift?'Ээлж '+S.shift.id:''}
 $('lGo').onclick=()=>{
   const u=users.find(x=>x.id===$('lCash').value);if(!u)return $('lMsg').textContent='Ажилтнаа сонгоно уу';
   if(!device.store)return $('lMsg').textContent='Энэ касс дэлгүүрт бэхлэгдээгүй';
