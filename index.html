@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.1">
+<meta name="vivi-ver" content="5.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -250,7 +250,8 @@ function promoWhy(l){
     if(r)out.push('«'+p.name+'»: '+r)});
   return out;
 }
-function activePromos(){const st=S.user&&S.user.store;return promos.filter(p=>promoState(p)==='on'&&(!p.stores.length||!st||p.stores.includes(st)))}
+// «Бусдыг түр зогсоох» урамшуулал (жишээ нь Black Friday) идэвхтэй үед зөвхөн тэр (тийм) урамшуулал хүчинтэй; дууссаны дараа 1+1 г.м. автоматаар буцна
+function activePromos(){const st=S.user&&S.user.store,A=promos.filter(p=>promoState(p)==='on'&&(!p.stores.length||!st||p.stores.includes(st)));return A.some(p=>p.solo)?A.filter(p=>p.solo):A}
 function plPrice(p,l){if(p.type!=='plist'||!p.prices)return null;const v=p.prices[l.code]!=null?p.prices[l.code]:(l.bc&&p.prices[l.bc]!=null?p.prices[l.bc]:null);return v}
 function promoBase(p,l){if(p.type==='plist')return plPrice(p,l)!=null;return !!(p.all||p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))}
 // Үл хамаарах: тодорхой код, нийлүүлэгч; «өөр урамшуулалтай бараа» (жишээ нь Black Friday −50% нь 1+1, тусгай үнэтэй бараанд хэрэглэгдэхгүй)
