@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.2">
+<meta name="vivi-ver" content="7.3">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -23,7 +23,10 @@ header nav.tabs button:hover{color:#fff}
 header nav.tabs button.on{color:#fff;border-bottom-color:var(--red)}
 header .tn{background:var(--red);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;margin-left:6px}
 header select#gStSel{font:inherit;font-size:14px;border-radius:6px;border:1px solid #4a5160;background:#2c323d;color:#fff;padding:3px 8px}
-.pnl{display:grid;gap:12px;align-content:start}.pnl[hidden]{display:none}
+.subnav{display:flex;gap:6px;flex-wrap:wrap}.subnav button{font:inherit;font-weight:650;border:1px solid var(--line);background:var(--soft,#f4f5f7);border-radius:10px;padding:9px 14px;cursor:pointer}
+.subnav button.on{background:var(--ink,#1d2330);color:#fff;border-color:var(--ink,#1d2330)}.subnav button.on .small{color:#cfd3da}
+.step{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px}.step .sn{flex:none;width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
+.pnl{display:grid;gap:12px;align-content:start}.pnl[hidden]{display:none}.card[hidden]{display:none!important}
 .rqban{font:inherit;font-weight:650;text-align:left;background:#fdecee;color:var(--red);border:1px solid var(--red);border-radius:10px;padding:10px 14px;cursor:pointer}
 main{padding:14px 16px;display:grid;gap:12px;max-width:1200px;margin:0 auto}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -165,44 +168,77 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div class="card"><h2>Хяналт: кассчны үйлдэл</h2><div class="scroll" id="cAud"></div></div>
 </section>
 <section class="pnl" data-panel="stock" hidden>
-  <div class="card"><h2>Эхний үлдэгдэл — бүх байршил нэг файлаар (Smart-ын «Ritel» / үлдэгдлийн файл)</h2>
-    <div class="small">Файлын байршлын багануудыг нэрээр нь таньж нэгтгэнэ: <b>Food city</b> = «Food city…» бүх хэлтэс + «Онлайн дэлгүүр»; <b>Драгон</b> = «Драгон…»; <b>Нийслэл</b> = «Нийслэл…»; <b>Агуулах</b> = Хувцас, Гутал, Da Toy, Эрка; <b>Гэмтэлтэй бараа</b> = «Деффикт»; <b>Явуулын касс</b> = «Дархан Үзэсгэлэн». «Нэгж өртөг»-өөр жигнэсэн дундаж өртөг эхэлнэ.</div>
-    <div class="frm" style="margin-top:8px"><div><label class="f">Smart-аас файл татсан огноо, цаг</label><input type="datetime-local" id="aAt" class="inp"></div><div><label class="f">Файл</label><input type="file" id="aFile" accept=".xlsx,.xls"></div></div>
-    <label class="inl" style="margin-top:6px"><input type="checkbox" id="aPos" checked> Манай POS-оор аль хэдийн хийсэн борлуулалтыг хасах (Smart-д ороогүй тул — тухайн дэлгүүрийн POS-ын эхний борлуулалтаас хойш)</label>
-    <div id="aPrev" class="small" style="margin-top:8px"></div>
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button id="aUp" class="btn pri" disabled>Бүх байршлын эхний үлдэгдэл хадгалах</button><span id="aoMsg" class="small"></span></div>
-  </div>
-  <div class="card"><h2>Агуулахын үлдэгдэл</h2>
-    <div class="small">Үлдэгдэл = эхний үлдэгдэл + орлого − зарлага ± шилжүүлэг − борлуулалт + буцаалт (эхний үлдэгдлийн огнооноос хойш).</div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:10px">
-      <div style="border:1px solid var(--line);border-radius:10px;padding:10px">
-        <b>1. Эхний үлдэгдэл (Smart-аас)</b>
-        <div class="frm"><div><label class="f">Дэлгүүр / агуулах</label><select id="oSt" class="inp"></select></div><div><label class="f">Хэдий үеийн үлдэгдэл</label><input type="datetime-local" id="oAt" class="inp"></div></div>
-        <label class="f">Үлдэгдлийн файл («Код» баганатай)</label><input type="file" id="oFile" accept=".xlsx,.xls">
-        <label class="f">Тоо хэмжээний багана (хэд хэдийг сонговол нийлбэрийг авна)</label><div id="oCol" class="chk" style="max-height:130px"></div><button id="oUp" class="btn pri" disabled style="margin-top:8px">Эхний үлдэгдэл хадгалах</button>
-        <div id="oMsg" class="small" style="margin-top:6px"></div><div id="oNow" class="small" style="margin-top:6px"></div>
-      </div>
-      <div style="border:1px solid var(--line);border-radius:10px;padding:10px">
-        <b>2. Хөдөлгөөн (орлого, зарлага, шилжүүлэг)</b>
-        <div class="frm"><div><label class="f">Төрөл</label><select id="mTy" class="inp"><option value="in">Орлого — нийлүүлэгчээс ирсэн</option><option value="move">Шилжүүлэг — байршлаас байршил руу</option><option value="out">Зарлага — гэмтэл, алдагдал, буцаалт г.м.</option></select></div><div id="mWhyW"><label class="f">Зарлагын шалтгаан</label><select id="mWhy" class="inp"><option>Гэмтэл, эвдрэл</option><option>Алдагдал, дутагдал</option><option>Нийлүүлэгчид буцаасан</option><option>Бэлэг, дээж, маркетинг</option><option>Дотоод хэрэглээ</option><option>Бусад</option></select></div><div><label class="f">Огноо, цаг</label><input type="datetime-local" id="mAt" class="inp"></div>
-        <div id="mSupW"><label class="f">Нийлүүлэгч (хаанаас ирсэн)</label><input type="text" id="mSup" class="inp" list="mSupL" placeholder="Жишээ: ORION WOJCIECH BARANKIEWICZ"><datalist id="mSupL"></datalist></div><div id="mFromW"><label class="f">Хаанаас</label><select id="mFrom" class="inp"></select></div><div id="mToW"><label class="f">Хаана</label><select id="mTo" class="inp"></select></div></div>
-        <label class="f">Тайлбар / баримтын №</label><input type="text" id="mNote" class="inp">
-        <label class="f">Бараа оруулах: баркод уншуулах (скан) эсвэл Excel файл</label><div style="display:flex;gap:6px;flex-wrap:wrap"><input type="text" id="mScan" class="inp" placeholder="Баркод уншуулах эсвэл код бичээд Enter (5*код = 5 ширхэг)" style="flex:1;min-width:220px" autocomplete="off"><button id="mClr" class="btn">Цэвэрлэх</button></div><div id="mScanL" class="small" style="max-height:220px;overflow:auto;margin-top:6px"></div><label class="small" style="display:block;margin-top:6px">эсвэл Excel («Код» + «Тоо»; орлогод «Нэгж өртөг» байвал жигнэсэн дундаж өртөг шинэчлэгдэнэ): <input type="file" id="mFile" accept=".xlsx,.xls"></label>
-        <div id="mPrev" class="small" style="margin-top:6px"></div>
-        <label class="inl" id="mRecvW" style="margin-top:6px"><input type="checkbox" id="mRecv" checked> Хүлээн авагч дэлгүүр касс дээрээ скан хийж хүлээн авна (тэр хүртэл «замд»)</label><label class="inl" style="margin-top:6px"><input type="checkbox" id="mPrint" checked> Хадгалахад баримт хэвлэх (A4 — бараатай хамт явуулж, хүлээн авагч гарын үсэг зурна)</label><button id="mUp" class="btn pri" disabled style="margin-top:6px">Хөдөлгөөн хадгалах</button><div id="mMsg" class="small" style="margin-top:6px"></div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px"><b>3. Үлдэгдлийн тайлан:</b><select id="sSt" class="inp" style="width:auto"></select><input type="text" id="sQ" class="inp" placeholder="Код эсвэл нэрээр шүүх" style="width:auto;flex:1;min-width:180px"><button id="sRun" class="btn">Тооцоолох</button><button id="sXl" class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)">Excel татах</button><span id="sMsg" class="small"></span></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>4. Кассууд:</b><button id="sPub" class="btn pri">Кассууд руу илгээх</button><span id="sPubM" class="small" style="flex:1"></span><span class="small">Кассчин «Үлдэгдэл (F2)» цонхонд бүх дэлгүүрийн үлдэгдлийг харна. Самбар нээгдэх бүрт 1 цагаас хуучин бол автоматаар шинэчилнэ.</span></div>
+  <div class="card" style="padding:10px 12px"><div class="subnav" id="stNav">
+    <button data-sub="bal" class="on">📦 Үлдэгдэл</button>
+    <button data-sub="in">⬇ Орлого <span class="small">нийлүүлэгчээс</span></button>
+    <button data-sub="move">⇄ Шилжүүлэг <span class="small">байршил хооронд</span></button>
+    <button data-sub="out">⬆ Зарлага <span class="small">гэмтэл, алдагдал</span></button>
+    <button data-sub="cnt">✓ Тооллого</button>
+    <button data-sub="arc">🗂 Архив</button>
+    <button data-sub="open" style="margin-left:auto">⚙ Эхний үлдэгдэл</button>
+  </div></div>
+
+  <!-- 1. Үлдэгдэл -->
+  <div class="card" data-sub="bal"><h2>Үлдэгдэл</h2>
+    <div class="small">Үлдэгдэл = эхний үлдэгдэл + орлого − зарлага ± шилжүүлэг − борлуулалт + буцаалт ± тооллогын зөрүү.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><select id="sSt" class="inp" style="width:auto"></select><input type="text" id="sQ" class="inp" placeholder="Код эсвэл нэрээр шүүх" style="width:auto;flex:1;min-width:180px"><button id="sRun" class="btn pri">Тооцоолох</button><button id="sXl" class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)">Excel татах</button></div>
+    <div id="sMsg" class="small" style="margin-top:6px"></div>
     <div class="kpi" id="sKpi" style="margin-top:8px"></div>
-    <div class="scroll" id="sTbl" style="max-height:460px;overflow:auto;margin-top:8px"></div>
-    <div style="margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:10px"><b>5. Тооллогын зөрүү (VIVI Kontrola-ийн тооллогын файл)</b>
-      <div class="small">Тоолсон тоог («Код» + «Тоо»/«Тоолсон» баганатай) системийн одоогийн үлдэгдэлтэй харьцуулж зөрүүг засна. Хадгалсны дараа үлдэгдэл тоолсон тоотой тэнцэнэ.</div>
-      <div class="frm" style="margin-top:6px"><div><label class="f">Байршил</label><select id="cSt" class="inp"></select></div><div><label class="f">Файл</label><input type="file" id="cFile" accept=".xlsx,.xls"></div></div>
-      <label class="inl" style="margin-top:6px"><input type="checkbox" id="cFull"> Бүрэн тооллого — файлд байхгүй бараа = 0 (тэмдэглээгүй бол зөвхөн файлд байгаа барааг засна)</label>
-      <div id="cPrev" class="small" style="margin-top:6px"></div><button id="cUp" class="btn pri" disabled style="margin-top:6px">Зөрүүг хадгалах</button><span id="cMsg" class="small"></span>
-    </div>
-    <div style="margin-top:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>Хөдөлгөөний баримтын архив</b><span class="small">Огноо</span><input type="date" id="mD1" class="inp" style="width:auto"><span>—</span><input type="date" id="mD2" class="inp" style="width:auto"><button id="mXlS" class="btn">Excel — баримтаар</button><button id="mXlL" class="btn pri">Excel — бараагаар (дэлгэрэнгүй)</button><span id="mTransit" class="small"></span></div><div class="small" style="margin-top:4px">Бүх орлого, зарлага, шилжүүлэг, тооллогын зөрүү энд хадгалагдана (устахгүй). Багана дээр дарж шүүнэ; Excel нь шүүсэн мөрийг татна. Мөр бүрийн «Хэвлэх», «Excel» — тухайн баримт.</div><div class="scroll" id="mList" style="max-height:380px;overflow:auto;margin-top:6px"></div></div>
+    <div class="scroll" id="sTbl" style="max-height:520px;overflow:auto;margin-top:8px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>Кассууд:</b><button id="sPub" class="btn">Кассууд руу илгээх</button><span id="sPubM" class="small" style="flex:1"></span><span class="small">Кассчин «Үлдэгдэл (F2)» цонхонд бүх дэлгүүрийн үлдэгдлийг харна. 1 цагаас хуучин бол автоматаар шинэчилнэ.</span></div>
+  </div>
+
+  <!-- 2-4. Орлого / Шилжүүлэг / Зарлага (нэг маягт) -->
+  <div class="card" data-sub="mov"><h2 id="mTitle">Хөдөлгөөн</h2><div class="small" id="mHint"></div>
+    <select id="mTy" class="hide"><option value="in">Орлого</option><option value="move">Шилжүүлэг</option><option value="out">Зарлага</option></select>
+    <div class="step"><div class="sn">1</div><div style="flex:1"><b>Хаанаас — хаана</b>
+      <div class="frm" style="margin-top:4px">
+        <div id="mSupW"><label class="f">Нийлүүлэгч (хаанаас ирсэн)</label><input type="text" id="mSup" class="inp" list="mSupL" placeholder="Жишээ: ORION WOJCIECH BARANKIEWICZ"><datalist id="mSupL"></datalist></div>
+        <div id="mFromW"><label class="f">Хаанаас</label><select id="mFrom" class="inp"></select></div>
+        <div id="mToW"><label class="f">Хаана</label><select id="mTo" class="inp"></select></div>
+        <div id="mWhyW"><label class="f">Зарлагын шалтгаан</label><select id="mWhy" class="inp"><option>Гэмтэл, эвдрэл</option><option>Алдагдал, дутагдал</option><option>Нийлүүлэгчид буцаасан</option><option>Бэлэг, дээж, маркетинг</option><option>Дотоод хэрэглээ</option><option>Бусад</option></select></div>
+        <div><label class="f">Огноо, цаг</label><input type="datetime-local" id="mAt" class="inp"></div>
+        <div><label class="f" id="mNoteL">Тайлбар</label><input type="text" id="mNote" class="inp"></div>
+      </div></div></div>
+    <div class="step"><div class="sn">2</div><div style="flex:1"><b>Бараа уншуулах</b> <span class="small">— баркод скан хийх эсвэл код бичээд Enter (5*код = 5 ширхэг)</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"><input type="text" id="mScan" class="inp" placeholder="Баркод уншуулах…" style="flex:1;min-width:220px;font-size:16px" autocomplete="off"><button id="mClr" class="btn">Цэвэрлэх</button></div>
+      <div id="mScanL" class="small" style="max-height:300px;overflow:auto;margin-top:6px"></div>
+      <details style="margin-top:6px"><summary class="small">эсвэл Excel файлаас оруулах («Код» + «Тоо»; орлогод «Нэгж өртөг»)</summary><input type="file" id="mFile" accept=".xlsx,.xls" style="margin-top:4px"></details>
+      <div id="mPrev" class="small" style="margin-top:6px"></div></div></div>
+    <div class="step"><div class="sn">3</div><div style="flex:1"><b>Хадгалах</b>
+      <label class="inl" id="mRecvW" style="margin-top:4px"><input type="checkbox" id="mRecv" checked> Хүлээн авагч дэлгүүр касс дээрээ скан хийж хүлээн авна (тэр хүртэл «замд»)</label>
+      <label class="inl" style="margin-top:4px"><input type="checkbox" id="mPrint" checked> Баримт хэвлэх (A4 — бараатай хамт явж, хүлээн авагч гарын үсэг зурна)</label>
+      <button id="mUp" class="btn pri" disabled style="margin-top:8px;min-width:220px">Хадгалах</button><div id="mMsg" class="small" style="margin-top:6px"></div></div></div>
+  </div>
+
+  <!-- 5. Тооллого -->
+  <div class="card" data-sub="cnt"><h2>Тооллогын зөрүү</h2>
+    <div class="small">VIVI Kontrola-ийн тооллогын файлыг («Код» + «Тоо»/«Тоолсон») системийн одоогийн үлдэгдэлтэй харьцуулж зөрүүг засна. Хадгалсны дараа үлдэгдэл тоолсон тоотой тэнцэнэ.</div>
+    <div class="step"><div class="sn">1</div><div style="flex:1"><div class="frm"><div><label class="f">Байршил</label><select id="cSt" class="inp"></select></div><div><label class="f">Тооллогын файл</label><input type="file" id="cFile" accept=".xlsx,.xls"></div></div>
+      <label class="inl" style="margin-top:6px"><input type="checkbox" id="cFull"> Бүрэн тооллого — файлд байхгүй бараа = 0 (тэмдэглээгүй бол зөвхөн файлд байгаа барааг засна)</label></div></div>
+    <div class="step"><div class="sn">2</div><div style="flex:1"><b>Зөрүүг шалгах</b><div id="cPrev" class="small" style="margin-top:4px">Файл сонгоно уу</div></div></div>
+    <div class="step"><div class="sn">3</div><div style="flex:1"><button id="cUp" class="btn pri" disabled>Зөрүүг хадгалах</button> <span id="cMsg" class="small"></span></div></div>
+  </div>
+
+  <!-- 6. Архив -->
+  <div class="card" data-sub="arc"><h2>Хөдөлгөөний баримтын архив</h2>
+    <div class="small">Бүх орлого, зарлага, шилжүүлэг, тооллогын зөрүү энд хадгалагдана (устахгүй). Багана дээр дарж шүүнэ; Excel нь шүүсэн мөрийг татна. Мөр бүрийн «Хэвлэх», «Excel» — тухайн баримт.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><span class="small">Огноо</span><input type="date" id="mD1" class="inp" style="width:auto"><span>—</span><input type="date" id="mD2" class="inp" style="width:auto"><button id="mXlS" class="btn">Excel — баримтаар</button><button id="mXlL" class="btn pri">Excel — бараагаар (дэлгэрэнгүй)</button><span id="mTransit" class="small"></span></div>
+    <div class="scroll" id="mList" style="max-height:560px;overflow:auto;margin-top:8px"></div>
+  </div>
+
+  <!-- 7. Эхний үлдэгдэл (тохиргоо) -->
+  <div class="card" data-sub="open"><h2>Эхний үлдэгдэл — бүх байршил нэг файлаар</h2>
+    <div class="small hot" style="margin-bottom:6px">Анхаар: хадгалахад байршил бүрийн одоогийн тооцоо шинээр эхэлнэ. Зөвхөн системийг эхлүүлэх үед (Smart-аас шилжихэд) ашиглана.</div>
+    <div class="small">Smart-ын «Ritel» / үлдэгдлийн файлын байршлын багануудыг нэрээр нь таньж нэгтгэнэ: <b>Food city</b> = «Food city…» бүх хэлтэс + «Онлайн дэлгүүр»; <b>Драгон</b> = «Драгон…»; <b>Нийслэл</b> = «Нийслэл…»; <b>Агуулах</b> = Хувцас, Гутал, Da Toy, Эрка; <b>Гэмтэлтэй бараа</b> = «Деффикт»; <b>Явуулын касс</b> = «Дархан Үзэсгэлэн». «Нэгж өртөг»-өөр жигнэсэн дундаж өртөг эхэлнэ.</div>
+    <div class="step"><div class="sn">1</div><div style="flex:1"><div class="frm"><div><label class="f">Smart-аас файл татсан огноо, цаг</label><input type="datetime-local" id="aAt" class="inp"></div><div><label class="f">Файл</label><input type="file" id="aFile" accept=".xlsx,.xls"></div></div>
+      <label class="inl" style="margin-top:6px"><input type="checkbox" id="aPos" checked> Манай POS-оор аль хэдийн хийсэн борлуулалтыг хасах (Smart-д ороогүй тул — тухайн дэлгүүрийн POS-ын эхний борлуулалтаас хойш)</label></div></div>
+    <div class="step"><div class="sn">2</div><div style="flex:1"><b>Шалгах</b><div id="aPrev" class="small" style="margin-top:4px">Файл сонгоно уу</div></div></div>
+    <div class="step"><div class="sn">3</div><div style="flex:1"><button id="aUp" class="btn pri" disabled>Бүх байршлын эхний үлдэгдэл хадгалах</button> <span id="aoMsg" class="small"></span><div id="oNow" class="small" style="margin-top:6px"></div></div></div>
+    <details style="margin-top:12px"><summary class="small">Нэг байршлаар оруулах (гараар багана сонгох)</summary>
+      <div class="frm" style="margin-top:6px"><div><label class="f">Дэлгүүр / агуулах</label><select id="oSt" class="inp"></select></div><div><label class="f">Хэдий үеийн үлдэгдэл</label><input type="datetime-local" id="oAt" class="inp"></div><div><label class="f">Үлдэгдлийн файл («Код» баганатай)</label><input type="file" id="oFile" accept=".xlsx,.xls"></div></div>
+      <label class="f">Тоо хэмжээний багана (хэд хэдийг сонговол нийлбэрийг авна)</label><div id="oCol" class="chk" style="max-height:130px"></div><button id="oUp" class="btn" disabled style="margin-top:8px">Эхний үлдэгдэл хадгалах</button><div id="oMsg" class="small" style="margin-top:6px"></div>
+    </details>
   </div>
 </section>
 <section class="pnl" data-panel="items" hidden>
@@ -1045,6 +1081,19 @@ function drawMov(){const MD=movInRange();
   xtable('mList','movs',['Баримт №','Огноо','Төрөл','Хаанаас','Хаана','Нийлүүлэгч / тайлбар','Төлөв','Илгээсэн','Ирсэн','Зөрүү','Илгээсэн хүн','Хүлээн авсан',''],MD.map(m=>{const rq=m.recvLines?JSON.parse(m.recvLines).reduce((a,x)=>a+x[1],0):null;
     return [m.no||'',lt(m.at),MT[m.type]||m.type,LOC[m.from]||'',LOC[m.to]||'',(m.supplier?m.supplier+(m.invoice?' · '+m.invoice:''):m.note||m.file||'')+(m.recvNote?' · '+m.recvNote:''),m.status==='sent'?'замд':m.status==='received'?'хүлээн авсан':'бүртгэсэн',m.qty,rq,rq==null||m.type!=='move'?null:rq-m.qty,m.by||'',(m.recvBy||'')+(m.recvAt?' · '+lt(m.recvAt):''),m.uid]}),{cell:(x,c)=>c===12?'<button class="btn" data-mp="'+esc(x[12])+'">Хэвлэх</button> <button class="btn" data-mxl="'+esc(x[12])+'">Excel</button>':c===6?'<span class="chip'+(x[6]==='замд'?' b':'')+'">'+x[6]+'</span>':c===9&&x[9]?'<span class="hot">'+(x[9]>0?'+':'')+x[9]+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])});
   const tr=movDocs.filter(m=>m.status==='sent');$('mTransit').innerHTML=tr.length?'<span class="chip b">Замд '+tr.length+' шилжүүлэг · '+tr.reduce((a,m)=>a+m.qty,0)+' ш</span> — хүлээн авагч дэлгүүр касс дээрээ скан хийж баталгаажуулна':''}
+
+/* ==== Агуулах: дэд цэс — нэг дор нэг ажил. Орлого/Шилжүүлэг/Зарлага нэг маягт, төрөл нь цэсээр ==== */
+const MOVT={in:['⬇ Орлого — нийлүүлэгчээс ирсэн бараа','Нийлүүлэгчээс ирсэн барааг аль байршилд орсныг бүртгэнэ. Нэгж өртөг оруулбал жигнэсэн дундаж өртөг шинэчлэгдэнэ.','Нэхэмжлэх / баримтын №','Орлого хадгалах'],
+  move:['⇄ Шилжүүлэг — байршлаас байршил руу','Илгээх барааг уншуулна. Хадгалахад баримт хэвлэгдэж, бараа «замд» болно. Хүлээн авагч дэлгүүр касс дээрээ уншуулж хүлээн авна.','Тайлбар','Шилжүүлэг илгээх'],
+  out:['⬆ Зарлага — гэмтэл, алдагдал, нийлүүлэгчид буцаалт','Байршлаас гарсан (зарагдаагүй) барааг шалтгаантай нь бүртгэнэ. Гэмтэлтэй барааг «Шилжүүлэг»-ээр «Гэмтэлтэй бараа» агуулах руу шилжүүлж болно.','Тайлбар','Зарлага хадгалах']};
+function stSub(k){const mv=['in','move','out'].includes(k);
+  document.querySelectorAll('#stNav [data-sub]').forEach(b=>b.classList.toggle('on',b.dataset.sub===k));
+  document.querySelectorAll('section[data-panel="stock"] .card[data-sub]').forEach(c=>c.hidden=c.dataset.sub!==(mv?'mov':k));
+  if(mv){if($('mTy').value!==k&&movLines&&movLines.length&&!confirm('Уншуулсан жагсаалтыг цэвэрлээд «'+MOVT[k][0]+'» руу шилжих үү?')){stSub($('mTy').value);return}
+    if($('mTy').value!==k){movLines=null;mDraw()}$('mTy').value=k;$('mTitle').textContent=MOVT[k][0];$('mHint').textContent=MOVT[k][1];$('mNoteL').textContent=MOVT[k][2];$('mUp').textContent=MOVT[k][3];syncMov();setTimeout(()=>$('mScan').focus(),50)}
+  if(k==='arc')drawMov();try{localStorage.setItem('vivipanel_stsub',k)}catch(e){}}
+$('stNav').onclick=e=>{const b=e.target.closest('[data-sub]');if(b)stSub(b.dataset.sub)};
+setTimeout(()=>stSub((()=>{try{return localStorage.getItem('vivipanel_stsub')}catch(e){return ''}})()||'bal'),0);
 $('sRun').onclick=calcStock;$('sSt').onchange=calcStock;$('sQ').oninput=()=>drawStock();
 // Нэг байршлын одоогийн үлдэгдэл: эхний үлдэгдэл + орлого − зарлага − борлуулалт + буцаалт (эхний үлдэгдлийн цагаас хойш)
 const sDay=iso=>new Date(iso).toLocaleDateString('sv-SE').replace(/-/g,'/');
