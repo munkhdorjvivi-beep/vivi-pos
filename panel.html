@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.8">
+<meta name="vivi-ver" content="7.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -184,10 +184,10 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       </div>
       <div style="border:1px solid var(--line);border-radius:10px;padding:10px">
         <b>2. Хөдөлгөөн (орлого, зарлага, шилжүүлэг)</b>
-        <div class="frm"><div><label class="f">Төрөл</label><select id="mTy" class="inp"><option value="in">Орлого (нийлүүлэгчээс ирсэн)</option><option value="out">Зарлага (гарсан)</option><option value="move">Шилжүүлэг</option></select></div><div id="mWhyW"><label class="f">Зарлагын шалтгаан</label><select id="mWhy" class="inp"><option>Гэмтэл, эвдрэл</option><option>Алдагдал, дутагдал</option><option>Нийлүүлэгчид буцаасан</option><option>Бэлэг, дээж, маркетинг</option><option>Дотоод хэрэглээ</option><option>Бусад</option></select></div><div><label class="f">Огноо, цаг</label><input type="datetime-local" id="mAt" class="inp"></div>
-        <div id="mFromW"><label class="f">Хаанаас</label><select id="mFrom" class="inp"></select></div><div id="mToW"><label class="f">Хаана</label><select id="mTo" class="inp"></select></div></div>
+        <div class="frm"><div><label class="f">Төрөл</label><select id="mTy" class="inp"><option value="in">Орлого — нийлүүлэгчээс ирсэн</option><option value="move">Шилжүүлэг — байршлаас байршил руу</option><option value="out">Зарлага — гэмтэл, алдагдал, буцаалт г.м.</option></select></div><div id="mWhyW"><label class="f">Зарлагын шалтгаан</label><select id="mWhy" class="inp"><option>Гэмтэл, эвдрэл</option><option>Алдагдал, дутагдал</option><option>Нийлүүлэгчид буцаасан</option><option>Бэлэг, дээж, маркетинг</option><option>Дотоод хэрэглээ</option><option>Бусад</option></select></div><div><label class="f">Огноо, цаг</label><input type="datetime-local" id="mAt" class="inp"></div>
+        <div id="mSupW"><label class="f">Нийлүүлэгч (хаанаас ирсэн)</label><input type="text" id="mSup" class="inp" list="mSupL" placeholder="Жишээ: ORION WOJCIECH BARANKIEWICZ"><datalist id="mSupL"></datalist></div><div id="mFromW"><label class="f">Хаанаас</label><select id="mFrom" class="inp"></select></div><div id="mToW"><label class="f">Хаана</label><select id="mTo" class="inp"></select></div></div>
         <label class="f">Тайлбар / баримтын №</label><input type="text" id="mNote" class="inp">
-        <label class="f">Файл («Код» + «Тоо» баганатай; орлогод «Нэгж өртөг» багана байвал жигнэсэн дундаж өртөг шинэчлэгдэнэ)</label><input type="file" id="mFile" accept=".xlsx,.xls">
+        <label class="f">Бараа оруулах: баркод уншуулах (скан) эсвэл Excel файл</label><div style="display:flex;gap:6px;flex-wrap:wrap"><input type="text" id="mScan" class="inp" placeholder="Баркод уншуулах эсвэл код бичээд Enter (5*код = 5 ширхэг)" style="flex:1;min-width:220px" autocomplete="off"><button id="mClr" class="btn">Цэвэрлэх</button></div><div id="mScanL" class="small" style="max-height:220px;overflow:auto;margin-top:6px"></div><label class="small" style="display:block;margin-top:6px">эсвэл Excel («Код» + «Тоо»; орлогод «Нэгж өртөг» байвал жигнэсэн дундаж өртөг шинэчлэгдэнэ): <input type="file" id="mFile" accept=".xlsx,.xls"></label>
         <div id="mPrev" class="small" style="margin-top:6px"></div>
         <label class="inl" id="mRecvW" style="margin-top:6px"><input type="checkbox" id="mRecv" checked> Хүлээн авагч дэлгүүр касс дээрээ скан хийж хүлээн авна (тэр хүртэл «замд»)</label><button id="mUp" class="btn pri" disabled style="margin-top:6px">Хөдөлгөөн хадгалах</button><div id="mMsg" class="small" style="margin-top:6px"></div>
       </div>
@@ -933,7 +933,7 @@ const locOpts=(sel,blank)=>(blank?'<option value="">—</option>':'')+Object.ent
 const dtl=d=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return x.toISOString().slice(0,16)};
 $('oAt').value=dtl(new Date());$('aAt').value=dtl(new Date());$('mAt').value=dtl(new Date());
 let openSheet=null,movLines=null,movDocs=[],stockRows=[];
-const syncMov=()=>{const ty=$('mTy').value;$('mWhyW').classList.toggle('hide',ty!=='out');$('mFromW').classList.toggle('hide',ty==='in');$('mToW').classList.toggle('hide',ty==='out');$('mRecvW').classList.toggle('hide',ty==='out'||($('mTo').value==='AG'))};$('mTo').addEventListener('change',()=>syncMov());$('mTy').onchange=syncMov;syncMov();
+const syncMov=()=>{const ty=$('mTy').value;$('mWhyW').classList.toggle('hide',ty!=='out');$('mSupW').classList.toggle('hide',ty!=='in');$('mSupL').innerHTML=(catLists.sups||[]).map(x=>'<option value="'+esc(x)+'">').join('');$('mFromW').classList.toggle('hide',ty==='in');$('mToW').classList.toggle('hide',ty==='out');$('mRecvW').classList.toggle('hide',ty==='out'||($('mTo').value==='AG'))};$('mTo').addEventListener('change',()=>syncMov());$('mTy').addEventListener('focus',()=>syncMov());$('mTy').onchange=syncMov;syncMov();
 function sheetWith(wb,need){for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim());if(need(row))return {rows:a.slice(h+1),head:row,sheet:n}}}return null}
 $('oFile').onchange=async()=>{const f=$('oFile').files[0];if(!f)return;$('oMsg').textContent='Уншиж байна…';$('oUp').disabled=true;
   try{await xlsx();const S=sheetWith(XLSX.read(await fileBuf(f),{type:'array'}),r=>r.includes('Код'));if(!S)return $('oMsg').innerHTML='<span class="hot">«Код» багана олдсонгүй</span>';
@@ -968,21 +968,34 @@ $('mFile').onchange=async()=>{const f=$('mFile').files[0];if(!f)return;movLines=
       if(S.ci>=0){const k=Number(r[S.ci]);if(isFinite(k)&&k>0){o[4]+=k*q;o[3]=Math.round(o[4]/o[1]*100)/100}}map.set(c,o)}});
     movLines=[...map.values()].map(x=>x[3]!=null?[x[0],x[1],x[2],x[3]]:[x[0],x[1],x[2]]);const wc=movLines.filter(x=>x[3]!=null).length;
     $('mPrev').innerHTML=esc(S.sheet)+': '+movLines.length+' бараа, '+movLines.reduce((a,x)=>a+x[1],0)+' ширхэг'+(S.ci>=0?' · нэгж өртөгтэй '+wc+' бараа («'+esc(String(S.a[S.h][S.ci]).trim())+'»), өртгийн дүн '+money(movLines.reduce((a,x)=>a+(x[3]||0)*x[1],0)):'')+
-      ($('mTy').value==='in'&&S.ci<0?' · <span class="hot">нэгж өртөг алга — дундаж өртөг өөрчлөгдөхгүй</span>':'');$('mUp').disabled=!movLines.length;
+      ($('mTy').value==='in'&&S.ci<0?' · <span class="hot">нэгж өртөг алга — дундаж өртөг өөрчлөгдөхгүй</span>':'');const pv=$('mPrev').innerHTML;mDraw();$('mPrev').innerHTML=pv;
   }catch(e){$('mPrev').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
 $('mUp').onclick=async()=>{
   const ty=$('mTy').value,at=new Date($('mAt').value),from=ty==='in'?'':$('mFrom').value,to=ty==='out'?'':$('mTo').value;
   if(!movLines||isNaN(at))return;if(ty==='move'&&from===to)return $('mMsg').innerHTML='<span class="hot">Хаанаас, хаана ижил байна</span>';
+  if(ty==='in'&&!$('mSup').value.trim())return $('mMsg').innerHTML='<span class="hot">Нийлүүлэгчийг бичнэ үү</span>';
   const uid=Date.now().toString(36)+Math.random().toString(36).slice(2,8);$('mUp').disabled=true;
   try{let costNote='';
     // Орлого + нэгж өртөг: жигнэсэн дундаж өртөг = (бүх байршлын үлдэгдэл × хуучин өртөг + ирсэн тоо × шинэ өртөг) / (үлдэгдэл + ирсэн)
     if(ty==='in'&&movLines.some(x=>x[3]!=null)){$('mMsg').textContent='Жигнэсэн дундаж өртөг тооцоолж байна…';const A=await stockAll(),m=new Map(costMap);let n=0;
       movLines.forEach(x=>{if(x[3]==null)return;const v=A.M.get(x[0]),Q=Math.max(0,v?v.reduce((a,b)=>a+b,0):0),old=m.has(x[0])?m.get(x[0]):x[3],nw=Math.round((Q*old+x[1]*x[3])/(Q+x[1])*100)/100;x.push(Q,old,nw);m.set(x[0],nw);n++});
       await writeChunks('pos_cost',[...m.entries()],{src:'receipt',doc:uid},()=>{});costMap=m;costNote=' · дундаж өртөг шинэчилсэн '+n+' бараа'}
-    await db.collection('pos_stock_docs').doc(uid).set({uid,type:ty,from,to,at:at.toISOString(),note:(ty==='out'?$('mWhy').value+(($('mNote').value.trim())?' · ':''):'')+$('mNote').value.trim(),reason:ty==='out'?$('mWhy').value:'',file:($('mFile').files[0]||{}).name||'',lines:JSON.stringify(movLines),count:movLines.length,qty:movLines.reduce((a,x)=>a+x[1],0),
+    await db.collection('pos_stock_docs').doc(uid).set({uid,type:ty,from,to,at:at.toISOString(),note:(ty==='out'?$('mWhy').value+(($('mNote').value.trim())?' · ':''):'')+$('mNote').value.trim(),supplier:ty==='in'?$('mSup').value.trim():'',invoice:ty==='in'?$('mNote').value.trim():'',reason:ty==='out'?$('mWhy').value:'',file:($('mFile').files[0]||{}).name||'',lines:JSON.stringify(movLines),count:movLines.length,qty:movLines.reduce((a,x)=>a+x[1],0),
       costSum:Math.round(movLines.reduce((a,x)=>a+(x[3]||0)*x[1],0)),by:auth.currentUser.email||'',saved:new Date().toISOString(),...(ty!=='out'&&to!=='AG'&&to!=='DF'&&$('mRecv').checked?{status:'sent'}:{})});
-    await auditCfg('stock_doc',{uid,type:ty,from,to,qty:movLines.reduce((a,x)=>a+x[1],0)});$('mMsg').innerHTML='<span class="chip">Хадгаллаа</span>'+costNote;movLines=null;$('mFile').value='';$('mPrev').textContent='';$('mNote').value=''}
+    await auditCfg('stock_doc',{uid,type:ty,from,to,qty:movLines.reduce((a,x)=>a+x[1],0)});$('mMsg').innerHTML='<span class="chip">Хадгаллаа</span>'+costNote;movLines=null;$('mFile').value='';$('mPrev').textContent='';$('mNote').value='';mDraw()}
   catch(e){$('mUp').disabled=false;$('mMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'}};
+
+/* Панелд скан хийх: USB сканнер гараар бичдэг тул баркод → Enter. «5*код» = 5 ширхэг. Excel-ийн оронд. */
+const mDraw=()=>{const L=movLines||[];$('mScanL').innerHTML=L.length?'<table data-xe="1"><thead><tr><th>Код</th><th>Нэр</th><th class="n">Тоо</th><th></th></tr></thead><tbody>'+L.map((x,i)=>'<tr><td>'+esc(x[0])+'</td><td>'+esc(x[2]||'')+'</td><td class="n"><input type="number" min="0" data-mq="'+i+'" value="'+x[1]+'" style="width:70px"></td><td><button class="btn" data-mx="'+i+'">×</button></td></tr>').join('')+'</tbody></table><div><b>'+L.length+'</b> бараа · <b>'+L.reduce((a,x)=>a+x[1],0)+'</b> ширхэг</div>':'';
+  $('mPrev').textContent='';$('mUp').disabled=!L.length};
+$('mScan').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('mScan').value.trim(),n=1;$('mScan').value='';if(!v)return;const m=/^(\d{1,4})\*(.+)$/.exec(v);if(m){n=+m[1];v=m[2].trim()}
+  try{await loadPCat()}catch(x){}const it=itRow(v),code=it?it.code:v;
+  if(!it){$('mMsg').innerHTML='<span class="hot">'+esc(v)+' — жагсаалтад алга (кодоор нь нэмлээ)</span>'}else $('mMsg').textContent='';
+  movLines=movLines||[];const o=movLines.find(x=>x[0]===code);if(o)o[1]+=n;else movLines.unshift([code,n,it?it.name:'']);mDraw()};
+$('mScanL').addEventListener('input',e=>{const q=e.target.closest('[data-mq]');if(!q)return;const x=movLines[+q.dataset.mq];x[1]=Math.max(0,Math.round(Number(q.value)||0));});
+$('mScanL').addEventListener('change',()=>{movLines=(movLines||[]).filter(x=>x[1]>0);mDraw()});
+$('mScanL').addEventListener('click',e=>{const b=e.target.closest('[data-mx]');if(!b)return;movLines.splice(+b.dataset.mx,1);mDraw()});
+$('mClr').onclick=()=>{movLines=null;$('mFile').value='';mDraw();$('mScan').focus()};
 const MT={in:'Орлого',out:'Зарлага',move:'Шилжүүлэг',adj:'Тооллогын зөрүү'};
 function watchMov(){db.collection('pos_stock_docs').onSnapshot(s=>{movDocs=s.docs.map(d=>d.data()).sort((a,b)=>a.at<b.at?1:-1);movReady=true;
   xtable('mList','movs',['Огноо','Төрөл','Хаанаас','Хаана','Нийлүүлэгч / тайлбар','Төлөв','Илгээсэн','Ирсэн','Зөрүү','Илгээсэн хүн','Хүлээн авсан'],movDocs.map(m=>{const rq=m.recvLines?JSON.parse(m.recvLines).reduce((a,x)=>a+x[1],0):null;
