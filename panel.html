@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.1">
+<meta name="vivi-ver" content="6.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -717,17 +717,17 @@ function editPromo(i){
   const sups=[...new Set([...catLists.sups,...p.suppliers])],grps=[...new Set([...catLists.grps,...p.groups])];
   $('pbox').innerHTML='<h2 style="margin:0 0 6px">'+(i==null?'Шинэ урамшуулал':'Урамшуулал засах')+'</h2><div class="frm">'+
   '<div><label class="f">Нэр</label><input type="text" id="e_name" value="'+esc(p.name)+'"></div>'+
-  '<div><label class="f">Төрөл</label><select id="e_type"><option value="pct">Хувиар хөнгөлөх (%)</option><option value="price">Тогтмол үнэ (₮)</option><option value="amount">Мөнгөн дүнгээр хөнгөлөх (−₮)</option><option value="plist">Үнийн жагсаалт (Excel: A — баркод, B — шинэ үнэ)</option><option value="pair">1+1 (хямд нь үнэгүй)</option><option value="gift">Бэлэг (үнэ 0 ₮)</option></select></div>'+
+  '<div><label class="f">Төрөл</label><select id="e_type"><option value="pct">Хувиар хөнгөлөх (%)</option><option value="price">Тогтмол үнэ (₮)</option><option value="amount">Мөнгөн дүнгээр хөнгөлөх (−₮)</option><option value="plist">Үнийн жагсаалт (Excel: A — баркод, B — шинэ үнэ)</option><option value="pair">1+1 (хямд нь үнэгүй)</option><option value="gift">Бэлэг (үнэ 0 ₮)</option></select><div class="small" id="e_tdesc" style="opacity:.75;margin-top:3px"></div></div>'+
   '<div id="e_pctw"><label class="f">Хөнгөлөлтийн хувь</label><input type="number" id="e_pct" value="'+(p.pct||'')+'"></div>'+
   '<div id="e_pricew"><label class="f">Шинэ үнэ, нэг ширхэг (₮)</label><input type="number" id="e_price" value="'+(p.price||'')+'"></div>'+
   '<div id="e_amtw"><label class="f">Хөнгөлөх дүн, нэг ширхэгт (₮)</label><input type="number" id="e_amt" value="'+(p.amount||'')+'"></div>'+
   '<div id="e_autow"><label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="e_auto" '+(p.auto?'checked':'')+'> Кассчин сонгохгүй — сагсанд автоматаар 0 ₮ болно</label><div class="small">Сонгоогүй үед бараа ердийн кассын үнээр орж, кассчин «Бэлэг болгох» товчоор 0 ₮ болгоно (бараа худалдаанд ч зарагдана).</div></div>'+
   '<div id="e_samew"><label class="f">Ижил үнэтэй 2+ ширхэгт хөнгөлөх хувь (0 = үгүй)</label><input type="number" id="e_same" value="'+p.samePct+'"></div>'+
   '<div><label class="f">Эхлэх огноо</label><input type="date" id="e_start" value="'+p.start+'"></div>'+
-  '<div><label class="f">Дуусах огноо</label><input type="date" id="e_end" value="'+p.end+'"><label class="inl"><input type="checkbox" id="e_noend" '+(p.end?'':'checked')+'> Дуусах огноогүй</label></div></div>'+
+  '<div><label class="f">Дуусах огноо</label><input type="date" id="e_end" value="'+p.end+'"><label class="inl"><input type="checkbox" id="e_noend" '+(p.end?'':'checked')+'> Дуусах огноогүй</label><div class="small" style="opacity:.75;margin-top:3px">Эхлэх өдрийн 00:00-аас дуусах өдрийн 23:59 хүртэл хүчинтэй. «Дуусах огноогүй» бол өөрөө зогсоох хүртэл.</div></div></div>'+
   '<div id="e_plw"><label class="f">Үнийн жагсаалт: мөр бүрт «баркод шинэ_үнэ»</label><textarea id="e_pl" rows="6">'+esc(Object.entries(p.prices||{}).map(x=>x[0]+'\t'+x[1]).join('\n'))+'</textarea>'+
   '<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">Excel файл (A багана — баркод эсвэл код, B багана — шинэ үнэ)<input type="file" id="e_plf" accept=".xlsx,.xls,.csv"></label><div id="e_plmsg" class="small"></div></div>'+
-  '<div id="e_scw"><label class="f">Хамрах бараа</label><label class="inl"><input type="checkbox" id="e_all" '+(p.all?'checked':'')+'> Бүх бараа</label>'+
+  '<div id="e_scw"><label class="f">Хамрах бараа</label><label class="inl"><input type="checkbox" id="e_all" '+(p.all?'checked':'')+'> Бүх бараа</label><div class="small" style="opacity:.75;margin-top:3px">Тэмдэглэвэл дэлгүүрийн бүх бараанд. Тэмдэглэгээг авбал нийлүүлэгч, бүлэг, барааны код эсвэл Excel (баркодын жагсаалт)-аар хамрах барааг сонгоно.</div>'+
   '<div id="e_scope"><div class="small" style="margin-top:6px">Нийлүүлэгч</div>'+(sups.length?chks('sup',sups.map(x=>[x,x]),p.suppliers):'<div class="small">Жагсаалт алга — барааны жагсаалтаа дахин илгээнэ үү.</div>')+
   '<div class="small" style="margin-top:6px">Барааны бүлэг</div>'+(grps.length?chks('grp',grps.map(x=>[x,x]),p.groups):'<div class="small">—</div>')+
   '<div class="small" style="margin-top:6px">Барааны код (мөр бүрт нэг)</div><textarea id="e_codes" rows="4">'+esc(p.codes.join('\n'))+'</textarea>'+
@@ -737,12 +737,13 @@ function editPromo(i){
   '<div class="small" style="margin-top:6px">Үл хамаарах нийлүүлэгч</div>'+(sups.length?chks('xsup',sups.map(x=>[x,x]),p.exSup||[]):'<div class="small">—</div>')+
   '<div class="small" style="margin-top:6px">Үл хамаарах барааны код (мөр бүрт нэг)</div><textarea id="e_excl" rows="4">'+esc((p.excl||[]).join('\n'))+'</textarea>'+
   '<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">Excel-ээс үл хамаарах код нэмэх («Код», «Баар код» баганатай)<input type="file" id="e_exf" accept=".xlsx,.xls,.csv"></label><div id="e_exmsg" class="small"></div></div>'+
-  '</div><label class="f">Дэлгүүр (сонгоогүй бол бүх дэлгүүр)</label>'+chks('st',Object.entries(STN),p.stores)+
-  '<label class="inl" style="margin-top:10px"><input type="checkbox" id="e_solo" '+(p.solo?'checked':'')+'> <b>Энэ урамшууллын хугацаанд бусад бүх урамшууллыг түр зогсоох</b> (1+1 г.м.) — дууссаны дараа автоматаар буцаж идэвхжинэ</label>'+
-  '<label class="inl" style="margin-top:10px"><input type="checkbox" id="e_act" '+(p.active?'checked':'')+'> Идэвхтэй</label>'+
+  '</div><label class="f">Дэлгүүр (сонгоогүй бол бүх дэлгүүр)</label><div class="small" style="opacity:.75;margin:-2px 0 4px">Аль дэлгүүрийн кассанд хүчинтэй вэ. Нэгийг ч сонгоогүй бол бүх дэлгүүрт.</div>'+chks('st',Object.entries(STN),p.stores)+
+  '<label class="inl" style="margin-top:10px"><input type="checkbox" id="e_solo" '+(p.solo?'checked':'')+'> <b>Энэ урамшууллын хугацаанд бусад бүх урамшууллыг түр зогсоох</b> (1+1 г.м.) — дууссаны дараа автоматаар буцаж идэвхжинэ</label><div class="small" style="opacity:.75;margin-top:3px">Black Friday мэт бүх дэлгүүрийн хямдралд. Тэмдэглээгүй бол бусад урамшуулалтай зэрэг ажиллана (нэг бараанд хамгийн хямд үнэ нь хүчинтэй, 1+1 хувийн хөнгөлөлтөөс давуу).</div>'+
+  '<label class="inl" style="margin-top:10px"><input type="checkbox" id="e_act" '+(p.active?'checked':'')+'> Идэвхтэй</label><div class="small" style="opacity:.75;margin-top:3px">Тэмдэглэгээг авбал урамшуулал устахгүй — зөвхөн түр зогсоно, кассад хэрэглэгдэхгүй. Дараа нь дахин тэмдэглээд «Хадгалах» дарж идэвхжүүлнэ.</div>'+
   '<div id="e_msg" class="small hot" style="min-height:18px;margin-top:6px"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'+(i==null?'':'<button class="btn warn" id="e_del" style="margin-right:auto">Устгах</button>')+'<button class="btn" id="e_c">Болих</button><button class="btn pri" id="e_ok">Хадгалах</button></div>';
   $('pm').classList.remove('hide');$('e_type').value=p.type;
-  const sync=()=>{const ty=$('e_type').value;$('e_pctw').classList.toggle('hide',ty!=='pct');$('e_pricew').classList.toggle('hide',ty!=='price');$('e_plw').classList.toggle('hide',ty!=='plist');$('e_scw').classList.toggle('hide',ty==='plist');$('e_amtw').classList.toggle('hide',ty!=='amount');$('e_samew').classList.toggle('hide',ty!=='pair');$('e_autow').classList.toggle('hide',ty!=='gift');$('e_exw').classList.toggle('hide',ty==='gift'||ty==='plist');$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
+  const TD={pct:'Кассын үнээс хувиар хасна. Жишээ: 50 → 35 900 ₮ бараа 17 950 ₮.',price:'Хамрах бараа бүгд нэг тогтмол үнээр зарагдана. Жишээ: 9 900 ₮.',amount:'Кассын үнээс тогтмол дүн хасна. Жишээ: −5 000 ₮.',plist:'Бараа бүрт өөр шинэ үнэ: Excel — A багана баркод, B багана шинэ үнэ (эсвэл доор мөр бүрт «баркод үнэ»). Тусгай үнэ, хямдралын жагсаалтад.',pair:'1+1: хоёр бараанаас хямд нь үнэгүй. Ижил үнэтэй бол хоёуланд нь доорх хувиар хөнгөлнө.',gift:'Сонгосон бараа бэлэг (0 ₮). Кассчин «Бэлэг болгох» дарна, эсвэл автоматаар.'};
+  const sync=()=>{const ty=$('e_type').value;$('e_tdesc').textContent=TD[ty]||'';$('e_pctw').classList.toggle('hide',ty!=='pct');$('e_pricew').classList.toggle('hide',ty!=='price');$('e_plw').classList.toggle('hide',ty!=='plist');$('e_scw').classList.toggle('hide',ty==='plist');$('e_amtw').classList.toggle('hide',ty!=='amount');$('e_samew').classList.toggle('hide',ty!=='pair');$('e_autow').classList.toggle('hide',ty!=='gift');$('e_exw').classList.toggle('hide',ty==='gift'||ty==='plist');$('e_end').disabled=$('e_noend').checked;if($('e_noend').checked)$('e_end').value='';$('e_scope').classList.toggle('hide',$('e_all').checked)};
   ['e_type','e_noend','e_all'].forEach(id=>$(id).onchange=sync);sync();
   $('e_file').onchange=async()=>{const f=$('e_file').files[0];if(!f)return;$('e_fmsg').textContent='Уншиж байна…';
     try{const pr=await readPl(f);
