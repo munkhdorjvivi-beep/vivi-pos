@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.4">
+<meta name="vivi-ver" content="7.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1113,11 +1113,11 @@ let stockHead=[],stockAllMode=false;
 async function calcStock(){
   const st=$('sSt').value;$('sMsg').textContent='Тооцоолж байна…';stockRows=[];
   try{await loadPCat().catch(()=>{});const nmOf=c=>{const x=itRow(c);return x?x.name:''},cash=c=>{const x=itRow(c);return x?x.price:0};
-    if(st==='ALL'){stockAllMode=true;const A=await stockAll();if(!A.SS.length){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">Эхний үлдэгдэл алга</span>'}
+    if(st==='ALL'){stockAllMode=true;const A=await stockAll();if(!A.SS.length){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">Эхний үлдэгдэл алга.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
       stockHead=['Код','Нэр',...A.SS.map(x=>LOC[x]),'Нийт','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
       stockRows=[...A.M.entries()].map(([c,v])=>{const t=v.reduce((a,b)=>a+b,0),k=costMap.get(c);return {code:c,name:nmOf(c),loc:v,now:t,cost:k==null?null:k,cash:cash(c)}});
       $('sMsg').textContent='Бүх байршил · '+A.SS.map(x=>LOC[x]+' ('+lt(A.O[x].asOf)+'-аас)').join(' · ')}
-    else{stockAllMode=false;const od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл хадгалаагүй байна</span>'}
+    else{stockAllMode=false;const od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл хадгалаагүй байна.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
       const O=od.data(),asOf=O.asOf,snap=await db.collection('pos_sales').where('date','>=',sDay(asOf)).get(),C=stockCalc(st,O,snap.docs.map(d=>d.data()));
       stockHead=['Код','Нэр','Эхний','Орлого','Зарлага','Борлуулсан','Буцаалт','Тооллогын зөрүү','Одоо','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
       stockRows=C.rows.map(r=>({...r,name:r.name||nmOf(r.code),cost:costMap.has(r.code)?costMap.get(r.code):null,cash:cash(r.code)}));
