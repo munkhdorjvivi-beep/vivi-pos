@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.5">
+<meta name="vivi-ver" content="5.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -94,7 +94,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <b>VIVI</b><span>POS хяналт</span><span class="ver">v<span class="appver"></span></span><span class="sp"></span>
   <input type="date" id="d1"><span>→</span><input type="date" id="d2"><select id="gStSel" title="Дэлгүүр"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="ON">Онлайн дэлгүүр</option><option value="YV">Явуулын касс</option></select>
   <span id="who" class="small" style="opacity:.75"></span><button id="logout" class="btn" style="min-height:30px;padding:2px 10px">Гарах</button><span id="live">холбогдож байна…</span>
-  <nav class="tabs" id="tabs"><button data-tab="home">Нүүр</button><button data-tab="req">Хүсэлт<span class="tn hide" id="tnReq"></span></button><button data-tab="rep">Борлуулалтын тайлан</button><button data-tab="rcpt">Баримтууд</button><button data-tab="cash">Ээлж, бэлэн мөнгө</button><button data-tab="stock">Агуулах, хөдөлгөөн</button><button data-tab="items">Бараа, үнэ, шошго</button><button data-tab="promo">Урамшуулал</button><button data-tab="till">Касс, ажилтан</button><button data-tab="set">Тохиргоо</button></nav>
+  <nav class="tabs" id="tabs"><button data-tab="home">Нүүр</button><button data-tab="req">Хүсэлт<span class="tn hide" id="tnReq"></span></button><button data-tab="chat">💬 Чат<span class="tn hide" id="tnChat"></span></button><button data-tab="rep">Борлуулалтын тайлан</button><button data-tab="rcpt">Баримтууд</button><button data-tab="cash">Ээлж, бэлэн мөнгө</button><button data-tab="stock">Агуулах, хөдөлгөөн</button><button data-tab="items">Бараа, үнэ, шошго</button><button data-tab="promo">Урамшуулал</button><button data-tab="till">Касс, ажилтан</button><button data-tab="set">Тохиргоо</button></nav>
 </header>
 <main>
 <section class="pnl" data-panel="home" hidden>
@@ -124,6 +124,13 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <div class="card" style="margin-top:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Хүсэлтийн түүх (сонгосон хугацаанд)</h2><select id="rhK" class="inp" style="width:auto"><option value="">Бүх төрөл</option><option value="return">Буцаалт</option><option value="exchange">Солилт</option><option value="paychange">Төлбөр засах</option></select></div><div class="scroll" id="cRqH" style="max-height:360px;overflow:auto;margin-top:8px"></div></div>
   <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Буцаалтын маягт — нягтлан шалгах <span id="rfCnt" class="small"></span></h2><select id="rfFlt" class="inp" style="width:auto"><option value="">Бүгд</option><option value="no">Шалгаагүй</option><option value="yes">Шалгасан</option></select></div>
   <div class="small" style="margin:4px 0 8px">Касс дээр бөглөсөн буцаалт, солилтын маягт (цаасны оронд). Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Шалгасны дараа «Шалгах» дарна.</div><div class="scroll" id="cRetF" style="max-height:520px;overflow:auto"></div></div>
+</section>
+<section class="pnl" data-panel="chat" hidden>
+  <div class="card"><div style="display:grid;grid-template-columns:230px 1fr;gap:12px;min-height:70vh" id="chWrap">
+    <div id="chList" style="display:flex;flex-direction:column;gap:6px"></div>
+    <div style="display:flex;flex-direction:column;min-width:0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><h2 style="margin:0" id="chTitle">Чат</h2><span class="small" id="chInfo"></span></div>
+      <div class="cht" id="chThread" style="flex:1;max-height:62vh"></div><div id="chComp"></div></div>
+  </div></div>
 </section>
 <section class="pnl" data-panel="rep" hidden>
   <div class="grid">
@@ -317,7 +324,7 @@ function drawReqHist(){const k=$('rhK').value,L=allReqs.filter(r=>(!gSt||r.store
   $('cRqH').innerHTML=tbl(['Огноо','Төрөл','Дэлгүүр · кассчин','Баримт','Дүн','Төлөв','Шийдвэрлэсэн'],L.map(r=>{const st=SN[r.status]||[r.status,''],kk=r.kind||'return';
     return '<tr><td class="small">'+lt(r.created)+'</td><td>'+RQK[kk]+(r.diffType?' <span class="small">'+esc(r.diffType)+'</span>':'')+'</td><td class="n small">'+esc(r.storeName)+' · '+esc(r.cashier)+'</td><td class="n small">'+esc(r.ref)+'</td><td class="n">'+(kk==='exchange'?'зөрүү '+money(r.diff):kk==='paychange'?money(r.total):money(-r.total))+'</td><td class="n"><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="n small">'+esc(r.decidedBy||'')+(r.note?'<br>'+esc(r.note):'')+'</td></tr>'}));}
 function listen(){
-  if(!reqOn){reqOn=true;watchCat();loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();watchDevs();watchPart();watchMov();watchTrip();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
+  if(!reqOn){reqOn=true;watchCat();loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();watchDevs();watchPart();watchMov();watchTrip();watchChat();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
@@ -502,6 +509,127 @@ $('rXl').onclick=()=>xtXlsx(repKey(),repName()).catch(e=>alert('Алдаа: '+(e
 /* ---- урамшуулал: pos_config/promos {list} — кассууд шууд уншина ---- */
 let promos=[],catLists={sups:[],grps:[]};
 const STN={FC:'Food city',DR:'Драгон',NS:'Нийслэл',ON:'Онлайн дэлгүүр',YV:'Явуулын касс'};
+/* ==== VIVI чат: касс ↔ самбар (оффис). Дэлгүүр бүр нэг яриатай.
+   Мессеж: pos_chat/{дэлгүүр}/msgs/{id}; хавсралт (зураг, дуу, файл) 600 КБ-аар хэсэглэж pos_chat/{дэлгүүр}/files/{fid_i}-д хадгална.
+   Зураг 1600px хүртэл багасгаж JPEG болгоно. Дуу бичлэг 3 мин хүртэл. Нэг файл 8 МБ хүртэл, нэг мессежид 10 хүртэл файл. ==== */
+const CHAT={MAXF:8*1024*1024,CH:600*1024,MAXN:10,MAXREC:180,cache:new Map(),db:null,
+  id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,10)},
+  col(st){return CHAT.db().collection('pos_chat/'+st+'/msgs')},
+  fcol(st){return CHAT.db().collection('pos_chat/'+st+'/files')},
+  e(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))},
+  kb(n){return n<1024*1024?Math.max(1,Math.round(n/1024))+' КБ':(n/1048576).toFixed(1)+' МБ'},
+  mmss(s){s=Math.round(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},
+  css(){if(document.getElementById('chatCss'))return;const st=document.createElement('style');st.id='chatCss';st.textContent=`
+.cht{display:flex;flex-direction:column;gap:6px;overflow:auto;padding:10px;background:#f4f5f7;border-radius:10px;min-height:200px}
+.cht .day{align-self:center;font-size:11px;color:#7a8190;background:#e6e8ec;border-radius:999px;padding:2px 10px;margin:6px 0}
+.cht .m{max-width:78%;padding:7px 10px;border-radius:12px;background:#fff;box-shadow:0 1px 1px rgba(0,0,0,.06);font-size:14px;line-height:1.35;word-wrap:break-word}
+.cht .m.me{align-self:flex-end;background:#dff3e4}
+.cht .m .a{font-size:11px;font-weight:700;color:#5b6270;margin-bottom:2px}
+.cht .m .t{font-size:10px;color:#8a909c;text-align:right;margin-top:3px}
+.cht .m img{display:block;max-width:240px;max-height:240px;border-radius:8px;margin-top:4px;cursor:zoom-in;background:#e9ebef;min-width:80px;min-height:60px}
+.cht .m audio{display:block;margin-top:4px;max-width:240px;height:36px}
+.cht .m .f,.cht .m .pl{display:inline-flex;gap:6px;align-items:center;margin-top:4px;padding:6px 10px;border-radius:8px;background:#eef0f3;border:0;font:inherit;font-size:13px;cursor:pointer;color:#1d2330}
+.chc{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.chc .row{display:flex;gap:6px;align-items:flex-end}
+.chc textarea{flex:1;min-height:42px;max-height:120px;resize:vertical;font:inherit;font-size:14px;padding:8px 10px;border:1px solid #cfd3da;border-radius:10px}
+.chc button{font:inherit;font-size:14px;border:1px solid #cfd3da;background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer;white-space:nowrap}
+.chc button.snd{background:#1d2330;color:#fff;border-color:#1d2330;font-weight:700}
+.chc button.rec{background:#c8102e;color:#fff;border-color:#c8102e}
+.chc .att{display:flex;gap:6px;flex-wrap:wrap}
+.chc .att span{font-size:12px;background:#eef0f3;border-radius:999px;padding:3px 8px}
+.chc .att b{cursor:pointer;margin-left:4px;color:#c8102e}
+.chc .st{font-size:12px;color:#c8102e;min-height:16px}
+.chzoom{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out}
+.chzoom img{max-width:94vw;max-height:94vh}`;document.head.appendChild(st)},
+  // зураг багасгах (gif, жижиг зураг хэвээр)
+  async prep(f){const kind=/^image\//.test(f.type)?'image':/^audio\//.test(f.type)?'audio':'file';
+    if(kind!=='image'||/gif|svg/.test(f.type))return {blob:f,name:f.name||'файл',type:f.type||'application/octet-stream',kind};
+    try{const url=URL.createObjectURL(f),im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+      const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      const b=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.82));if(b&&b.size<f.size)return {blob:b,name:(f.name||'зураг').replace(/\.\w+$/,'')+'.jpg',type:'image/jpeg',kind};
+    }catch(e){}
+    return {blob:f,name:f.name||'зураг',type:f.type,kind}},
+  b64(blob){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=no;r.readAsDataURL(blob)})},
+  // илгээх: эхлээд хавсралтын хэсгүүд, дараа нь мессеж (мессеж харагдахад файл бэлэн байна)
+  async send(st,meta,files,prog){const id=CHAT.id(),F=[];let done=0;const tot=files.reduce((a,f)=>a+Math.ceil(f.blob.size/CHAT.CH)||1,0)||1;
+    for(let k=0;k<files.length;k++){const f=files[k],fid=id+'_'+k,n=Math.max(1,Math.ceil(f.blob.size/CHAT.CH));
+      for(let i=0;i<n;i++){const d=await CHAT.b64(f.blob.slice(i*CHAT.CH,(i+1)*CHAT.CH));await CHAT.fcol(st).doc(fid+'_'+i).set({store:st,msg:id,fid,i,n,d});done++;prog&&prog(done/tot)}
+      F.push({fid,name:f.name,type:f.type,size:f.blob.size,kind:f.kind,n,dur:f.dur||null});CHAT.cache.set(fid,URL.createObjectURL(f.blob))}
+    const m={id,store:st,from:meta.from,author:meta.author||'',t:new Date().toISOString(),text:meta.text||'',files:F,readPanel:meta.from==='panel',readTill:meta.from==='till'};
+    await CHAT.col(st).doc(id).set(m);return m},
+  async load(st,f){if(CHAT.cache.has(f.fid))return CHAT.cache.get(f.fid);
+    const P=[];for(let i=0;i<f.n;i++)P.push(CHAT.fcol(st).doc(f.fid+'_'+i).get());const S=await Promise.all(P);
+    const parts=S.map(s=>{const b=atob((s.exists&&s.data().d)||''),u=new Uint8Array(b.length);for(let j=0;j<b.length;j++)u[j]=b.charCodeAt(j);return u});
+    const url=URL.createObjectURL(new Blob(parts,{type:f.type}));CHAT.cache.set(f.fid,url);return url},
+  // яриа зурах
+  draw(box,st,msgs,me){const near=box.scrollHeight-box.scrollTop-box.clientHeight<80;let day='',h='';
+    msgs.forEach(m=>{const d=new Date(m.t),dk=d.toLocaleDateString('mn-MN');if(dk!==day){day=dk;h+='<div class="day">'+CHAT.e(d.toISOString().slice(0,10).replace(/-/g,'.'))+'</div>'}
+      h+='<div class="m'+(m.from===me?' me':'')+'"><div class="a">'+CHAT.e(m.author||(m.from==='panel'?'Оффис':'Касс'))+'</div>'+(m.text?CHAT.e(m.text).replace(/\n/g,'<br>'):'')+
+        (m.files||[]).map(f=>f.kind==='image'?'<img data-fid="'+CHAT.e(f.fid)+'" alt="">':f.kind==='audio'?'<button class="pl" data-fid="'+CHAT.e(f.fid)+'">▶ Дуу '+CHAT.mmss(f.dur)+'</button>':'<button class="f" data-fid="'+CHAT.e(f.fid)+'">📄 '+CHAT.e(f.name)+' · '+CHAT.kb(f.size)+'</button>').join('')+
+        '<div class="t">'+d.toTimeString().slice(0,5)+(m.from===me?(me==='till'?(m.readPanel?' ✓✓':' ✓'):(m.readTill?' ✓✓':' ✓')):'')+'</div></div>'});
+    box.innerHTML=h||'<div class="day">Мессеж алга. Эхний мессежээ бичнэ үү.</div>';
+    const F=new Map();msgs.forEach(m=>(m.files||[]).forEach(f=>F.set(f.fid,f)));
+    box.querySelectorAll('img[data-fid]').forEach(im=>{const f=F.get(im.dataset.fid);CHAT.load(st,f).then(u=>{im.src=u}).catch(()=>{im.alt='зураг ачаалсангүй'})});
+    box.onclick=async e=>{const b=e.target.closest('[data-fid]');if(!b)return;const f=F.get(b.dataset.fid);if(!f)return;
+      if(b.tagName==='IMG'){if(!b.src)return;const z=document.createElement('div');z.className='chzoom';z.innerHTML='<img src="'+b.src+'">';z.onclick=()=>z.remove();document.body.appendChild(z);return}
+      const old=b.textContent;b.textContent='Ачаалж байна…';try{const u=await CHAT.load(st,f);
+        if(f.kind==='audio'){const a=document.createElement('audio');a.controls=true;a.src=u;b.replaceWith(a);a.play().catch(()=>{})}
+        else{const a=document.createElement('a');a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();b.textContent=old}}catch(err){b.textContent=old+' (алдаа)'}};
+    if(near||!box.dataset.init){box.scrollTop=box.scrollHeight;box.dataset.init=1}},
+  // бичих хэсэг: текст, олон файл (📎, хуулж буулгах, чирж оруулах), дуу бичлэг 🎤
+  composer(el,onSend){CHAT.css();let att=[],rec=null;
+    el.className='chc';el.innerHTML='<div class="att"></div><div class="row"><textarea placeholder="Мессеж бичих… (Enter — илгээх, Shift+Enter — шинэ мөр)"></textarea><button class="fb" title="Файл, зураг хавсаргах">📎</button><button class="mic" title="Дуу бичих">🎤</button><button class="snd">Илгээх</button></div><div class="st"></div><input type="file" multiple hidden>';
+    const ta=el.querySelector('textarea'),inp=el.querySelector('input'),A=el.querySelector('.att'),S=el.querySelector('.st'),mic=el.querySelector('.mic'),snd=el.querySelector('.snd');
+    const drawA=()=>{A.innerHTML=att.map((f,i)=>'<span>'+(f.kind==='image'?'🖼 ':f.kind==='audio'?'🎤 ':'📄 ')+CHAT.e(f.name)+' · '+CHAT.kb(f.blob.size)+'<b data-x="'+i+'">×</b></span>').join('')};
+    A.onclick=e=>{const x=e.target.closest('[data-x]');if(x){att.splice(+x.dataset.x,1);drawA()}};
+    const add=async L=>{for(const f of L){if(att.length>=CHAT.MAXN){S.textContent='Нэг мессежид '+CHAT.MAXN+' хүртэл файл';break}
+      const p=await CHAT.prep(f);if(p.blob.size>CHAT.MAXF){S.textContent=p.name+' — 8 МБ-аас том файл илгээх боломжгүй';continue}att.push(p)}drawA()};
+    el.querySelector('.fb').onclick=()=>inp.click();inp.onchange=()=>{add([...inp.files]);inp.value=''};
+    ta.addEventListener('paste',e=>{const F=[...(e.clipboardData&&e.clipboardData.files||[])];if(F.length){e.preventDefault();add(F)}});
+    el.addEventListener('dragover',e=>e.preventDefault());el.addEventListener('drop',e=>{e.preventDefault();add([...e.dataTransfer.files])});
+    mic.onclick=async()=>{if(rec){rec.stop();return}
+      if(!navigator.mediaDevices||!window.MediaRecorder){S.textContent='Энэ компьютер дуу бичих боломжгүй';return}
+      try{const stream=await navigator.mediaDevices.getUserMedia({audio:true}),mt=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t))||'';
+        const r=new MediaRecorder(stream,mt?{mimeType:mt,audioBitsPerSecond:24000}:{}),ch=[],t0=Date.now();rec=r;mic.classList.add('rec');
+        const tick=setInterval(()=>{const s=(Date.now()-t0)/1000;mic.textContent='⏹ '+CHAT.mmss(s);if(s>=CHAT.MAXREC)r.stop()},250);
+        r.ondataavailable=e=>e.data.size&&ch.push(e.data);
+        r.onstop=()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;mic.classList.remove('rec');mic.textContent='🎤';
+          const type=(r.mimeType||'audio/webm').split(';')[0],b=new Blob(ch,{type}),dur=(Date.now()-t0)/1000;
+          if(dur<1)return;att.push({blob:b,name:'дуу '+CHAT.mmss(dur)+'.'+(type.split('/')[1]||'webm'),type,kind:'audio',dur});drawA()};
+        r.start(1000);S.textContent=''}catch(e){S.textContent='Микрофон ашиглах зөвшөөрөл алга: '+(e.name||e)}};
+    const go=async()=>{const text=ta.value.trim();if(rec){rec.stop();await new Promise(r=>setTimeout(r,300))}
+      if(!text&&!att.length)return;snd.disabled=true;S.textContent='Илгээж байна…';
+      try{await onSend(text,att,p=>{S.textContent='Илгээж байна… '+Math.round(p*100)+'%'});ta.value='';att=[];drawA();S.textContent=''}
+      catch(e){S.textContent='Илгээгдсэнгүй: '+(e&&e.code||e)}snd.disabled=false;ta.focus()};
+    snd.onclick=go;ta.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();go()}});
+    return {focus:()=>ta.focus()}},
+  beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(a.destination);o.start();
+    setTimeout(()=>{o.frequency.value=1320},120);setTimeout(()=>{o.stop();a.close()},260)}catch(e){}}
+};
+
+/* ==== Чат: дэлгүүр бүрийн касстай ярих (хавсралт, дуу). Уншаагүй тоо цэсэнд, шинэ мессежид дуут дохио ==== */
+const CHATM={};let chSel=localStorage.getItem('vivipanel_chat')||'FC',chSeen={};
+function chatMe(){const e=(auth.currentUser&&auth.currentUser.email)||'',l=e.split('@')[0];return l==='panel'?'Оффис':'Оффис · '+l.replace(/^panel-/,'')}
+function watchChat(){CHAT.db=()=>db;CHAT.css();
+  chComp=chComp||CHAT.composer($('chComp'),async(text,files,prog)=>{await CHAT.send(chSel,{from:'panel',author:chatMe(),text},files,prog)});
+  ST_ORDER.forEach(st=>CHAT.col(st).orderBy('t').limitToLast(200).onSnapshot(q=>{const L=q.docs.map(d=>d.data()).sort((a,b)=>a.t<b.t?-1:1);
+    const fresh=chSeen[st]?L.filter(m=>m.from==='till'&&!chSeen[st].has(m.id)):[];chSeen[st]=new Set(L.map(m=>m.id));CHATM[st]=L;
+    if(fresh.length)CHAT.beep();chatUI()},e=>{$('chInfo').textContent='Чат: '+(e.code||e)}))}
+let chComp=null;
+const chUnread=st=>(CHATM[st]||[]).filter(m=>m.from==='till'&&!m.readPanel).length;
+function chatUI(){const tot=ST_ORDER.reduce((a,st)=>a+chUnread(st),0);$('tnChat').textContent=tot;$('tnChat').classList.toggle('hide',!tot);
+  document.title=(tot?'('+tot+') ':'')+document.title.replace(/^\(\d+\) /,'');
+  $('chList').innerHTML=ST_ORDER.map(st=>{const L=CHATM[st]||[],last=L[L.length-1],n=chUnread(st);
+    return '<button class="btn" data-ch="'+st+'" style="text-align:left;display:block;padding:10px 12px;'+(st===chSel?'border-color:var(--red);background:#fdecee':'')+'"><div style="display:flex;gap:6px;align-items:center"><b style="flex:1">'+esc(STN[st])+'</b>'+(n?'<span class="tn" style="margin:0">'+n+'</span>':'')+'</div>'+
+      (last?'<div class="small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((last.from==='panel'?'Та: ':'')+(last.text||((last.files||[])[0]||{}).name||''))+'</div><div class="small" style="opacity:.6">'+lt(last.t)+'</div>':'<div class="small" style="opacity:.6">мессеж алга</div>')+'</button>'}).join('');
+  $('chTitle').textContent='💬 '+STN[chSel];
+  const vis=!document.querySelector('section[data-panel="chat"]').hidden;
+  if(vis){CHAT.draw($('chThread'),chSel,CHATM[chSel]||[],'panel');(CHATM[chSel]||[]).filter(m=>m.from==='till'&&!m.readPanel).forEach(m=>{m.readPanel=true;CHAT.col(chSel).doc(m.id).update({readPanel:true,readPanelAt:new Date().toISOString(),readPanelBy:chatMe()}).catch(()=>{})});
+    setTimeout(()=>{const t=ST_ORDER.reduce((a,st)=>a+chUnread(st),0);$('tnChat').textContent=t;$('tnChat').classList.toggle('hide',!t)},0)}}
+$('chList').onclick=e=>{const b=e.target.closest('[data-ch]');if(!b)return;chSel=b.dataset.ch;try{localStorage.setItem('vivipanel_chat',chSel)}catch(x){}$('chThread').dataset.init='';chatUI();chComp&&chComp.focus()};
+window.addEventListener('popstate',()=>setTimeout(chatUI,0));$('tabs').addEventListener('click',()=>setTimeout(chatUI,0));
+
 /* ==== Буцаалтын маягт: касс дээр бөглөсөн буцаалт/солилтыг нягтлан шалгана (pos_sales.checked) ==== */
 function custLine(c){if(!c)return '';return '<div class="small" style="margin-top:4px">Үйлчлүүлэгч: <b>'+esc(c.name||'')+'</b> · '+esc(c.phone||'')+(c.acct?' · данс: '+esc(c.bank)+' '+esc(c.acct)+' ('+esc(c.holder)+')':'')+'</div>'}
 function drawRetForms(){const f=$('rfFlt').value,L=sales.filter(s=>s.type==='return').sort((a,b)=>a.iso<b.iso?1:-1);

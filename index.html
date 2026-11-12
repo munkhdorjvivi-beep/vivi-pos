@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="4.7">
+<meta name="vivi-ver" content="4.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -128,7 +128,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
 <body>
 <div id="top" class="hide">
   <b>VIVI</b><span class="ver">POS <span class="appver"></span></span><span class="tag" id="tStore"></span><span class="tag" id="tCash"></span><span class="tag" id="tShift"></span>
-  <span class="sp"></span><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
+  <span class="sp"></span><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
 </div>
 
 <div id="login">
@@ -312,7 +312,7 @@ async function cloudInit(){
   try{
     if(!window.firebase)for(const m of ['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+FB_VER+'/firebase-'+m+'-compat.js');
     firebase.initializeApp(FB_CONFIG);fb.auth=firebase.auth();fb.db=firebase.firestore();fb.ready=true;
-    fb.auth.onAuthStateChanged(u=>{fb.user=u;movStop();devStop();accBind();cloudStatus();if(u){cloudListen();cloudSync()}});
+    fb.auth.onAuthStateChanged(u=>{fb.user=u;movStop();devStop();chatStop();accBind();cloudStatus();if(u){cloudListen();cloudSync()}});
   }catch(e){fb.err=String(e&&e.message||e)}
   cloudStatus();
 }
@@ -389,7 +389,7 @@ async function cloudSync(){
 function cloudSoon(){clearTimeout(cloudSoon.h);cloudSoon.h=setTimeout(()=>{fb.err='';cloudSync()},400);cloudStatus()}
 function shiftOut(sh){shiftq=shiftq.filter(q=>q.id!==sh.id);shiftq.push(JSON.parse(JSON.stringify(sh)));store.set('shiftq',shiftq);cloudSoon()}
 function cloudListen(){
-  if(cloudListen.on)return;cloudListen.on=true;movListen();itxListen();devListen();
+  if(cloudListen.on)return;cloudListen.on=true;movListen();itxListen();devListen();chatListen();
   // Явуулын кассын одоогийн аян (самбараас тохируулна)
   fb.db.collection('pos_config').doc('trip').onSnapshot(d=>{const v=d.exists?String(d.data().name||'').trim():'';if(v!==TRIP){TRIP=v;store.set('trip',v);if(S.user)header()}},()=>{});
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
@@ -1383,6 +1383,132 @@ setInterval(()=>{$('clock').textContent=tstr(now()).slice(0,5)},1000);
 window.addEventListener('beforeunload',e=>{if(S.cart.length){e.preventDefault();e.returnValue=''}});
 applyDevice();fillCashiers();$('lCash').focus();
 showCat();applyItx();pruneLocal();catLocal();if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});$('lCon').onclick=cloudConnect;$('lBind').onclick=bindStore;window.addEventListener('online',cloudSoon);window.addEventListener('offline',cloudStatus);setInterval(cloudSync,20000);cloudInit();
+</script>
+<script>
+/* ==== VIVI чат: касс ↔ самбар (оффис). Дэлгүүр бүр нэг яриатай.
+   Мессеж: pos_chat/{дэлгүүр}/msgs/{id}; хавсралт (зураг, дуу, файл) 600 КБ-аар хэсэглэж pos_chat/{дэлгүүр}/files/{fid_i}-д хадгална.
+   Зураг 1600px хүртэл багасгаж JPEG болгоно. Дуу бичлэг 3 мин хүртэл. Нэг файл 8 МБ хүртэл, нэг мессежид 10 хүртэл файл. ==== */
+const CHAT={MAXF:8*1024*1024,CH:600*1024,MAXN:10,MAXREC:180,cache:new Map(),db:null,
+  id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,10)},
+  col(st){return CHAT.db().collection('pos_chat/'+st+'/msgs')},
+  fcol(st){return CHAT.db().collection('pos_chat/'+st+'/files')},
+  e(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))},
+  kb(n){return n<1024*1024?Math.max(1,Math.round(n/1024))+' КБ':(n/1048576).toFixed(1)+' МБ'},
+  mmss(s){s=Math.round(s||0);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},
+  css(){if(document.getElementById('chatCss'))return;const st=document.createElement('style');st.id='chatCss';st.textContent=`
+.cht{display:flex;flex-direction:column;gap:6px;overflow:auto;padding:10px;background:#f4f5f7;border-radius:10px;min-height:200px}
+.cht .day{align-self:center;font-size:11px;color:#7a8190;background:#e6e8ec;border-radius:999px;padding:2px 10px;margin:6px 0}
+.cht .m{max-width:78%;padding:7px 10px;border-radius:12px;background:#fff;box-shadow:0 1px 1px rgba(0,0,0,.06);font-size:14px;line-height:1.35;word-wrap:break-word}
+.cht .m.me{align-self:flex-end;background:#dff3e4}
+.cht .m .a{font-size:11px;font-weight:700;color:#5b6270;margin-bottom:2px}
+.cht .m .t{font-size:10px;color:#8a909c;text-align:right;margin-top:3px}
+.cht .m img{display:block;max-width:240px;max-height:240px;border-radius:8px;margin-top:4px;cursor:zoom-in;background:#e9ebef;min-width:80px;min-height:60px}
+.cht .m audio{display:block;margin-top:4px;max-width:240px;height:36px}
+.cht .m .f,.cht .m .pl{display:inline-flex;gap:6px;align-items:center;margin-top:4px;padding:6px 10px;border-radius:8px;background:#eef0f3;border:0;font:inherit;font-size:13px;cursor:pointer;color:#1d2330}
+.chc{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.chc .row{display:flex;gap:6px;align-items:flex-end}
+.chc textarea{flex:1;min-height:42px;max-height:120px;resize:vertical;font:inherit;font-size:14px;padding:8px 10px;border:1px solid #cfd3da;border-radius:10px}
+.chc button{font:inherit;font-size:14px;border:1px solid #cfd3da;background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer;white-space:nowrap}
+.chc button.snd{background:#1d2330;color:#fff;border-color:#1d2330;font-weight:700}
+.chc button.rec{background:#c8102e;color:#fff;border-color:#c8102e}
+.chc .att{display:flex;gap:6px;flex-wrap:wrap}
+.chc .att span{font-size:12px;background:#eef0f3;border-radius:999px;padding:3px 8px}
+.chc .att b{cursor:pointer;margin-left:4px;color:#c8102e}
+.chc .st{font-size:12px;color:#c8102e;min-height:16px}
+.chzoom{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out}
+.chzoom img{max-width:94vw;max-height:94vh}`;document.head.appendChild(st)},
+  // зураг багасгах (gif, жижиг зураг хэвээр)
+  async prep(f){const kind=/^image\//.test(f.type)?'image':/^audio\//.test(f.type)?'audio':'file';
+    if(kind!=='image'||/gif|svg/.test(f.type))return {blob:f,name:f.name||'файл',type:f.type||'application/octet-stream',kind};
+    try{const url=URL.createObjectURL(f),im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+      const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      const b=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.82));if(b&&b.size<f.size)return {blob:b,name:(f.name||'зураг').replace(/\.\w+$/,'')+'.jpg',type:'image/jpeg',kind};
+    }catch(e){}
+    return {blob:f,name:f.name||'зураг',type:f.type,kind}},
+  b64(blob){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=no;r.readAsDataURL(blob)})},
+  // илгээх: эхлээд хавсралтын хэсгүүд, дараа нь мессеж (мессеж харагдахад файл бэлэн байна)
+  async send(st,meta,files,prog){const id=CHAT.id(),F=[];let done=0;const tot=files.reduce((a,f)=>a+Math.ceil(f.blob.size/CHAT.CH)||1,0)||1;
+    for(let k=0;k<files.length;k++){const f=files[k],fid=id+'_'+k,n=Math.max(1,Math.ceil(f.blob.size/CHAT.CH));
+      for(let i=0;i<n;i++){const d=await CHAT.b64(f.blob.slice(i*CHAT.CH,(i+1)*CHAT.CH));await CHAT.fcol(st).doc(fid+'_'+i).set({store:st,msg:id,fid,i,n,d});done++;prog&&prog(done/tot)}
+      F.push({fid,name:f.name,type:f.type,size:f.blob.size,kind:f.kind,n,dur:f.dur||null});CHAT.cache.set(fid,URL.createObjectURL(f.blob))}
+    const m={id,store:st,from:meta.from,author:meta.author||'',t:new Date().toISOString(),text:meta.text||'',files:F,readPanel:meta.from==='panel',readTill:meta.from==='till'};
+    await CHAT.col(st).doc(id).set(m);return m},
+  async load(st,f){if(CHAT.cache.has(f.fid))return CHAT.cache.get(f.fid);
+    const P=[];for(let i=0;i<f.n;i++)P.push(CHAT.fcol(st).doc(f.fid+'_'+i).get());const S=await Promise.all(P);
+    const parts=S.map(s=>{const b=atob((s.exists&&s.data().d)||''),u=new Uint8Array(b.length);for(let j=0;j<b.length;j++)u[j]=b.charCodeAt(j);return u});
+    const url=URL.createObjectURL(new Blob(parts,{type:f.type}));CHAT.cache.set(f.fid,url);return url},
+  // яриа зурах
+  draw(box,st,msgs,me){const near=box.scrollHeight-box.scrollTop-box.clientHeight<80;let day='',h='';
+    msgs.forEach(m=>{const d=new Date(m.t),dk=d.toLocaleDateString('mn-MN');if(dk!==day){day=dk;h+='<div class="day">'+CHAT.e(d.toISOString().slice(0,10).replace(/-/g,'.'))+'</div>'}
+      h+='<div class="m'+(m.from===me?' me':'')+'"><div class="a">'+CHAT.e(m.author||(m.from==='panel'?'Оффис':'Касс'))+'</div>'+(m.text?CHAT.e(m.text).replace(/\n/g,'<br>'):'')+
+        (m.files||[]).map(f=>f.kind==='image'?'<img data-fid="'+CHAT.e(f.fid)+'" alt="">':f.kind==='audio'?'<button class="pl" data-fid="'+CHAT.e(f.fid)+'">▶ Дуу '+CHAT.mmss(f.dur)+'</button>':'<button class="f" data-fid="'+CHAT.e(f.fid)+'">📄 '+CHAT.e(f.name)+' · '+CHAT.kb(f.size)+'</button>').join('')+
+        '<div class="t">'+d.toTimeString().slice(0,5)+(m.from===me?(me==='till'?(m.readPanel?' ✓✓':' ✓'):(m.readTill?' ✓✓':' ✓')):'')+'</div></div>'});
+    box.innerHTML=h||'<div class="day">Мессеж алга. Эхний мессежээ бичнэ үү.</div>';
+    const F=new Map();msgs.forEach(m=>(m.files||[]).forEach(f=>F.set(f.fid,f)));
+    box.querySelectorAll('img[data-fid]').forEach(im=>{const f=F.get(im.dataset.fid);CHAT.load(st,f).then(u=>{im.src=u}).catch(()=>{im.alt='зураг ачаалсангүй'})});
+    box.onclick=async e=>{const b=e.target.closest('[data-fid]');if(!b)return;const f=F.get(b.dataset.fid);if(!f)return;
+      if(b.tagName==='IMG'){if(!b.src)return;const z=document.createElement('div');z.className='chzoom';z.innerHTML='<img src="'+b.src+'">';z.onclick=()=>z.remove();document.body.appendChild(z);return}
+      const old=b.textContent;b.textContent='Ачаалж байна…';try{const u=await CHAT.load(st,f);
+        if(f.kind==='audio'){const a=document.createElement('audio');a.controls=true;a.src=u;b.replaceWith(a);a.play().catch(()=>{})}
+        else{const a=document.createElement('a');a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();b.textContent=old}}catch(err){b.textContent=old+' (алдаа)'}};
+    if(near||!box.dataset.init){box.scrollTop=box.scrollHeight;box.dataset.init=1}},
+  // бичих хэсэг: текст, олон файл (📎, хуулж буулгах, чирж оруулах), дуу бичлэг 🎤
+  composer(el,onSend){CHAT.css();let att=[],rec=null;
+    el.className='chc';el.innerHTML='<div class="att"></div><div class="row"><textarea placeholder="Мессеж бичих… (Enter — илгээх, Shift+Enter — шинэ мөр)"></textarea><button class="fb" title="Файл, зураг хавсаргах">📎</button><button class="mic" title="Дуу бичих">🎤</button><button class="snd">Илгээх</button></div><div class="st"></div><input type="file" multiple hidden>';
+    const ta=el.querySelector('textarea'),inp=el.querySelector('input'),A=el.querySelector('.att'),S=el.querySelector('.st'),mic=el.querySelector('.mic'),snd=el.querySelector('.snd');
+    const drawA=()=>{A.innerHTML=att.map((f,i)=>'<span>'+(f.kind==='image'?'🖼 ':f.kind==='audio'?'🎤 ':'📄 ')+CHAT.e(f.name)+' · '+CHAT.kb(f.blob.size)+'<b data-x="'+i+'">×</b></span>').join('')};
+    A.onclick=e=>{const x=e.target.closest('[data-x]');if(x){att.splice(+x.dataset.x,1);drawA()}};
+    const add=async L=>{for(const f of L){if(att.length>=CHAT.MAXN){S.textContent='Нэг мессежид '+CHAT.MAXN+' хүртэл файл';break}
+      const p=await CHAT.prep(f);if(p.blob.size>CHAT.MAXF){S.textContent=p.name+' — 8 МБ-аас том файл илгээх боломжгүй';continue}att.push(p)}drawA()};
+    el.querySelector('.fb').onclick=()=>inp.click();inp.onchange=()=>{add([...inp.files]);inp.value=''};
+    ta.addEventListener('paste',e=>{const F=[...(e.clipboardData&&e.clipboardData.files||[])];if(F.length){e.preventDefault();add(F)}});
+    el.addEventListener('dragover',e=>e.preventDefault());el.addEventListener('drop',e=>{e.preventDefault();add([...e.dataTransfer.files])});
+    mic.onclick=async()=>{if(rec){rec.stop();return}
+      if(!navigator.mediaDevices||!window.MediaRecorder){S.textContent='Энэ компьютер дуу бичих боломжгүй';return}
+      try{const stream=await navigator.mediaDevices.getUserMedia({audio:true}),mt=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t))||'';
+        const r=new MediaRecorder(stream,mt?{mimeType:mt,audioBitsPerSecond:24000}:{}),ch=[],t0=Date.now();rec=r;mic.classList.add('rec');
+        const tick=setInterval(()=>{const s=(Date.now()-t0)/1000;mic.textContent='⏹ '+CHAT.mmss(s);if(s>=CHAT.MAXREC)r.stop()},250);
+        r.ondataavailable=e=>e.data.size&&ch.push(e.data);
+        r.onstop=()=>{clearInterval(tick);stream.getTracks().forEach(t=>t.stop());rec=null;mic.classList.remove('rec');mic.textContent='🎤';
+          const type=(r.mimeType||'audio/webm').split(';')[0],b=new Blob(ch,{type}),dur=(Date.now()-t0)/1000;
+          if(dur<1)return;att.push({blob:b,name:'дуу '+CHAT.mmss(dur)+'.'+(type.split('/')[1]||'webm'),type,kind:'audio',dur});drawA()};
+        r.start(1000);S.textContent=''}catch(e){S.textContent='Микрофон ашиглах зөвшөөрөл алга: '+(e.name||e)}};
+    const go=async()=>{const text=ta.value.trim();if(rec){rec.stop();await new Promise(r=>setTimeout(r,300))}
+      if(!text&&!att.length)return;snd.disabled=true;S.textContent='Илгээж байна…';
+      try{await onSend(text,att,p=>{S.textContent='Илгээж байна… '+Math.round(p*100)+'%'});ta.value='';att=[];drawA();S.textContent=''}
+      catch(e){S.textContent='Илгээгдсэнгүй: '+(e&&e.code||e)}snd.disabled=false;ta.focus()};
+    snd.onclick=go;ta.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();go()}});
+    return {focus:()=>ta.focus()}},
+  beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(a.destination);o.start();
+    setTimeout(()=>{o.frequency.value=1320},120);setTimeout(()=>{o.stop();a.close()},260)}catch(e){}}
+};
+
+/* ---- Чат (касс тал): толгойн «💬 Чат» товч, баруун талын цонх. Оффисоос ирсэн уншаагүй мессежийн тоо, дуут дохио ---- */
+CHAT.db=()=>fb.db;
+let chatMsgs=[],chatSeen=null;
+const chatBox=document.createElement('div');chatBox.id='chatPane';chatBox.className='hide';
+chatBox.innerHTML='<div class="chh"><b>💬 Оффистой чат</b><span id="chatSt" class="small"></span><span style="flex:1"></span><button id="chatX">✕</button></div><div class="cht" id="chatThread"></div><div id="chatComp"></div>';
+document.body.appendChild(chatBox);
+(()=>{const st=document.createElement('style');st.textContent=`#chatPane{position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.18);z-index:900;display:flex;flex-direction:column;padding:10px 12px}
+#chatPane.hide{display:none}#chatPane .chh{display:flex;gap:8px;align-items:center;padding:4px 2px 8px}#chatPane .chh button{border:0;background:#eef0f3;border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit}
+#chatPane .cht{flex:1}.chatb{cursor:pointer;border:0;font:inherit}.chn{background:#c8102e;color:#fff;border-radius:999px;padding:0 7px;margin-left:6px;font-size:12px}.chn.hide{display:none}`;document.head.appendChild(st)})();
+const chatComp=CHAT.composer($('chatComp'),async(text,files,prog)=>{const st=curAcc();if(!st)throw 'Үүлэнд холбогдоогүй';
+  await CHAT.send(st,{from:'till',author:(S.user?S.user.name:'Касс')+' · '+(STORES[st]||st)+(S.user&&S.user.reg?' · касс '+S.user.reg:''),text},files,prog)});
+function chatStop(){(chatListen.u||(()=>{}))();chatListen.u=null;chatMsgs=[];chatSeen=null;chatBadge()}
+function chatListen(){if(chatListen.u||!(fb.ready&&fb.user))return;const st=curAcc();if(!st)return;CHAT.css();
+  chatListen.u=CHAT.col(st).orderBy('t').limitToLast(200).onSnapshot(q=>{const L=q.docs.map(d=>d.data()).sort((a,b)=>a.t<b.t?-1:1);
+    const fresh=chatSeen?L.filter(m=>m.from==='panel'&&!chatSeen.has(m.id)):[];chatSeen=new Set(L.map(m=>m.id));chatMsgs=L;
+    if(fresh.length){CHAT.beep();if(!chatOpen())flash('💬 Оффисоос шинэ мессеж: '+(fresh[fresh.length-1].text||'хавсралт').slice(0,60))}
+    if(chatOpen()){chatDraw();chatRead()}chatBadge()},e=>{$('chatSt').textContent='Чат: '+(e.code||e)})}
+const chatOpen=()=>!chatBox.classList.contains('hide');
+function chatBadge(){const n=chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).length;$('chatN').textContent=n;$('chatN').classList.toggle('hide',!n)}
+function chatDraw(){CHAT.draw($('chatThread'),curAcc(),chatMsgs,'till')}
+function chatRead(){const st=curAcc();chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).forEach(m=>{m.readTill=true;CHAT.col(st).doc(m.id).update({readTill:true,readTillAt:new Date().toISOString()}).catch(()=>{})});chatBadge()}
+$('chatBtn').onclick=()=>{if(chatOpen()){chatBox.classList.add('hide');$('scan').focus();return}
+  if(!(fb.ready&&fb.user&&curAcc())){flash('Чат ашиглахын тулд касс үүлэнд холбогдсон байх ёстой');return}
+  chatListen();chatBox.classList.remove('hide');$('chatSt').textContent=STORES[curAcc()]||'';chatDraw();chatRead();chatComp.focus()};
+$('chatX').onclick=()=>{chatBox.classList.add('hide');$('scan').focus()};
 </script>
 </body>
 </html>
