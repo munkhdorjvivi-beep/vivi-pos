@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="3.7">
+<meta name="vivi-ver" content="3.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -91,6 +91,7 @@ tr.sel td{background:#fff8e1}tr.sel td:first-child{box-shadow:inset 4px 0 0 var(
 .hsum{display:flex;gap:22px;flex-wrap:wrap;margin:8px 0;font-size:14px;color:var(--mut)}.hsum span{white-space:nowrap;display:inline}.box .hsum b{display:inline;margin:0;font-size:17px;color:var(--ink);text-transform:none;letter-spacing:0}
 #updBar{display:flex;gap:10px;align-items:center;padding:8px 14px;margin-bottom:8px;border-radius:12px;background:#e1edfa;color:var(--blue);font-size:14px}#updBar button{min-height:34px;padding:3px 12px}#updBar b{display:inline;margin:0;font-size:inherit;color:inherit}
 .box .ib b{display:inline;margin:0;font-size:inherit;color:var(--ink);text-transform:none;letter-spacing:0}
+.ordbox{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:#f6f9ff}.ordg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}.ordg input{min-height:42px}
 .nbadge{display:inline-block;min-width:20px;padding:0 6px;border-radius:99px;background:var(--red);color:#fff;font-size:12px;font-weight:700;margin-left:4px}
 #exbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:10px 14px;margin-bottom:8px;border-radius:12px;background:#fff4d6;border:2px solid #e8a400;color:#6b4a00;font-size:14px}#exbar .sp{flex:1}#exbar button{min-height:36px;padding:3px 12px}
 .ownonly{display:inline-flex;align-items:center;padding:0 12px;min-height:40px;border-radius:10px;background:#eef6ff;color:var(--blue);font-weight:650;font-size:14px}
@@ -131,7 +132,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
 
 <div id="login">
   <h1><span>VIVI</span>POS <span class="ver2">v<span class="appver"></span></span></h1><div class="small"><span id="lCatI"></span></div>
-  <label>Дэлгүүр <span id="lStoreI" class="small"></span></label><select id="lStore"><option value="">—</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="YV">Явуулын касс</option></select>
+  <label>Дэлгүүр <span id="lStoreI" class="small"></span></label><select id="lStore"><option value="">—</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="ON">Онлайн дэлгүүр</option><option value="YV">Явуулын касс</option></select>
   <label>Касс №</label><select id="lReg"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
   <label>Кассчин</label><select id="lCash"></select>
   <label>ПИН код</label><input id="lPin" type="password" inputmode="numeric">
@@ -170,7 +171,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
     </div></div>
     <div class="grp"><h3>Ээлж</h3><div class="g">
       <button id="bHist">Борлуулалтын түүх <kbd>F10</kbd></button><button id="bStk">Үлдэгдэл <kbd>F2</kbd></button>
-      <button id="bMov">Бараа хөдөлгөөн <span id="movCnt2"></span></button><button id="bCash">Бэлэн мөнгө</button><button id="bRep">Тайлан</button><button id="bClose">Ээлж хаах</button>
+      <button id="bDel" class="hide">Хүргэлтийн төлбөр нэмэх</button><button id="bMov">Бараа хөдөлгөөн <span id="movCnt2"></span></button><button id="bCash">Бэлэн мөнгө</button><button id="bRep">Тайлан</button><button id="bClose">Ээлж хаах</button>
       <button id="bSet">Тохиргоо</button><button id="bOut">Гарах</button><button id="bCust" style="grid-column:1/3">Харилцагчийн дэлгэц нээх</button>
     </div></div>
   </div>
@@ -195,7 +196,8 @@ const pad=(n,l)=>String(n).padStart(l,'0');
 const now=()=>new Date();
 const dstr=d=>d.getFullYear()+'/'+pad(d.getMonth()+1,2)+'/'+pad(d.getDate(),2);
 const tstr=d=>pad(d.getHours(),2)+':'+pad(d.getMinutes(),2)+':'+pad(d.getSeconds(),2);
-const STORES={FC:'Food city',DR:'Драгон',NS:'Нийслэл',YV:'Явуулын касс'};
+const STORES={FC:'Food city',DR:'Драгон',NS:'Нийслэл',ON:'Онлайн дэлгүүр',YV:'Явуулын касс'};
+const STOCK_SRC={ON:'FC'}; // онлайн захиалгыг Food city-ийн үлдэгдлээс бэлтгэнэ
 const CASHIERS={
  FC:['Болормаа.','Б.Дуламжав','Мөнхзул','Хандсүрэн','Б.Мөнхсувд','О.Мөнхцэцэг','Энхчимэг','Үзэсгэлэн','Б.Ундрал','Н.Болормаа','Б.Анужин','Оюундалай','Мишээл','М.Анужин','Г.Отгонням','Өнөржаргал','Байгалмаа','Сүнжидмаа'],
  DR:['Б.Оюун-Эрдэнэ','О.Золжаргал','Ч.Мөнхдарь','Н.Нармандах','Хи.Пүрэвсүрэн','Мөнхзул','Б.Ану-Үржин','С.Намуун','Намуун.С','Ц.Мөнхзул','Б. Байгалмаа','Пүрэвсүрэн','Аззаяа','Д.ДашӨлзий','Б.Аззаяа','Эрдэнэцэцэг'],
@@ -380,7 +382,7 @@ function flash(t){$('msg').textContent=t;clearTimeout(flash.h);flash.h=setTimeou
 function computePromo(cart,ps){
   ps=ps||activePromos();const byPair={};
   cart.forEach((l,li)=>{l.free=0;l.same=0;l.samePct=0;l.pct=0;l.pu=null;l.ptxt='';l.promoName='';l.progSame=0;l.gift=0;l.giftAvail='';
-    if(l.disc||l.price<=0)return;
+    if(l.disc||l.price<=0||l.noPromo)return;
     const gift=ps.find(p=>p.type==='gift'&&promoMatch(p,l));
     if(gift&&(gift.auto||l.giftOn)){l.gift=1;l.promoName=gift.name;return}
     if(gift)l.giftAvail=gift.name; // кассчин «Бэлэг болгох» дарвал 0 ₮, үгүй бол ердийн үнээр (бусад урамшуулалтай)
@@ -528,11 +530,11 @@ function showParked(){
 function openPay(){
   if(S.exch)return exchPay();
   const t=computePromo(S.cart);if(!S.cart.length)return;
-  const pays=[];let ebar=false;
+  const pays=[];let ebar=false;const ON=S.user.store==='ON',ord=openPay.ord||{no:'',name:'',phone:'',addr:''};openPay.ord=ord;
   const paid=()=>pays.reduce((a,p)=>a+p.amount,0);
   const draw=()=>{
     const rest=t.total-paid(),sum=f=>pays.filter(p=>p.form===f).reduce((a,p)=>a+p.amount,0);
-    openModal('<h2>Төлбөр төлөлт</h2><div class="tiles"><div class="tile y"><div class="l">НИЙТ ТӨЛӨХ ДҮН</div><div class="v">'+fmt(t.total)+'</div></div><div class="tile"><div class="l">ЗЭЭЛЭЭР (F9)</div><div class="v">'+fmt(sum('Зээлээр'))+'</div></div><div class="tile"><div class="l">БАНКААР (F10)</div><div class="v">'+fmt(sum('Банкаар'))+'</div></div><div class="tile"><div class="l">БЭЛНЭЭР (F11)</div><div class="v">'+fmt(sum('Бэлнээр'))+'</div></div></div>'+
+    openModal('<h2>Төлбөр төлөлт</h2>'+(ON?'<div class="ordbox"><b>Онлайн захиалга</b><div class="ordg"><input id="oNo" placeholder="Захиалгын №" value="'+esc(ord.no)+'"><input id="oPh" placeholder="Утас *" inputmode="tel" value="'+esc(ord.phone)+'"><input id="oNm" placeholder="Үйлчлүүлэгчийн нэр" value="'+esc(ord.name)+'"><input id="oAd" placeholder="Хүргэлтийн хаяг" value="'+esc(ord.addr)+'"></div></div>':'')+'<div class="tiles"><div class="tile y"><div class="l">НИЙТ ТӨЛӨХ ДҮН</div><div class="v">'+fmt(t.total)+'</div></div><div class="tile"><div class="l">ЗЭЭЛЭЭР (F9)</div><div class="v">'+fmt(sum('Зээлээр'))+'</div></div><div class="tile"><div class="l">БАНКААР (F10)</div><div class="v">'+fmt(sum('Банкаар'))+'</div></div><div class="tile"><div class="l">БЭЛНЭЭР (F11)</div><div class="v">'+fmt(sum('Бэлнээр'))+'</div></div></div>'+
     '<div class="tiles" style="grid-template-columns:1fr 1fr"><div class="tile y"><div class="l">'+(rest>=0?'ТӨЛӨХ ҮЛДЭГДЭЛ':'ХАРИУЛТ')+'</div><div class="v">'+fmt(Math.abs(rest))+'</div></div><div><label style="margin-top:0">Төлсөн дүн</label><input id="pa" inputmode="numeric" autofocus value="'+(rest>0?rest:'')+'"></div></div>'+
     '<div class="banks">'+BANKS.map((b,i)=>'<button data-b="'+i+'">'+b[0]+'<br><kbd>Ctrl+'+(i+1)+'</kbd></button>').join('')+'</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="blue" id="pcash">Бэлнээр <kbd>F11</kbd></button><button class="blue" id="pcred">Зээлээр <kbd>F9</kbd></button></div>'+
@@ -540,6 +542,7 @@ function openPay(){
     '<label style="display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink);font-size:15px"><input type="checkbox" id="peb" style="width:22px;min-height:22px" '+(ebar?'checked':'')+'> И-баримтыг банкны терминалаас өгсөн</label>'+
     '<div id="pm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="pcancel">Болих <kbd>Esc</kbd></button><button class="ok" id="psave" style="min-width:200px;font-size:18px">Хадгалах <kbd>F12</kbd></button></div>');
     $('peb').onchange=e=>ebar=e.target.checked;
+    if(ON)[['oNo','no'],['oPh','phone'],['oNm','name'],['oAd','addr']].forEach(([id,k])=>$(id).oninput=()=>ord[k]=$(id).value);
     $('mbox').querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>add('Банкаар',+b.dataset.b));
     $('mbox').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{pays.splice(+b.dataset.rm,1);draw()});
     $('pcash').onclick=()=>add('Бэлнээр');$('pcred').onclick=credit;$('pcancel').onclick=closeModal;$('psave').onclick=save;
@@ -560,7 +563,8 @@ function openPay(){
     if(rest>0)return $('pm').textContent='Төлбөр дутуу: '+fmt(rest);
     const change=-rest;
     if(change>0){const c=pays.filter(p=>p.form==='Бэлнээр').reduce((a,p)=>a+p.amount,0);if(change>c)return $('pm').textContent='Хариулт бэлэн мөнгөнөөс их байна';}
-    const sale=makeSale(S.cart,t,pays,change,ebar,'sale');
+    if(ON&&!ord.phone.trim()&&!ord.no.trim())return $('pm').textContent='Онлайн захиалга: утас эсвэл захиалгын дугаар заавал';
+    const sale=makeSale(S.cart,t,pays,change,ebar,'sale');if(ON){sale.order={no:ord.no.trim(),phone:ord.phone.trim(),name:ord.name.trim(),addr:ord.addr.trim()};store.set('sales',sales);openPay.ord=null}
     S.cart=[];S.sel=-1;S.fromPark=null;closeModal();render();custThanks(sale);printReceipt(sale);
   };
   openPay.add=add;openPay.credit=credit;openPay.save=save;openPay.active=true;
@@ -577,7 +581,7 @@ function makeSale(cart,t,pays,change,ebar,type,ref){
   // хариултыг бэлэн мөнгөнөөс хасаж цэвэр дүнг хадгална
   const net=pays.map(p=>({...p}));let ch=change;
   for(const p of net){if(p.form==='Бэлнээр'&&ch>0){const x=Math.min(ch,p.amount);p.tendered=p.amount;p.amount-=x;ch-=x}}
-  const sale={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type,ref:ref||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,
+  const sale={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type,ref:ref||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,
     lines,qty:t.qty,base:t.base,discount:t.disc,total:t.total,payments:net,change,ebarimt:!!ebar,synced:false};
   sales.push(sale);store.set('sales',sales);cloudSoon();return sale;
 }
@@ -604,7 +608,7 @@ function receiptHtml(s,copy,label){
   const pl=s.payments.map(p=>'<tr><td>'+p.form+(p.bank?' ('+esc(p.bank)+')':'')+(p.partner?' ('+esc(p.partner)+')':'')+':</td><td style="text-align:right">'+fmt(p.tendered||p.amount)+'</td></tr>').join('');
   return '<div class="c" style="font-size:9px">Хэвлэсэн огноо: '+dstr(now())+' '+tstr(now())+'</div><div class="c big">VIVI · '+esc(s.storeName)+'</div>'+(label?'<div class="c"><b>'+label+'</b></div>':'')+
   (s.exch&&s.type==='sale'?'<div class="c big">СОЛИЛТ</div>':s.type==='return'?'<div class="c big">БУЦААЛТ</div>':'')+(copy?'<div class="c">ХУУЛБАР</div>':'')+
-  '<div class="hr"></div><table><tr><td>Огноо: '+s.date+' '+s.time.slice(0,5)+'</td><td style="text-align:right">№: '+s.dayNo+'</td></tr><tr><td>Касс: '+s.reg+' · '+esc(s.cashier)+'</td><td style="text-align:right">'+s.id+'</td></tr>'+(s.ref?'<tr><td colspan="2">'+(s.exch?'Солилт, эх баримт: ':'Эх баримт: ')+s.ref+(s.exch&&s.exch.ret?' · буцаалт '+s.exch.ret:'')+'</td></tr>':'')+'</table>'+
+  '<div class="hr"></div><table><tr><td>Огноо: '+s.date+' '+s.time.slice(0,5)+'</td><td style="text-align:right">№: '+s.dayNo+'</td></tr><tr><td>Касс: '+s.reg+' · '+esc(s.cashier)+'</td><td style="text-align:right">'+s.id+'</td></tr>'+(s.order?'<tr><td colspan="2">Захиалга '+esc(s.order.no||'')+' · '+esc(s.order.phone||'')+(s.order.name?' · '+esc(s.order.name):'')+(s.order.addr?'<br>'+esc(s.order.addr):'')+'</td></tr>':'')+(s.ref?'<tr><td colspan="2">'+(s.exch?'Солилт, эх баримт: ':'Эх баримт: ')+s.ref+(s.exch&&s.exch.ret?' · буцаалт '+s.exch.ret:'')+'</td></tr>':'')+'</table>'+
   '<div class="hr"></div><table><tr><th style="text-align:left">Бараа</th><th style="text-align:right">Тоо</th><th style="text-align:right">Үнэ</th><th style="text-align:right">Дүн</th></tr>'+
   s.lines.map(l=>'<tr><td>'+esc(l.name.slice(0,26))+(l.promo==='gift'?' (бэлэг)':l.promo==='free'?' (1+1)':l.promo==='same'||l.promo==='pct'?' (хөнгөлөлт)':'')+'</td><td style="text-align:right">'+l.qty+'</td><td style="text-align:right">'+fmt(l.unit)+'</td><td style="text-align:right">'+fmt(l.sum)+'</td></tr>').join('')+
   '</table><div class="hr"></div><table><tr><td>НИЙТ:</td><td style="text-align:right">'+s.qty+' ш</td></tr><tr><td>Нийт хөнгөлөлт:</td><td style="text-align:right">'+fmt(s.discount)+'</td></tr><tr class="big"><td><b>Төлөх дүн:</b></td><td style="text-align:right"><b>'+fmt(s.total)+'</b></td></tr>'+pl+(s.change>0?'<tr><td>Хариулт:</td><td style="text-align:right">'+fmt(s.change)+'</td></tr>':'')+'</table>'+
@@ -676,7 +680,7 @@ function returnLines(s){
 }
 function finishReturn(r,reqUid){
   const n=nextNo(),d=now();
-  const sale={uid:uuid(),id:n.no,dayNo:n.day,type:'return',ref:r.ref,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{form:r.form,amount:r.total}],change:0,ebarimt:false,reason:r.reason,request:reqUid||null,synced:false};
+  const sale={uid:uuid(),id:n.no,dayNo:n.day,type:'return',ref:r.ref,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{form:r.form,amount:r.total}],change:0,ebarimt:false,reason:r.reason,request:reqUid||null,synced:false};
   sales.push(sale);store.set('sales',sales);cloudSoon();log('return',{ref:r.ref,total:r.total,why:r.reason,request:reqUid||''});closeModal();printReceipt(sale);
 }
 /* ---------- shift / reports ---------- */
@@ -709,6 +713,10 @@ function scanBox(st,exp){
       $('msm').textContent=(i==null?'⚠ Танигдаагүй код: ':'')+nm+' +'+n;$('msm').style.color=i==null?'var(--red)':'';draw()};
     draw()}}
 }
+function addDelivery(){if(S.exch)return;
+  openModal('<h2>Хүргэлтийн төлбөр</h2><label>Дүн (₮)</label><input id="dlA" inputmode="numeric" autofocus value="5000"><div class="rowbtn"><button id="dlC">Болих</button><button class="pri" id="dlO">Нэмэх</button></div>',true);
+  $('dlC').onclick=closeModal;$('dlO').onclick=()=>{const a=Math.round(num($('dlA').value));if(!(a>0))return;const ex=S.cart.find(l=>l.code==='DELIVERY');
+    if(ex){ex.price=ex.base=a}else S.cart.push({code:'DELIVERY',bc:'',name:'Хүргэлтийн төлбөр',base:a,price:a,sup:'',grp:'Хүргэлт',model:'',size:'',qty:1,disc:0,d5:false,noPromo:true});S.sel=S.cart.length-1;closeModal();render()}}
 function openMov(tab){
   if(!S.user)return;if(movListen.on&&movListen.st!==S.user.store)movStop();movListen();tab=tab||'in';const own=S.user.store;
   const tabs=[['in','Ирсэн — хүлээн авах'],['send','Шилжүүлэг илгээх'],['sup','Нийлүүлэгчээс орлого'],['hist','Түүх']];
@@ -947,7 +955,7 @@ function exchPay(){
     if(used)rp.push({form:'Солилт',amount:-used});if(D<0)rp.push({...fp($('xf').value),amount:D});
     // 1) буцаалт
     const n=nextNo(),d=now();
-    const ret={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type:'return',ref:x.ref,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:x.lines,qty:x.qty,base:x.base,discount:x.base+C,total:-C,payments:rp.length?rp:[{form:'Солилт',amount:0}],change:0,ebarimt:false,reason:'Солилт: '+why,exch:{id,role:'return'},synced:false};
+    const ret={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type:'return',ref:x.ref,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:x.lines,qty:x.qty,base:x.base,discount:x.base+C,total:-C,payments:rp.length?rp:[{form:'Солилт',amount:0}],change:0,ebarimt:false,reason:'Солилт: '+why,exch:{id,role:'return'},synced:false};
     sales.push(ret);
     // 2) шинэ борлуулалт
     const sale=makeSale(S.cart,t,sp.length?sp:[{form:'Солилт',amount:0}],0,false,'sale',x.ref);sale.exch={id,role:'sale',ret:ret.id};ret.exch.sale=sale.id;store.set('sales',sales);
@@ -1003,7 +1011,7 @@ const H={rows:[],src:'',range:'',all:false,by:''};
 const PERM_DEF={cashier:{hist:'own',xl:true,stock:true},manager:{hist:'store',xl:true,stock:true},admin:{hist:'store',xl:true,stock:true}};
 function perm(){const u=S.user&&users.find(x=>x.id===S.user.uid);return Object.assign({},PERM_DEF[(u||S.user||{}).role]||PERM_DEF.cashier,u&&u.perm||{})}
 function mine(s){return s.cashierId?s.cashierId===S.user.uid:s.cashier===S.user.name}
-function permButtons(){if(!S.user)return;const p=perm();$('bHist').classList.toggle('hide',p.hist==='none');$('bStk').classList.toggle('hide',!p.stock)}
+function permButtons(){if(!S.user)return;$('bDel').classList.toggle('hide',S.user.store!=='ON');const p=perm();$('bHist').classList.toggle('hide',p.hist==='none');$('bStk').classList.toggle('hide',!p.stock)}
 const ymd=d=>d.toLocaleDateString('sv-SE');
 async function loadXlsx(){if(!window.XLSX)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('Excel сан ачаалагдсангүй (интернэт хэрэгтэй)'));document.head.appendChild(s)})}
 function openHist(keep){
@@ -1032,6 +1040,8 @@ async function histLoad(){
   sales.filter(s=>s.store===st&&s.date>=d0&&s.date<=d1).forEach(s=>map.set(s.uid,s));
   if(fb.ready&&fb.user&&navigator.onLine){
     try{const qs=await Promise.all(days.map(d=>fb.db.collection('pos_sales').where('store','==',st).where('date','==',d).get()));
+      // үүлээс уншсан бол үүл л үнэн: энэ кассын хадгалсан хуучин хуулбараас зөвхөн илгээгдээгүйг нэмнэ (самбараас устгасан баримт орохгүй)
+      for(const [k,v] of map)if(v.synced)map.delete(k);
       qs.forEach(q=>q.docs.forEach(x=>{const s=x.data();map.set(s.uid||x.id,s)}));src='Дэлгүүрийн бүх касс (үүл)'}
     catch(e){src='Зөвхөн энэ касс — үүлээс уншиж чадсангүй ('+(e&&e.code||e)+')'}
   }else src='Зөвхөн энэ касс — үүлэнд холбогдоогүй / офлайн';
@@ -1087,9 +1097,9 @@ function openStock(){
   stkLoad().then(stkDraw).catch(e=>{$('ks').innerHTML='<span style="color:var(--red)">'+esc(e.message||e)+'</span>'});
 }
 function stkDraw(){
-  if(!STK.map||!$('kl'))return;const q=$('kq').value.trim(),ql=q.toLowerCase(),meta=STK.meta,SS=meta.stores||[],own=S.user.store;
+  if(!STK.map||!$('kl'))return;const q=$('kq').value.trim(),ql=q.toLowerCase(),meta=STK.meta,SS=meta.stores||[],own=STOCK_SRC[S.user.store]||S.user.store;
   // энэ кассын агшин зургаас хойших борлуулалтыг өөрийн дэлгүүрийн үлдэгдлээс хасна
-  const after=new Map();sales.filter(s=>s.store===own&&(s.iso||'')>meta.version).forEach(s=>(s.lines||[]).forEach(l=>after.set(l.code,(after.get(l.code)||0)+l.qty)));
+  const after=new Map();sales.filter(s=>(s.stockFrom||s.store)===own&&(s.iso||'')>meta.version).forEach(s=>(s.lines||[]).forEach(l=>after.set(l.code,(after.get(l.code)||0)+l.qty)));
   let ids=[];
   if(q&&IDX.has(q)){const i=IDX.get(q),m=CAT[i][7];ids=[i];if(m)CAT.forEach((r,k)=>{if(k!==i&&r[7]===m&&ids.length<120)ids.push(k)})}
   else if(q){const w=ql.split(/\s+/).filter(Boolean);for(let i=0;i<NAMES.length&&ids.length<120;i++)if(w.every(x=>NAMES[i].includes(x)))ids.push(i)}
@@ -1219,7 +1229,7 @@ function logout(){if(S.cart.length)return flash('Эхлээд баримтаа �
 $('scan').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();onScan()}};
 $('bSearch').onclick=()=>openSearch($('scan').value.trim());
 $('bPay').onclick=openPay;$('bPlus').onclick=()=>chgQty(1);$('bMinus').onclick=()=>chgQty(-1);$('bDel').onclick=delLine;
-$('bHist').onclick=openHist;$('bMov').onclick=()=>openMov();$('bCash').onclick=openCash;$('bExch').onclick=openExch;$('bPfix').onclick=openPayFix;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
+$('bHist').onclick=openHist;$('bDel').onclick=addDelivery;$('bMov').onclick=()=>openMov();$('bCash').onclick=openCash;$('bExch').onclick=openExch;$('bPfix').onclick=openPayFix;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
 document.addEventListener('keydown',e=>{
   if($('sale').classList.contains('hide'))return;
   const m=modalOpen(),pay=m&&$('psave');
