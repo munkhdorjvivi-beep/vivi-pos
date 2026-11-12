@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.8">
+<meta name="vivi-ver" content="6.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -197,7 +197,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div class="small" id="catNow">Үүлэн дэх жагсаалт: шалгаж байна…</div><div class="small" id="costNow" style="font-weight:650"></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:8px">
       <label class="small">1. Smart-ын барааны жагсаалт (Мастер дата → Бараа, Excel)<input type="file" id="fMaster" accept=".xlsx,.xls" style="display:block;margin-top:4px"></label>
-      <label class="small">2. Кассын үнэ — заавал биш (хөнгөлөлтийн жагсаалт: «Хөнгөлөлт хассан дүн» баганатай)<input type="file" id="fPrice" accept=".xlsx,.xls" style="display:block;margin-top:4px"></label>
+      <label class="small">2. Кассын үнэ, өртөг — заавал биш (хөнгөлөлтийн жагсаалт «Хөнгөлөлт хассан дүн» ба/эсвэл үлдэгдлийн файл «Нэгж өртөг», «Кассын үнэ» баганатай). Зөвхөн энэ файлыг сонгож «Файл шалгах» дарвал зөвхөн өртөг шинэчилнэ.<input type="file" id="fPrice" accept=".xlsx,.xls" style="display:block;margin-top:4px"></label>
     </div>
     <label class="small" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="useAT"> Үлдэгдлийн файлын «Кассын үнэ» баганыг (AT) хямдралын жагсаалтаас давуу ашиглах</label>
     <div id="catPrev" class="small" style="margin-top:8px"></div>
@@ -683,7 +683,9 @@ $('gStSel').onchange=()=>{gSt=$('gStSel').value;['fSt','xSt'].forEach(id=>{if($(
 
 const STOCK_SRC={ON:'FC'}; // онлайн дэлгүүрийн борлуулалт Food city-ийн үлдэгдлээс хасагдана
 const todayIso=()=>iso(new Date());
-function pState(p){const t=todayIso();if(!p.active)return ['Зогсоосон','r'];if(p.start&&t<p.start)return ['Эхлээгүй','b'];if(p.end&&t>p.end)return ['Дууссан','r'];return ['Идэвхтэй','']}
+function pOn(p,t){return p.active&&!(p.start&&t<p.start)&&!(p.end&&t>p.end)}
+function pState(p){const t=todayIso();if(!p.active)return ['Зогсоосон','r'];if(p.start&&t<p.start)return ['Эхлээгүй','b'];if(p.end&&t>p.end)return ['Дууссан','r'];
+  const solo=promos.find(q=>q!==p&&q.solo&&pOn(q,t));if(solo&&!p.solo)return ['Түр зогссон — «'+solo.name+'» дуустал','b'];return ['Идэвхтэй'+(p.solo?' · бусдыг зогсоосон':''),'']}
 function pType(p){return p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):p.type==='gift'?(p.auto?'Бэлэг · автоматаар 0 ₮':'Бэлэг · кассчин сонгоно'):p.type==='plist'?'Үнийн жагсаалт · '+Object.keys(p.prices||{}).length+' бараа':p.type==='price'?'Тогтмол үнэ '+Number(p.price).toLocaleString('en-US').replace(/,/g,' ')+' ₮':p.type==='amount'?'−'+Number(p.amount).toLocaleString('en-US').replace(/,/g,' ')+' ₮':'−'+p.pct+'%'}
 function pScope(p){if(p.type==='plist')return Object.keys(p.prices||{}).length+' бараа (Excel)';const x=[];if((p.excl||[]).length)x.push((p.excl||[]).length+' код');if((p.exSup||[]).length)x.push(p.exSup.join(', '));if(p.exOther)x.push('өөр урамшуулалтай бараа');const xs=x.length?' · үл хамаарах: '+x.join(', '):'';if(p.all)return 'Бүх бараа'+xs;const a=[];if(p.suppliers.length)a.push('Нийлүүлэгч: '+p.suppliers.join(', '));if(p.groups.length)a.push('Бүлэг: '+p.groups.join(', '));if(p.codes.length)a.push(p.codes.length+' барааны код');return (a.join(' · ')||'—')+xs}
 function watchPromos(){db.collection('pos_config').doc('promos').onSnapshot(d=>{promos=d.exists&&Array.isArray(d.data().list)?d.data().list:[];drawPromos()},e=>{$('cPromo').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'})}
@@ -736,6 +738,7 @@ function editPromo(i){
   '<div class="small" style="margin-top:6px">Үл хамаарах барааны код (мөр бүрт нэг)</div><textarea id="e_excl" rows="4">'+esc((p.excl||[]).join('\n'))+'</textarea>'+
   '<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">Excel-ээс үл хамаарах код нэмэх («Код», «Баар код» баганатай)<input type="file" id="e_exf" accept=".xlsx,.xls,.csv"></label><div id="e_exmsg" class="small"></div></div>'+
   '</div><label class="f">Дэлгүүр (сонгоогүй бол бүх дэлгүүр)</label>'+chks('st',Object.entries(STN),p.stores)+
+  '<label class="inl" style="margin-top:10px"><input type="checkbox" id="e_solo" '+(p.solo?'checked':'')+'> <b>Энэ урамшууллын хугацаанд бусад бүх урамшууллыг түр зогсоох</b> (1+1 г.м.) — дууссаны дараа автоматаар буцаж идэвхжинэ</label>'+
   '<label class="inl" style="margin-top:10px"><input type="checkbox" id="e_act" '+(p.active?'checked':'')+'> Идэвхтэй</label>'+
   '<div id="e_msg" class="small hot" style="min-height:18px;margin-top:6px"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'+(i==null?'':'<button class="btn warn" id="e_del" style="margin-right:auto">Устгах</button>')+'<button class="btn" id="e_c">Болих</button><button class="btn pri" id="e_ok">Хадгалах</button></div>';
   $('pm').classList.remove('hide');$('e_type').value=p.type;
@@ -759,7 +762,7 @@ function editPromo(i){
   if(i!=null)$('e_del').onclick=async()=>{if($('e_del').dataset.ok!=='1'){$('e_del').dataset.ok='1';$('e_del').textContent='Дахин дарж баталгаажуулна уу';return}
     try{const L=promos.slice();const old=L.splice(i,1)[0];await save(L,'promo_delete',{by:auth.currentUser.email,promo:old});pClose()}catch(e){$('e_msg').textContent='Алдаа: '+(e.code||e)}};
   $('e_ok').onclick=async()=>{
-    const n={id:p.id,name:$('e_name').value.trim(),type:$('e_type').value,pct:0,samePct:0,all:$('e_all').checked,suppliers:chkd('sup'),groups:chkd('grp'),codes:[...new Set($('e_codes').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean))],start:$('e_start').value,end:$('e_noend').checked?'':$('e_end').value,stores:chkd('st'),active:$('e_act').checked};if(n.type==='gift'&&$('e_auto').checked)n.auto=true;
+    const n={id:p.id,name:$('e_name').value.trim(),type:$('e_type').value,pct:0,samePct:0,all:$('e_all').checked,suppliers:chkd('sup'),groups:chkd('grp'),codes:[...new Set($('e_codes').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean))],start:$('e_start').value,end:$('e_noend').checked?'':$('e_end').value,stores:chkd('st'),active:$('e_act').checked,solo:$('e_solo').checked};if(n.type==='gift'&&$('e_auto').checked)n.auto=true;
     if(n.type!=='gift'&&n.type!=='plist'){n.excl=[...new Set($('e_excl').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean))];n.exSup=chkd('xsup');n.exOther=$('e_exo').checked}
     const err=m=>{$('e_msg').textContent=m};
     if(!n.name)return err('Нэр оруулна уу');
@@ -1168,15 +1171,20 @@ const fileBuf=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>r
 const sv=v=>v==null?'':String(v).trim(),nm=v=>sv(v).replace(/\s+/g,' '),cl=v=>{v=nm(v);return /^(nan|no size|all size)$/i.test(v)?'':v};
 function fnv(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(16)}
 $('catRead').onclick=async()=>{
-  const fm=$('fMaster').files[0],fp=$('fPrice').files[0],out=$('catPrev');catItems=null;$('catUp').disabled=true;$('catUp').style.opacity=.5;
-  if(!fm)return out.innerHTML='<span class="hot">Барааны жагсаалтын файлаа сонгоно уу</span>';
+  const fm=$('fMaster').files[0],fp=$('fPrice').files[0],out=$('catPrev');catItems=null;costOnly=false;$('catUp').disabled=true;$('catUp').style.opacity=.5;
+  if(!fm&&!fp)return out.innerHTML='<span class="hot">Файлаа сонгоно уу</span>';
+  // Зөвхөн үлдэгдлийн файл (2) сонгосон бол — зөвхөн өртөг шинэчилнэ
+  if(!fm){try{out.textContent='Файл уншиж байна…';await xlsx();const sc=stockCostOf(XLSX.read(await fileBuf(fp),{type:'array'}));
+      if(!sc)return out.innerHTML='<span class="hot">Барааны жагсаалтын файл (1) сонгоогүй, 2-р файлд «Код» + «Нэгж өртөг» багана алга</span>';
+      catCost=mergeCost(sc.m,null);costOnly=true;out.innerHTML='<table><tbody><tr><td>Өртгийн хуудас</td><td class="n">'+esc(sc.sheet)+' · «Нэгж өртөг»</td></tr><tr><td>Файлаас өртөгтэй бараа</td><td class="n">'+sc.m.size.toLocaleString('en-US')+'</td></tr><tr><td>Үүлэнд байсан өртөг (хадгалагдана)</td><td class="n">'+costMap.size.toLocaleString('en-US')+'</td></tr><tr><td><b>Илгээх өртөг нийт</b></td><td class="n"><b>'+catCost.length.toLocaleString('en-US')+'</b></td></tr></tbody></table><div class="small">Зөвхөн өртөг шинэчилнэ — барааны жагсаалт, үнэ өөрчлөгдөхгүй.</div>';
+      $('catUp').disabled=false;$('catUp').style.opacity=1}catch(e){out.innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}return}
   try{
     out.textContent='Файл уншиж байна… (том файл хэдэн секунд болно)';await xlsx();
     const M=findSheet(XLSX.read(await fileBuf(fm),{type:'array'}),['Код','Барааны нэр','Худалдах үнэ']);
     if(!M)return out.innerHTML='<span class="hot">«Код», «Барааны нэр», «Худалдах үнэ» баганатай хуудас олдсонгүй</span>';
     /* Кассын үнэ: 1) (сонговол) үлдэгдлийн файлын «Кассын үнэ» багана, 2) хямдралын жагсаалтууд — тусгай жагсаалт эхэнд, хамгийн том «бүх бараа» хамгийн сүүлд. Эхэлж олдсон үнэ хүчинтэй. */
-    const price=new Map(),src={};let ps='',atMap=new Map(),diff=0;
-    if(fp){const wb=XLSX.read(await fileBuf(fp),{type:'array'});
+    const price=new Map(),src={};let ps='',atMap=new Map(),diff=0,sc=null;
+    if(fp){const wb=XLSX.read(await fileBuf(fp),{type:'array'});sc=stockCostOf(wb);
       const disc=allSheets(wb,(row,ix)=>('Барааны код' in ix&&'Хөнгөлөлт хассан дүн' in ix)?'Хөнгөлөлт хассан дүн':null).sort((x,y)=>x.rows.length-y.rows.length);
       const at=allSheets(wb,(row,ix)=>('Код' in ix)?row.find(k=>/Кассын үнэ$/.test(k)&&!/Нийт/.test(k)):null)[0];
       if(!disc.length&&!at)return out.innerHTML='<span class="hot">Кассын үнийн файлд «Барааны код» + «Хөнгөлөлт хассан дүн», эсвэл «Код» + «Кассын үнэ» багана олдсонгүй</span>';
@@ -1197,11 +1205,19 @@ $('catRead').onclick=async()=>{
       const u=Number(g(r,'Нэгж өртөг')),pp=Number(g(r,'Орлогод авах үнэ')),sup=nm(g(r,'Бэлтгэн нийлүүлэгчийн нэр'));let v=null;
       if(isFinite(u)&&u>0){v=u;catCostSrc.u++}else if(sup!==ORION&&isFinite(pp)&&pp>0){v=pp;catCostSrc.p++}
       if(v!=null){seen.add(c);catCost.push([c,Math.round(v*100)/100])}})}
+    // Үлдэгдлийн файлын «Нэгж өртөг» (AP) — хамгийн шинэ өртөг, master-аас давуу. Үүлэнд байсан бусад барааны өртөг хадгалагдана.
+    catCost=mergeCost(sc?sc.m:new Map(),catCost);if(sc)catCostSrc.s=sc.m.size;
     const cp=catItems.filter(x=>price.has(x[0])).length,low=catItems.filter(x=>x[4]<x[3]).length,zero=catItems.filter(x=>x[4]<=0).length,dup=M.rows.length-skip-inact-catItems.length;
-    out.innerHTML='<table><tbody>'+[['Барааны хуудас',M.sheet],['Кассын үнийн эх сурвалж (эхэлж олдсон нь)',ps||'—'],['Идэвхтэй, борлуулах бараа',catItems.length.toLocaleString('en-US')],['Өртөгтэй бараа',catCost?catCost.length.toLocaleString('en-US')+' (нэгж өртөг '+catCostSrc.u.toLocaleString('en-US')+', орлогод авах үнэ '+catCostSrc.p.toLocaleString('en-US')+')':'<span class="hot">файлд «Нэгж өртөг» багана алга</span>'],['Идэвхгүй / борлуулахгүй (орхисон)',inact.toLocaleString('en-US')],['Давхардсан код',dup],['Кассын үнэ файлаас',fp?cp.toLocaleString('en-US'):'— (үндсэн үнэ ашиглана)'],['Кассын үнэ үндсэн үнээс бага',low.toLocaleString('en-US')],['Үнэ 0 бараа',zero?'<span class="hot">'+zero+'</span>':0],['«Кассын үнэ» (AT) хямдралын жагсаалтаас зөрүүтэй',atMap.size?(diff?'<span class="hot">'+diff.toLocaleString('en-US')+'</span>':0):'—']].map(x=>'<tr><td>'+x[0]+'</td><td class="n"><b>'+x[1]+'</b></td></tr>').join('')+'</tbody></table>';
+    out.innerHTML='<table><tbody>'+[['Барааны хуудас',M.sheet],['Кассын үнийн эх сурвалж (эхэлж олдсон нь)',ps||'—'],['Идэвхтэй, борлуулах бараа',catItems.length.toLocaleString('en-US')],['Өртөгтэй бараа (илгээх нийт)',catCost&&catCost.length?catCost.length.toLocaleString('en-US')+' (үлдэгдлийн файлаас '+(catCostSrc.s||0).toLocaleString('en-US')+', master: нэгж өртөг '+catCostSrc.u.toLocaleString('en-US')+', орлогод авах үнэ '+catCostSrc.p.toLocaleString('en-US')+')':'<span class="hot">өртөг олдсонгүй — 2-р файлд үлдэгдлийн файл («Нэгж өртөг» баганатай) оруулна уу</span>'],['Идэвхгүй / борлуулахгүй (орхисон)',inact.toLocaleString('en-US')],['Давхардсан код',dup],['Кассын үнэ файлаас',fp?cp.toLocaleString('en-US'):'— (үндсэн үнэ ашиглана)'],['Кассын үнэ үндсэн үнээс бага',low.toLocaleString('en-US')],['Үнэ 0 бараа',zero?'<span class="hot">'+zero+'</span>':0],['«Кассын үнэ» (AT) хямдралын жагсаалтаас зөрүүтэй',atMap.size?(diff?'<span class="hot">'+diff.toLocaleString('en-US')+'</span>':0):'—']].map(x=>'<tr><td>'+x[0]+'</td><td class="n"><b>'+x[1]+'</b></td></tr>').join('')+'</tbody></table>';
     if(catItems.length){$('catUp').disabled=false;$('catUp').style.opacity=1}
   }catch(e){out.innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}
 };
+let costOnly=false;
+// Үлдэгдлийн файл: «Код» + «Нэгж өртөг» баганатай хуудас → код→өртөг (0-ээс их)
+function stockCostOf(wb){const S=allSheets(wb,(row,ix)=>('Код' in ix&&'Нэгж өртөг' in ix)?'Нэгж өртөг':null)[0];if(!S)return null;const m=new Map();
+  S.rows.forEach(r=>{const raw=r[S.ix['Код']],c=raw==null?'':typeof raw==='number'?String(Math.round(raw)):String(raw).trim(),v=Number(r[S.ix['Нэгж өртөг']]);if(c&&isFinite(v)&&v>0)m.set(c,Math.round(v*100)/100)});return {m,sheet:S.sheet}}
+// Өртөг нэгтгэх: үлдэгдлийн файл > master > үүлэнд байсан
+function mergeCost(stock,master){const m=new Map(costMap);(master||[]).forEach(([c,v])=>m.set(c,v));stock.forEach((v,c)=>m.set(c,v));return [...m.entries()]}
 async function writeChunks(col,rows,metaExtra,prog){
   const enc=new TextEncoder(),chunks=[];let cur=[],size=2;
   rows.forEach(it=>{const b=enc.encode(JSON.stringify(it)).length+1;if(size+b>800000&&cur.length){chunks.push(cur);cur=[];size=2}cur.push(it);size+=b});if(cur.length)chunks.push(cur);
@@ -1214,19 +1230,21 @@ async function writeChunks(col,rows,metaExtra,prog){
   return {w,n:chunks.length};
 }
 async function loadCost(){
-  try{const m=await db.collection('pos_cost').doc('meta').get();if(!m.exists){costInfo='Өртөг: үүлэнд алга — тайланд өртөг гарахгүй. Барааны жагсаалтаа (master + үнэ) дахин илгээнэ үү.';const el=$('costNow');if(el){el.textContent=costInfo;el.className='small hot'}return}
+  try{const m=await db.collection('pos_cost').doc('meta').get();if(!m.exists){costInfo='Өртөг: үүлэнд алга — тайланд өртөг гарахгүй. 2-р талбарт үлдэгдлийн файл («Нэгж өртөг» баганатай) сонгож «Файл шалгах» → «Үүлэнд илгээх» дарна уу.';const el=$('costNow');if(el){el.textContent=costInfo;el.className='small hot'}return}
     const meta=m.data(),mp=new Map();for(const c of meta.chunks){const d=await db.collection('pos_cost').doc(c.id).get();if(d.exists)JSON.parse(d.data().d).forEach(x=>mp.set(x[0],x[1]))}
     Object.values(costMap).length;costMap.forEach((v,k)=>{if(!mp.has(k))mp.set(k,v)});costMap=mp;costInfo='Өртөг: '+mp.size.toLocaleString('en-US')+' бараа · '+new Date(meta.version).toLocaleString('sv-SE').slice(0,16);
   }catch(e){costInfo='Өртөг уншсангүй: '+(e.code||e.message||e);setTimeout(loadCost,30000)}
   const el=$('costNow');if(el)el.textContent=costInfo;if(typeof drawRep==='function')draw();
 }
 $('catUp').onclick=async()=>{
-  if(!catItems)return;const btn=$('catUp'),out=$('catMsg');btn.disabled=true;btn.style.opacity=.5;
+  if(!catItems&&!costOnly)return;const btn=$('catUp'),out=$('catMsg');btn.disabled=true;btn.style.opacity=.5;
   try{
     const files=[($('fMaster').files[0]||{}).name||'',($('fPrice').files[0]||{}).name||''];
+    if(costOnly){await writeChunks('pos_cost',catCost,{files},(i,n)=>out.textContent='Өртөг илгээж байна '+i+'/'+n);await loadCost();await auditCfg('cost_upload',{by:auth.currentUser.email,files,count:catCost.length});
+      out.innerHTML='<span class="chip">Илгээгдлээ</span> Өртөг: '+catCost.length.toLocaleString('en-US')+' бараа. Тайлан шууд өртөгтэй харагдана.';return}
     const sups=[...new Set(catItems.map(x=>x[5]).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),grps=[...new Set(catItems.map(x=>x[6]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
     const r=await writeChunks('pos_catalog',catItems,{files,sups,grps},(i,n,w)=>out.textContent='Барааны жагсаалт илгээж байна '+i+'/'+n+' (шинэчилсэн '+w+')');
-    let cw='';if(catCost){const rc=await writeChunks('pos_cost',catCost,{files},(i,n)=>out.textContent='Өртөг илгээж байна '+i+'/'+n);cw=' Өртөг: '+catCost.length.toLocaleString('en-US')+' бараа.';await loadCost()}
+    let cw='';if(catCost&&catCost.length){const rc=await writeChunks('pos_cost',catCost,{files},(i,n)=>out.textContent='Өртөг илгээж байна '+i+'/'+n);cw=' Өртөг: '+catCost.length.toLocaleString('en-US')+' бараа.';await loadCost()}
     const w=r.w,chunks={length:r.n};
     out.innerHTML='<span class="chip">Илгээгдлээ</span> '+catItems.length.toLocaleString('en-US')+' бараа, '+w+'/'+chunks.length+' хэсэг шинэчлэгдсэн. Кассууд автоматаар татна.'+cw;
   }catch(e){out.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>';btn.disabled=false;btn.style.opacity=1}
