@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.5">
+<meta name="vivi-ver" content="5.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -1105,7 +1105,8 @@ async function verCheck(force){
   if(location.protocol==='file:'||(!force&&Date.now()-updAt<5*60e3))return;updAt=Date.now();
   try{const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',headers:{Range:'bytes=0-2047'}});const t=(await r.text()).slice(0,4000),m=/name="vivi-ver" content="([\d.]+)"/.exec(t);
     if(m&&verNewer(m[1],APP_VER)){updVer=m[1];updShow()}}catch(e){}}
-async function updGo(){try{await fetch(location.pathname,{cache:'reload'})}catch(e){}location.replace(location.pathname+location.hash)}
+// Шинэ хувилбар татах: кэшийг шинэчлээд хуудсыг бүрэн дахин ачаална (хаяг #… -тэй үед location.replace ажилладаггүй байсан)
+async function updGo(){const b=document.getElementById('updB');if(b){b.disabled=true;b.textContent='Шинэчилж байна…'}try{await fetch(location.pathname,{cache:'reload'})}catch(e){}try{const c=await caches.keys();await Promise.all(c.map(k=>caches.open(k).then(x=>x.delete(location.pathname))))}catch(e){}location.reload()}
 setInterval(()=>verCheck(),15*60e3);window.addEventListener('focus',()=>verCheck());setTimeout(()=>verCheck(true),8000);
 // Касс: нэвтрэх дэлгэц дээр шууд шинэчилнэ; борлуулалтын үед сагс хоосон болмогц хуудсын дээр мэдэгдэнэ
 function updShow(){if(!S.user&&!S.cart.length)return updGo();const e=$('updBar');e.classList.remove('hide');e.innerHTML='Шинэ хувилбар <b>'+esc(updVer)+'</b> бэлэн (одоо '+esc(APP_VER)+'). Баримтаа дуусгаад шинэчилнэ үү. <button id="updB">Шинэчлэх</button>';

@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.3">
+<meta name="vivi-ver" content="7.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -334,7 +334,8 @@ async function verCheck(force){
   if(location.protocol==='file:'||(!force&&Date.now()-updAt<5*60e3))return;updAt=Date.now();
   try{const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',headers:{Range:'bytes=0-2047'}});const t=(await r.text()).slice(0,4000),m=/name="vivi-ver" content="([\d.]+)"/.exec(t);
     if(m&&verNewer(m[1],APP_VER)){updVer=m[1];updShow()}}catch(e){}}
-async function updGo(){try{await fetch(location.pathname,{cache:'reload'})}catch(e){}location.replace(location.pathname+location.hash)}
+// Шинэ хувилбар татах: кэшийг шинэчлээд хуудсыг бүрэн дахин ачаална (хаяг #… -тэй үед location.replace ажилладаггүй байсан)
+async function updGo(){const b=document.getElementById('updB');if(b){b.disabled=true;b.textContent='Шинэчилж байна…'}try{await fetch(location.pathname,{cache:'reload'})}catch(e){}try{const c=await caches.keys();await Promise.all(c.map(k=>caches.open(k).then(x=>x.delete(location.pathname))))}catch(e){}location.reload()}
 setInterval(()=>verCheck(),15*60e3);window.addEventListener('focus',()=>verCheck());setTimeout(()=>verCheck(true),8000);
 function updShow(){let e=$('updBar');if(!e){e=document.createElement('div');e.id='updBar';e.style.cssText='position:sticky;top:0;z-index:50;background:#e1edfa;color:var(--blue);padding:8px 16px;text-align:center;font-size:14px';document.body.insertBefore(e,document.body.firstChild)}
   e.innerHTML='Самбарын шинэ хувилбар <b>'+esc(updVer)+'</b> бэлэн (одоо '+esc(APP_VER)+'). <button id="updB" class="btn pri" style="min-height:30px;padding:2px 12px;margin-left:8px">Шинэчлэх</button>';$('updB').onclick=updGo}
