@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.0">
+<meta name="vivi-ver" content="6.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1176,7 +1176,7 @@ $('catRead').onclick=async()=>{
   // Зөвхөн үлдэгдлийн файл (2) сонгосон бол — зөвхөн өртөг шинэчилнэ
   if(!fm){try{out.textContent='Файл уншиж байна…';await xlsx();const sc=stockCostOf(XLSX.read(await fileBuf(fp),{type:'array'}));
       if(!sc)return out.innerHTML='<span class="hot">Барааны жагсаалтын файл (1) сонгоогүй, 2-р файлд «Код» + «Нэгж өртөг» багана алга</span>';
-      catCost=mergeCost(sc.m,null);costOnly=true;out.innerHTML='<table><tbody><tr><td>Өртгийн хуудас</td><td class="n">'+esc(sc.sheet)+' · «Нэгж өртөг»</td></tr><tr><td>Файлаас өртөгтэй бараа</td><td class="n">'+sc.m.size.toLocaleString('en-US')+'</td></tr><tr><td>Үүлэнд байсан өртөг (хадгалагдана)</td><td class="n">'+costMap.size.toLocaleString('en-US')+'</td></tr><tr><td><b>Илгээх өртөг нийт</b></td><td class="n"><b>'+catCost.length.toLocaleString('en-US')+'</b></td></tr></tbody></table><div class="small">Зөвхөн өртөг шинэчилнэ — барааны жагсаалт, үнэ өөрчлөгдөхгүй.</div>';
+      catCost=mergeCost(sc.m,null);costOnly=true;out.innerHTML='<table><tbody>'+costCheckHtml(sc)+'<tr><td>Файлаас өртөгтэй бараа</td><td class="n">'+sc.m.size.toLocaleString('en-US')+'</td></tr><tr><td>Үүлэнд байсан өртөг (хадгалагдана)</td><td class="n">'+costMap.size.toLocaleString('en-US')+'</td></tr><tr><td><b>Илгээх өртөг нийт</b></td><td class="n"><b>'+catCost.length.toLocaleString('en-US')+'</b></td></tr></tbody></table><div class="small">Зөвхөн өртөг шинэчилнэ — барааны жагсаалт, үнэ өөрчлөгдөхгүй.</div>';
       $('catUp').disabled=false;$('catUp').style.opacity=1}catch(e){out.innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}return}
   try{
     out.textContent='Файл уншиж байна… (том файл хэдэн секунд болно)';await xlsx();
@@ -1208,14 +1208,35 @@ $('catRead').onclick=async()=>{
     // Үлдэгдлийн файлын «Нэгж өртөг» (AP) — хамгийн шинэ өртөг, master-аас давуу. Үүлэнд байсан бусад барааны өртөг хадгалагдана.
     catCost=mergeCost(sc?sc.m:new Map(),catCost);if(sc)catCostSrc.s=sc.m.size;
     const cp=catItems.filter(x=>price.has(x[0])).length,low=catItems.filter(x=>x[4]<x[3]).length,zero=catItems.filter(x=>x[4]<=0).length,dup=M.rows.length-skip-inact-catItems.length;
-    out.innerHTML='<table><tbody>'+[['Барааны хуудас',M.sheet],['Кассын үнийн эх сурвалж (эхэлж олдсон нь)',ps||'—'],['Идэвхтэй, борлуулах бараа',catItems.length.toLocaleString('en-US')],['Өртөгтэй бараа (илгээх нийт)',catCost&&catCost.length?catCost.length.toLocaleString('en-US')+' (үлдэгдлийн файлаас '+(catCostSrc.s||0).toLocaleString('en-US')+', master: нэгж өртөг '+catCostSrc.u.toLocaleString('en-US')+', орлогод авах үнэ '+catCostSrc.p.toLocaleString('en-US')+')':'<span class="hot">өртөг олдсонгүй — 2-р файлд үлдэгдлийн файл («Нэгж өртөг» баганатай) оруулна уу</span>'],['Идэвхгүй / борлуулахгүй (орхисон)',inact.toLocaleString('en-US')],['Давхардсан код',dup],['Кассын үнэ файлаас',fp?cp.toLocaleString('en-US'):'— (үндсэн үнэ ашиглана)'],['Кассын үнэ үндсэн үнээс бага',low.toLocaleString('en-US')],['Үнэ 0 бараа',zero?'<span class="hot">'+zero+'</span>':0],['«Кассын үнэ» (AT) хямдралын жагсаалтаас зөрүүтэй',atMap.size?(diff?'<span class="hot">'+diff.toLocaleString('en-US')+'</span>':0):'—']].map(x=>'<tr><td>'+x[0]+'</td><td class="n"><b>'+x[1]+'</b></td></tr>').join('')+'</tbody></table>';
+    out.innerHTML='<table><tbody>'+[['Барааны хуудас',M.sheet],['Кассын үнийн эх сурвалж (эхэлж олдсон нь)',ps||'—'],['Идэвхтэй, борлуулах бараа',catItems.length.toLocaleString('en-US')],['Өртөгтэй бараа (илгээх нийт)',catCost&&catCost.length?catCost.length.toLocaleString('en-US')+' (үлдэгдлийн файлаас '+(catCostSrc.s||0).toLocaleString('en-US')+', master: нэгж өртөг '+catCostSrc.u.toLocaleString('en-US')+', орлогод авах үнэ '+catCostSrc.p.toLocaleString('en-US')+')':'<span class="hot">өртөг олдсонгүй — 2-р файлд үлдэгдлийн файл («Нэгж өртөг» баганатай) оруулна уу</span>'],...(sc?[['Өртгийн багана (нэрээр олсон)',esc(sc.sheet)+' · '+esc(sc.col)]]:[]),['Идэвхгүй / борлуулахгүй (орхисон)',inact.toLocaleString('en-US')],['Давхардсан код',dup],['Кассын үнэ файлаас',fp?cp.toLocaleString('en-US'):'— (үндсэн үнэ ашиглана)'],['Кассын үнэ үндсэн үнээс бага',low.toLocaleString('en-US')],['Үнэ 0 бараа',zero?'<span class="hot">'+zero+'</span>':0],['«Кассын үнэ» (AT) хямдралын жагсаалтаас зөрүүтэй',atMap.size?(diff?'<span class="hot">'+diff.toLocaleString('en-US')+'</span>':0):'—']].map(x=>'<tr><td>'+x[0]+'</td><td class="n"><b>'+x[1]+'</b></td></tr>').join('')+'</tbody></table>';
     if(catItems.length){$('catUp').disabled=false;$('catUp').style.opacity=1}
   }catch(e){out.innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}
 };
 let costOnly=false;
-// Үлдэгдлийн файл: «Код» + «Нэгж өртөг» баганатай хуудас → код→өртөг (0-ээс их)
-function stockCostOf(wb){const S=allSheets(wb,(row,ix)=>('Код' in ix&&'Нэгж өртөг' in ix)?'Нэгж өртөг':null)[0];if(!S)return null;const m=new Map();
-  S.rows.forEach(r=>{const raw=r[S.ix['Код']],c=raw==null?'':typeof raw==='number'?String(Math.round(raw)):String(raw).trim(),v=Number(r[S.ix['Нэгж өртөг']]);if(c&&isFinite(v)&&v>0)m.set(c,Math.round(v*100)/100)});return {m,sheet:S.sheet}}
+// Үлдэгдлийн файл: баганыг үсгээр биш, гарчгийн нэрээр олно (зай, том жижиг үсэг, дараалал өөрчлөгдсөн ч болно).
+// Өртөг: «Нэгж өртөг», «Нэгжийн өртөг», «Өртөг», «Өртөг үнэ», «Орлогод авах үнэ», «Худалдан авах үнэ», «Unit cost», «Cost»; «нийт» гэсэн нийлбэр баганыг алгасна.
+const HN=x=>String(x==null?'':x).toLowerCase().replace(/\s+/g,' ').trim();
+const COST_H=['нэгж өртөг','нэгжийн өртөг','өртөг','өртөг үнэ','нэгж өртөг үнэ','орлогод авах үнэ','худалдан авах үнэ','авах үнэ','unit cost','cost','cena zakupu'];
+const CODE_H=['код','барааны код','баар код','баркод','бар код','barcode','ean','kod'];
+const PRICE_H=['худалдах үнэ','үнэ','кассын үнэ'];
+function colL(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+function stockCostOf(wb){
+  for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
+    for(let h=0;h<Math.min(15,a.length);h++){const row=(a[h]||[]).map(HN);
+      const ci=CODE_H.map(k=>row.indexOf(k)).find(x=>x>=0);if(ci==null)continue;
+      let ki=-1,kn='';for(const k of COST_H){const x=row.findIndex(v=>v===k);if(x>=0){ki=x;kn=k;break}}
+      if(ki<0){const x=row.findIndex(v=>/өртөг|cost/.test(v)&&!/нийт|total|дүн/.test(v));if(x>=0){ki=x;kn=row[x]}}
+      if(ki<0)continue;
+      const pi=PRICE_H.map(k=>row.indexOf(k)).find(x=>x>=0);
+      const m=new Map();let above=0,cmp=0;
+      a.slice(h+1).forEach(r=>{if(!r)return;const raw=r[ci],c=raw==null?'':typeof raw==='number'?String(Math.round(raw)):String(raw).trim(),v=Number(r[ki]);
+        if(c&&/^[0-9A-Za-z\-]+$/.test(c)&&isFinite(v)&&v>0){m.set(c,Math.round(v*100)/100);if(pi!=null){const p=Number(r[pi]);if(isFinite(p)&&p>0){cmp++;if(v>p)above++}}}});
+      if(!m.size)continue;
+      return {m,sheet:n,col:colL(ki)+' «'+String(a[h][ki]).trim()+'»',codeCol:colL(ci)+' «'+String(a[h][ci]).trim()+'»',above,cmp}}}
+  return null}
+// Өртгийн баганыг шалгах мөр (аль баганыг авснаа харуулна; өртөг үнээсээ их бол сануулна)
+function costCheckHtml(sc){const warn=sc.cmp&&sc.above/sc.cmp>0.2;return '<tr><td>Өртгийн багана (нэрээр олсон)</td><td class="n">'+esc(sc.sheet)+' · '+esc(sc.col)+' · код: '+esc(sc.codeCol)+'</td></tr>'+
+  (sc.cmp?'<tr><td>Өртөг худалдах үнээс их</td><td class="n'+(warn?' hot':'')+'">'+sc.above.toLocaleString('en-US')+' / '+sc.cmp.toLocaleString('en-US')+(warn?' — баганыг шалгана уу!':'')+'</td></tr>':'')}
 // Өртөг нэгтгэх: үлдэгдлийн файл > master > үүлэнд байсан
 function mergeCost(stock,master){const m=new Map(costMap);(master||[]).forEach(([c,v])=>m.set(c,v));stock.forEach((v,c)=>m.set(c,v));return [...m.entries()]}
 async function writeChunks(col,rows,metaExtra,prog){
