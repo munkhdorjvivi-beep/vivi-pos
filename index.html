@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.4">
+<meta name="vivi-ver" content="5.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -853,9 +853,9 @@ function movRecv(m){
       log('move_recv',{uid:m.uid,from:m.from,qty:lnQty(got),diff,approver:ap});closeModal();flash('Хүлээн авлаа: '+lnQty(got)+' ш'+(diff?' · зөрүү '+diff:''))}
     catch(e){$('mvm').textContent='Алдаа: '+(e&&e.code||e)}};
 }
-function movPrint(d,title){const L=JSON.parse(d.lines);
-  printDocs(['<div class="c big">'+title+'</div><div class="c">'+esc(LOCN(d.from))+' → '+esc(LOCN(d.to))+'</div><div class="c">'+dstr(now())+' '+tstr(now())+'</div>'+(d.supplier?'<div class="c">'+esc(d.supplier)+(d.invoice?' · '+esc(d.invoice):'')+'</div>':'')+'<div class="hr"></div><table><tr><th style="text-align:left">Бараа</th><th style="text-align:right">Тоо</th></tr>'+
-    L.map(x=>'<tr><td>'+esc(String(x[2]).slice(0,30))+'<br><span style="font-size:9px">'+esc(x[0])+'</span></td><td style="text-align:right">'+x[1]+'</td></tr>').join('')+'</table><div class="hr"></div><table><tr><td><b>Нийт</b></td><td style="text-align:right"><b>'+d.qty+' ш</b></td></tr></table><br>Илгээсэн: ____________<br><br>Хүлээн авсан: ____________'])}
+function movPrint(d,title){const L=JSON.parse(d.lines),pr=c=>{const i=IDX.get(c);return i==null?0:CAT[i][4]||0};let ts=0;
+  printDocs(['<div class="c big">'+title+'</div>'+(d.no?'<div class="c">№ '+esc(d.no)+'</div>':'')+'<div class="c">'+esc(LOCN(d.from))+' → '+esc(LOCN(d.to))+'</div><div class="c">'+dstr(now())+' '+tstr(now())+'</div>'+(d.supplier?'<div class="c">'+esc(d.supplier)+(d.invoice?' · '+esc(d.invoice):'')+'</div>':'')+'<div class="hr"></div><table><tr><th style="text-align:left">Бараа</th><th style="text-align:right">Тоо</th><th style="text-align:right">Үнэ</th><th style="text-align:right">Дүн</th></tr>'+
+    L.map(x=>{const p=pr(x[0]);ts+=p*x[1];return '<tr><td>'+esc(String(x[2]).slice(0,26))+'<br><span style="font-size:9px">'+esc(x[0])+'</span></td><td style="text-align:right">'+x[1]+'</td><td style="text-align:right">'+fmt(p)+'</td><td style="text-align:right">'+fmt(p*x[1])+'</td></tr>'}).join('')+'</table><div class="hr"></div><table><tr><td><b>Нийт</b></td><td style="text-align:right"><b>'+d.qty+' ш · '+fmt(ts)+'</b></td></tr></table><br>Илгээсэн: ____________<br><br>Тээвэрлэсэн: ____________<br><br>Хүлээн авсан: ____________'])}
 /* ---------- Ээлжийн бэлэн мөнгө: касст нэмэх, кассаас гаргах (банкинд тушаах, зардал), X тайлан ----------
    Гүйлгээ бүр ээлжийн баримтад (pos_shifts) хадгалагдаж, самбар болон ээлж хаахад тооцогдоно. */
 const CASH_KIND={deposit:'Банкинд тушаасан',expense:'Жижиг зардал',other:'Бусад гаргалт',change:'Задгай мөнгө нэмсэн',in_other:'Бусад орлого'};
