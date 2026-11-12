@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.2">
+<meta name="vivi-ver" content="6.3">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1015,16 +1015,21 @@ function drawSup(){
   keep('fSup',all.map(x=>x.l.sup),'','Бүх нийлүүлэгч');keep('fGrp',all.map(x=>x.l.grp),'','Бүх бүлэг');
   const sup=$('fSup').value,grp=$('fGrp').value;
   const L=all.filter(({l})=>(!sup||l.sup===sup)&&(!grp||l.grp===grp)&&(!q||String(l.code).toLowerCase().includes(q)||String(l.name).toLowerCase().includes(q)));
-  let rev=0,cost=0,covRev=0,qty=0,disc=0,miss=0;
-  L.forEach(({l})=>{const c=unitCost(l);rev+=l.sum;qty+=l.qty;disc+=l.base*l.qty-l.sum;if(c!=null){cost+=c*l.qty;covRev+=l.sum}else miss++});
+  // Бэлэг (promo «gift», 0 ₮) — маркетингийн зардал: борлуулалтын ашгаас тусад нь. 1+1-ийн үнэгүй ширхэг хосын үнийн нэг хэсэг тул борлуулалтад үлдэнэ.
+  let rev=0,cost=0,covRev=0,qty=0,disc=0,miss=0,gq=0,gc=0,gk=0;const isG=l=>l.promo==='gift';
+  L.forEach(({l})=>{const c=unitCost(l);rev+=l.sum;qty+=l.qty;
+    if(isG(l)){gq+=l.qty;gk+=kassP(l)*l.qty;if(c!=null)gc+=c*l.qty;return}
+    disc+=l.base*l.qty-l.sum;if(c!=null){cost+=c*l.qty;covRev+=l.sum}else miss++});
   const pr=covRev-cost,pct=covRev?Math.round(pr/covRev*1000)/10:null;
-  $('fKpi').innerHTML=[['Борлуулалт',money(rev),1],['Тоо',qty.toLocaleString('en-US')+' ш'],['Хөнгөлөлт',money(disc)],['Өртөг',money(cost)],['Ашиг',money(pr)],['Ашгийн хувь',pct==null?'—':pct+'%']].map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
-  const agg=key=>{const m=new Map();L.forEach(({s,l})=>{const k=key(l);let r=m.get(k);if(!r){r={k,name:l.name,sup:l.sup||'',grp:l.grp||'',qty:0,rev:0,base:0,cost:0,cov:0,kas:0,free:0,gift:0,rec:new Set()};m.set(k,r)}const c=unitCost(l);r.qty+=l.qty;r.kas+=kassP(l)*l.qty;if(l.promo==='free')r.free+=l.qty;if(l.promo==='gift')r.gift+=l.qty;r.rev+=l.sum;r.base+=l.base*l.qty;r.rec.add(s.id);if(c!=null){r.cost+=c*l.qty;r.cov+=l.sum}});return [...m.values()].sort((a,b)=>b.rev-a.rev)};
+  $('fKpi').innerHTML=[['Борлуулалт',money(rev),1],['Тоо',qty.toLocaleString('en-US')+' ш'+(gq?' <span class="small">(бэлэг '+gq+')</span>':'')],['Хөнгөлөлт',money(disc)],['Өртөг (борлуулсан)',money(cost)],['Борлуулалтын ашиг',money(pr)+' <span class="small">'+(pct==null?'':pct+'%')+'</span>'],
+    ['Бэлэг',gq?gq+' ш · өртөг '+money(gc):'—'],['Ашиг (бэлэг хассан)',money(pr-gc)]].map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
+  const agg=key=>{const m=new Map();L.forEach(({s,l})=>{const k=key(l);let r=m.get(k);if(!r){r={k,name:l.name,sup:l.sup||'',grp:l.grp||'',qty:0,rev:0,base:0,cost:0,cov:0,kas:0,free:0,gift:0,gc:0,uc:null,rec:new Set()};m.set(k,r)}const c=unitCost(l);r.qty+=l.qty;r.kas+=kassP(l)*l.qty;if(l.promo==='free')r.free+=l.qty;r.rev+=l.sum;r.base+=l.base*l.qty;r.rec.add(s.id);if(c!=null)r.uc=c;
+    if(l.promo==='gift'){r.gift+=l.qty;if(c!=null)r.gc+=c*l.qty;return}if(c!=null){r.cost+=c*l.qty;r.cov+=l.sum}});return [...m.values()].sort((a,b)=>b.rev-a.rev)};
   const pc=r=>r.cov?Math.round((r.cov-r.cost)/r.cov*1000)/10:null,n=v=>Math.round(v);
-  if(mode==='sup'){const A=agg(l=>l.sup||'—');fHead=['Нийлүүлэгч','Баримт','Тоо','Үндсэн дүн','Борлуулалт','Хувь (борлуулалтад)','Өртөг','Ашиг','Ашгийн хувь'];
-    fRows=A.map(r=>[r.k,r.rec.size,r.qty,n(r.base),n(r.rev),rev?Math.round(r.rev/rev*1000)/10:0,n(r.cost),n(r.cov-r.cost),pc(r)]);}
-  else if(mode==='item'){const A=agg(l=>l.code);fHead=['Код','Нэр','Нийлүүлэгч','Тоо','Үүнээс 1+1 үнэгүй','Үүнээс бэлэг','Кассын үнэ','Төлсөн дундаж үнэ','Борлуулалт','Нэгж өртөг','Өртөг','Ашиг','Ашгийн хувь'];
-    fRows=A.map(r=>[r.k,r.name,r.sup,r.qty,r.free||'',r.gift||'',r.qty?n(r.kas/r.qty):0,r.qty?n(r.rev/r.qty):0,n(r.rev),r.qty&&r.cov?n(r.cost/r.qty):'',n(r.cost),n(r.cov-r.cost),pc(r)]);}
+  if(mode==='sup'){const A=agg(l=>l.sup||'—');fHead=['Нийлүүлэгч','Баримт','Тоо','Үндсэн дүн','Борлуулалт','Хувь (борлуулалтад)','Өртөг','Ашиг','Ашгийн хувь','Бэлэг (ш)','Бэлгийн өртөг','Ашиг (бэлэг хассан)'];
+    fRows=A.map(r=>[r.k,r.rec.size,r.qty,n(r.base),n(r.rev),rev?Math.round(r.rev/rev*1000)/10:0,n(r.cost),n(r.cov-r.cost),pc(r),r.gift||'',r.gc?n(r.gc):'',n(r.cov-r.cost-r.gc)]);}
+  else if(mode==='item'){const A=agg(l=>l.code);fHead=['Код','Нэр','Нийлүүлэгч','Тоо','Үүнээс 1+1 үнэгүй','Үүнээс бэлэг','Кассын үнэ','Төлсөн дундаж үнэ','Борлуулалт','Нэгж өртөг','Өртөг','Ашиг','Ашгийн хувь','Бэлгийн өртөг','Ашиг (бэлэг хассан)'];
+    fRows=A.map(r=>[r.k,r.name,r.sup,r.qty,r.free||'',r.gift||'',r.qty?n(r.kas/r.qty):0,r.qty?n(r.rev/r.qty):0,n(r.rev),r.uc!=null?n(r.uc):'',n(r.cost),n(r.cov-r.cost),pc(r),r.gc?n(r.gc):'',n(r.cov-r.cost-r.gc)]);}
   else{fHead=['Баримт','Огноо','Дэлгүүр','Кассчин','Нийлүүлэгч','Код','Нэр','Тоо','Үндсэн үнэ','Кассын үнэ','Төлсөн үнэ','Хөнгөлөлт','Дүн','Өртөг','Ашиг','Ашгийн хувь','Урамшуулал'];
     fRows=L.slice().sort((a,b)=>a.s.iso<b.s.iso?1:-1).map(({s,l})=>{const c=unitCost(l),co=c==null?'':n(c*l.qty);return [s.id,s.date+' '+(s.time||'').slice(0,5),s.storeName,s.cashier,l.sup||'',l.code,l.name,l.qty,l.base,kassP(l),l.unit,n(l.base*l.qty-l.sum),l.sum,co,co===''?'':n(l.sum-co),co===''||!l.sum?'':Math.round((l.sum-co)/l.sum*1000)/10,promoLbl(l)]})}
   if(mode==='pair'){
