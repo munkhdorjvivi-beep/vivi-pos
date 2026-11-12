@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.2">
+<meta name="vivi-ver" content="5.3">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -250,8 +250,8 @@ function promoWhy(l){
     if(r)out.push('«'+p.name+'»: '+r)});
   return out;
 }
-// «Бусдыг түр зогсоох» урамшуулал (жишээ нь Black Friday) идэвхтэй үед зөвхөн тэр (тийм) урамшуулал хүчинтэй; дууссаны дараа 1+1 г.м. автоматаар буцна
-function activePromos(){const st=S.user&&S.user.store,A=promos.filter(p=>promoState(p)==='on'&&(!p.stores.length||!st||p.stores.includes(st)));return A.some(p=>p.solo)?A.filter(p=>p.solo):A}
+// «Бусдыг түр зогсоох» (solo) урамшууллын үйлчлэлийг computePromo мөр бүрээр шийднэ
+function activePromos(){const st=S.user&&S.user.store;return promos.filter(p=>promoState(p)==='on'&&(!p.stores.length||!st||p.stores.includes(st)))}
 function plPrice(p,l){if(p.type!=='plist'||!p.prices)return null;const v=p.prices[l.code]!=null?p.prices[l.code]:(l.bc&&p.prices[l.bc]!=null?p.prices[l.bc]:null);return v}
 function promoBase(p,l){if(p.type==='plist')return plPrice(p,l)!=null;return !!(p.all||p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))}
 // Үл хамаарах: тодорхой код, нийлүүлэгч; «өөр урамшуулалтай бараа» (жишээ нь Black Friday −50% нь 1+1, тусгай үнэтэй бараанд хэрэглэгдэхгүй)
@@ -329,12 +329,16 @@ function pending(){return sales.filter(s=>!s.synced).length+audit.filter(a=>!a.s
    2) Нэг компьютер дээр касс нэг цонхонд л. 3) Компьютерийн цаг серверийн цагтай таарах ёстой.
    4) Өмнөх өдрийн ээлж хаагдаагүй бол эхлээд хаана. 5) Ээлж өөр кассчин нээсэн бол хүлээлгэн өгөх. 6) Удаан офлайн бол анхааруулна. */
 const KEEP_DAYS=14;
-function pruneLocal(){const lim=new Date(Date.now()-KEEP_DAYS*864e5).toISOString(),a0=sales.length,b0=audit.length;
-  sales=sales.filter(s=>!s.synced||(s.iso||'')>=lim);audit=audit.filter(a=>!a.synced||(a.t||a.at||'')>=new Date(Date.now()-7*864e5).toISOString());
-  if(sales.length!==a0)store.set('sales',sales);if(audit.length!==b0)store.set('audit',audit);
+// Ачаалал ихтэй үед (Black Friday г.м.) санах ой дүүргэхгүйн тулд: 3 МБ-аас их бол үүлэнд илгээгдсэн хуучин баримтыг 7 → 3 → 1 хоногоор цэвэрлэнэ.
+// Илгээгээгүй баримт, өнөөдрийн болон нээлттэй ээлжийн баримт хэзээ ч устахгүй. Хуучин баримтыг буцаалтад үүлнээс хайна.
+const STORE_SOFT=3*1048576,STORE_WARN=7*1048576;
+function pruneLocal(){const a0=sales.length,b0=audit.length,sh=(typeof S!=='undefined'&&S.shift&&S.shift.id)||'',td=new Date(new Date().toDateString()).toISOString();
+  for(const d of [KEEP_DAYS,7,3,1]){const lim=new Date(Math.min(Date.now()-d*864e5,Date.parse(td))).toISOString();
+    sales=sales.filter(s=>!s.synced||(s.iso||'')>=lim||(sh&&s.shift===sh));if(d===KEEP_DAYS||sales.length!==a0)store.set('sales',sales);if(storeUse()<STORE_SOFT)break}audit=audit.filter(a=>!a.synced||(a.t||a.at||'')>=new Date(Date.now()-7*864e5).toISOString());
+  if(audit.length!==b0)store.set('audit',audit);
   const h=store.get('shifts',[]);if(h.length>200)store.set('shifts',h.slice(-200))}
 function storeUse(){let n=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);n+=(k.length+(localStorage.getItem(k)||'').length)*2}}catch(e){}return n}
-function storeCheck(){const mb=storeUse()/1048576;if(mb>3.5){pruneLocal();if(storeUse()/1048576>3.8)flash('Анхаар: энэ компьютерын санах ой дүүрч байна ('+mb.toFixed(1)+' MB). Интернэтэд холбогдож илгээгээгүй өгөгдлөө илгээнэ үү.')}}
+function storeCheck(){const mb=storeUse()/1048576;if(storeUse()>STORE_SOFT){pruneLocal();if(storeUse()>STORE_WARN)flash('Анхаар: энэ компьютерын санах ой дүүрч байна ('+mb.toFixed(1)+' MB). Интернэтэд холбогдож илгээгээгүй өгөгдлөө илгээнэ үү.')}}
 // нэг цонх
 let tabOk=true;
 if(navigator.locks&&navigator.locks.request){navigator.locks.request('vivipos-main',{ifAvailable:true},lock=>{if(!lock){tabOk=false;blockAll('Касс энэ компьютер дээр өөр цонхонд (tab) нээлттэй байна','Нэг компьютер дээр касс зөвхөн нэг цонхонд ажиллана — хоёр цонх өгөгдлөө бие биенийхээ дээгүүр бичдэг. Энэ цонхыг хааж, нөгөө цонхоо ашиглана уу.');return}return new Promise(()=>{})})}
@@ -432,16 +436,18 @@ function computePromo(cart,ps){
   ps=ps||activePromos();const byPair={};
   cart.forEach((l,li)=>{l.free=0;l.same=0;l.samePct=0;l.pct=0;l.pu=null;l.ptxt='';l.promoName='';l.progSame=0;l.gift=0;l.giftAvail='';
     if(l.disc||l.price<=0||l.noPromo)return;
-    const gift=ps.find(p=>p.type==='gift'&&promoMatch(p,l));
+    // «Бусдыг түр зогсоох» (Black Friday г.м.) урамшуулал энэ бараанд хамаарвал зөвхөн тэр; үл хамаарах бараа өөрийн урамшууллаараа (тусгай үнэ, 1+1) үлдэнэ
+    const so=ps.filter(p=>p.solo&&promoMatch(p,l)),pl=so.length?so:ps.filter(p=>!p.solo);
+    const gift=pl.find(p=>p.type==='gift'&&promoMatch(p,l));
     if(gift&&(gift.auto||l.giftOn)){l.gift=1;l.promoName=gift.name;return}
     if(gift)l.giftAvail=gift.name; // кассчин «Бэлэг болгох» дарвал 0 ₮, үгүй бол ердийн үнээр (бусад урамшуулалтай)
     // барааны кодоор тусгайлан тохируулсан хөнгөлөлт (%, үнэ, дүн) нийлүүлэгчийн 1+1-ээс давуу
-    const byCode=ps.some(p=>(p.type==='plist'&&plPrice(p,l)!=null)||((p.type==='pct'||p.type==='price'||p.type==='amount')&&(p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))));
-    const pair=byCode?null:ps.find(p=>p.type==='pair'&&promoMatch(p,l));
+    const byCode=pl.some(p=>(p.type==='plist'&&plPrice(p,l)!=null)||((p.type==='pct'||p.type==='price'||p.type==='amount')&&(p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))));
+    const pair=byCode?null:pl.find(p=>p.type==='pair'&&promoMatch(p,l));
     if(pair){l.promoName=pair.name;l.progSame=pair.samePct||0;const u=(byPair[pair.id]=byPair[pair.id]||{p:pair,units:[]}).units;for(let k=0;k<l.qty;k++)u.push({li,price:l.price,used:false});return}
     // хувь, тогтмол үнэ, мөнгөн дүн: хамгийн бага үнэ гаргадаг нь хүчинтэй
     let best=null;
-    ps.forEach(p=>{if(!promoMatch(p,l))return;let u=null,tx='';
+    pl.forEach(p=>{if(!promoMatch(p,l))return;let u=null,tx='';
       if(p.type==='pct'){u=Math.round(l.price*(1-p.pct/100));tx='−'+p.pct+'%'}
       else if(p.type==='price'){u=Math.min(l.price,Math.round(p.price));tx=fmt(p.price)+' ₮'}
       else if(p.type==='amount'){u=Math.max(0,l.price-Math.round(p.amount));tx='−'+fmt(p.amount)+' ₮'}
@@ -688,7 +694,8 @@ function retState(s){
 function keptTotal(s,rem){
   let fixed=0;const cart=[],P={};
   s.lines.forEach((l,i)=>{const k=l.qty-(rem[i]||0);if(k<=0)return;
-    if(l.prog){const id=l.code+'#'+i;cart.push({code:id,price:l.price!=null?l.price:l.base,base:l.base,qty:k,disc:0,sup:'',grp:''});
+    // бэлэг (0 ₮) хосын урамшуулалд орохгүй — үлдсэн бэлэг төлбөргүй хэвээр
+    if(l.prog&&l.promo!=='gift'){const id=l.code+'#'+i;cart.push({code:id,price:l.price!=null?l.price:l.base,base:l.base,qty:k,disc:0,sup:'',grp:''});
       const p=P[l.prog]=P[l.prog]||{id:'r'+i,name:l.prog,type:'pair',pct:0,samePct:0,all:false,suppliers:[],groups:[],codes:[],start:'',end:'',stores:[],active:true};p.codes.push(id);if(l.samePct)p.samePct=l.samePct}
     else fixed+=k*l.unit});
   return fixed+(cart.length?computePromo(cart,Object.values(P)).total:0);
