@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.3">
+<meta name="vivi-ver" content="5.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -820,7 +820,7 @@ function openMov(tab){
     bindTabs();$('mvc').onclick=closeModal;$('mil').onclick=e=>{const tr=e.target.closest('tr[data-u]');if(tr)movRecv(MOV.find(m=>m.uid===tr.dataset.u))};return}
   if(tab==='hist'){const L=MOV.slice(0,200);
     openModal(head+'<div class="list" style="max-height:60vh"><table><thead><tr><th>Огноо</th><th>Төрөл</th><th>Хаанаас → хаана</th><th>Төлөв</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th></tr></thead><tbody>'+
-      (L.map(m=>{const rq=m.recvLines?lnQty(JSON.parse(m.recvLines)):null;return '<tr><td>'+esc(lt2(m.at))+'</td><td>'+({move:'Шилжүүлэг',in:'Орлого',out:'Зарлага'}[m.type]||m.type)+(m.supplier?'<div class="small">'+esc(m.supplier)+(m.invoice?' · '+esc(m.invoice):'')+'</div>':'')+'</td><td>'+esc(LOCN(m.from))+' → '+esc(LOCN(m.to))+'</td><td>'+(m.status==='sent'?'<span class="badge b30">замд</span>':m.status==='received'?'<span class="badge">хүлээн авсан</span>':'<span class="badge">бүртгэсэн</span>')+'</td><td class="n">'+m.qty+'</td><td class="n">'+(rq==null?'':rq+(rq!==m.qty&&m.type==='move'?' <b style="color:var(--red)">('+(rq-m.qty>0?'+':'')+(rq-m.qty)+')</b>':''))+'</td></tr>'}).join('')||'<tr><td colspan="6" class="empty">Хөдөлгөөн алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="mvc">Хаах</button></div>');
+      (L.map(m=>{const rq=m.recvLines?lnQty(JSON.parse(m.recvLines)):null;return '<tr><td>'+esc(lt2(m.at))+'</td><td>'+({move:'Шилжүүлэг',in:'Орлого',out:'Зарлага',adj:'Тооллогын зөрүү'}[m.type]||m.type)+(m.supplier?'<div class="small">'+esc(m.supplier)+(m.invoice?' · '+esc(m.invoice):'')+'</div>':'')+'</td><td>'+esc(LOCN(m.from))+' → '+esc(LOCN(m.to))+'</td><td>'+(m.status==='sent'?'<span class="badge b30">замд</span>':m.status==='received'?'<span class="badge">хүлээн авсан</span>':'<span class="badge">бүртгэсэн</span>')+'</td><td class="n">'+m.qty+'</td><td class="n">'+(rq==null?'':rq+(rq!==m.qty&&m.type==='move'?' <b style="color:var(--red)">('+(rq-m.qty>0?'+':'')+(rq-m.qty)+')</b>':''))+'</td></tr>'}).join('')||'<tr><td colspan="6" class="empty">Хөдөлгөөн алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="mvc">Хаах</button></div>');
     bindTabs();$('mvc').onclick=closeModal;return}
   const st=new Map(),sb=scanBox(st);
   if(tab==='send'){const dests=['FC','DR','NS','YV','AG'].filter(k=>k!==own);
@@ -1219,7 +1219,7 @@ function stkDraw(){
       r.v.map((x,k)=>'<td class="n'+(SS[k]===own?' own':'')+'">'+(x>0?'<b>'+x+'</b>':x<0?'<span style="color:var(--red)">'+x+'</span>':'<span class="small">—</span>')+'</td>').join('')+'<td class="n"><b>'+r.t+'</b></td></tr>'}).join('')+'</tbody></table>'
     :'<div class="empty" style="padding:30px">Бараа олдсонгүй</div>';
 }
-const STK_NAMES={AG:'Агуулах'};
+const STK_NAMES={AG:'Агуулах',DF:'Гэмтэлтэй (агуулах)'};
 /* ---------- settings (админ) ---------- */
 const PST={on:['Идэвхтэй',''],future:['Эхлээгүй','b30'],ended:['Дууссан','man'],off:['Зогсоосон','man']};
 let SUPS,GRPS;function sortLists(){SUPS=SUP.filter(Boolean).sort((a,b)=>a.localeCompare(b));GRPS=GRP.filter(Boolean).sort((a,b)=>a.localeCompare(b))}sortLists();

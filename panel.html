@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.7">
+<meta name="vivi-ver" content="6.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -165,6 +165,13 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div class="card"><h2>Хяналт: кассчны үйлдэл</h2><div class="scroll" id="cAud"></div></div>
 </section>
 <section class="pnl" data-panel="stock" hidden>
+  <div class="card"><h2>Эхний үлдэгдэл — бүх байршил нэг файлаар (Smart-ын «Ritel» / үлдэгдлийн файл)</h2>
+    <div class="small">Файлын байршлын багануудыг нэрээр нь таньж нэгтгэнэ: <b>Food city</b> = «Food city…» бүх хэлтэс + «Онлайн дэлгүүр»; <b>Драгон</b> = «Драгон…»; <b>Нийслэл</b> = «Нийслэл…»; <b>Агуулах</b> = Хувцас, Гутал, Da Toy, Эрка; <b>Гэмтэлтэй бараа</b> = «Деффикт»; <b>Явуулын касс</b> = «Дархан Үзэсгэлэн». «Нэгж өртөг»-өөр жигнэсэн дундаж өртөг эхэлнэ.</div>
+    <div class="frm" style="margin-top:8px"><div><label class="f">Smart-аас файл татсан огноо, цаг</label><input type="datetime-local" id="aAt" class="inp"></div><div><label class="f">Файл</label><input type="file" id="aFile" accept=".xlsx,.xls"></div></div>
+    <label class="inl" style="margin-top:6px"><input type="checkbox" id="aPos" checked> Манай POS-оор аль хэдийн хийсэн борлуулалтыг хасах (Smart-д ороогүй тул — тухайн дэлгүүрийн POS-ын эхний борлуулалтаас хойш)</label>
+    <div id="aPrev" class="small" style="margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button id="aUp" class="btn pri" disabled>Бүх байршлын эхний үлдэгдэл хадгалах</button><span id="aMsg" class="small"></span></div>
+  </div>
   <div class="card"><h2>Агуулахын үлдэгдэл</h2>
     <div class="small">Үлдэгдэл = эхний үлдэгдэл + орлого − зарлага ± шилжүүлэг − борлуулалт + буцаалт (эхний үлдэгдлийн огнооноос хойш).</div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:10px">
@@ -177,10 +184,10 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       </div>
       <div style="border:1px solid var(--line);border-radius:10px;padding:10px">
         <b>2. Хөдөлгөөн (орлого, зарлага, шилжүүлэг)</b>
-        <div class="frm"><div><label class="f">Төрөл</label><select id="mTy" class="inp"><option value="in">Орлого (ирсэн)</option><option value="out">Зарлага (гарсан)</option><option value="move">Шилжүүлэг</option></select></div><div><label class="f">Огноо, цаг</label><input type="datetime-local" id="mAt" class="inp"></div>
+        <div class="frm"><div><label class="f">Төрөл</label><select id="mTy" class="inp"><option value="in">Орлого (нийлүүлэгчээс ирсэн)</option><option value="out">Зарлага (гарсан)</option><option value="move">Шилжүүлэг</option></select></div><div id="mWhyW"><label class="f">Зарлагын шалтгаан</label><select id="mWhy" class="inp"><option>Гэмтэл, эвдрэл</option><option>Алдагдал, дутагдал</option><option>Нийлүүлэгчид буцаасан</option><option>Бэлэг, дээж, маркетинг</option><option>Дотоод хэрэглээ</option><option>Бусад</option></select></div><div><label class="f">Огноо, цаг</label><input type="datetime-local" id="mAt" class="inp"></div>
         <div id="mFromW"><label class="f">Хаанаас</label><select id="mFrom" class="inp"></select></div><div id="mToW"><label class="f">Хаана</label><select id="mTo" class="inp"></select></div></div>
         <label class="f">Тайлбар / баримтын №</label><input type="text" id="mNote" class="inp">
-        <label class="f">Файл («Код» + «Тоо» баганатай, жишээ нь БМ-3 хөдөлгөөний баримт)</label><input type="file" id="mFile" accept=".xlsx,.xls">
+        <label class="f">Файл («Код» + «Тоо» баганатай; орлогод «Нэгж өртөг» багана байвал жигнэсэн дундаж өртөг шинэчлэгдэнэ)</label><input type="file" id="mFile" accept=".xlsx,.xls">
         <div id="mPrev" class="small" style="margin-top:6px"></div>
         <label class="inl" id="mRecvW" style="margin-top:6px"><input type="checkbox" id="mRecv" checked> Хүлээн авагч дэлгүүр касс дээрээ скан хийж хүлээн авна (тэр хүртэл «замд»)</label><button id="mUp" class="btn pri" disabled style="margin-top:6px">Хөдөлгөөн хадгалах</button><div id="mMsg" class="small" style="margin-top:6px"></div>
       </div>
@@ -189,6 +196,12 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>4. Кассууд:</b><button id="sPub" class="btn pri">Кассууд руу илгээх</button><span id="sPubM" class="small" style="flex:1"></span><span class="small">Кассчин «Үлдэгдэл (F2)» цонхонд бүх дэлгүүрийн үлдэгдлийг харна. Самбар нээгдэх бүрт 1 цагаас хуучин бол автоматаар шинэчилнэ.</span></div>
     <div class="kpi" id="sKpi" style="margin-top:8px"></div>
     <div class="scroll" id="sTbl" style="max-height:460px;overflow:auto;margin-top:8px"></div>
+    <div style="margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:10px"><b>5. Тооллогын зөрүү (VIVI Kontrola-ийн тооллогын файл)</b>
+      <div class="small">Тоолсон тоог («Код» + «Тоо»/«Тоолсон» баганатай) системийн одоогийн үлдэгдэлтэй харьцуулж зөрүүг засна. Хадгалсны дараа үлдэгдэл тоолсон тоотой тэнцэнэ.</div>
+      <div class="frm" style="margin-top:6px"><div><label class="f">Байршил</label><select id="cSt" class="inp"></select></div><div><label class="f">Файл</label><input type="file" id="cFile" accept=".xlsx,.xls"></div></div>
+      <label class="inl" style="margin-top:6px"><input type="checkbox" id="cFull"> Бүрэн тооллого — файлд байхгүй бараа = 0 (тэмдэглээгүй бол зөвхөн файлд байгаа барааг засна)</label>
+      <div id="cPrev" class="small" style="margin-top:6px"></div><button id="cUp" class="btn pri" disabled style="margin-top:6px">Зөрүүг хадгалах</button><span id="cMsg" class="small"></span>
+    </div>
     <div style="margin-top:12px"><b>Хөдөлгөөний жагсаалт</b> <span id="mTransit" class="small"></span><div class="scroll" id="mList" style="max-height:380px;overflow:auto;margin-top:6px"></div></div>
   </div>
 </section>
@@ -914,13 +927,13 @@ $('aXl').onclick=async()=>{
     const nm='ustgasan_barimt_'+$('a1').value+'_'+$('a2').value+'.xlsx';XLSX.writeFile(wb,nm);$('aMsg').textContent=nm;
   }catch(e){$('aMsg').textContent='Алдаа: '+(e.message||e)}};
 /* ---- агуулахын үлдэгдэл: pos_stock_open/{store} = эхний үлдэгдэл; pos_stock_docs = хөдөлгөөн; борлуулалт pos_sales-аас ---- */
-const LOC={FC:'Food city',DR:'Драгон',NS:'Нийслэл',ON:'Онлайн дэлгүүр',YV:'Явуулын касс',AG:'Агуулах'};
+const LOC={FC:'Food city',DR:'Драгон',NS:'Нийслэл',ON:'Онлайн дэлгүүр',YV:'Явуулын касс',AG:'Агуулах',DF:'Гэмтэлтэй бараа (агуулах)'};
 const locOpts=(sel,blank)=>(blank?'<option value="">—</option>':'')+Object.entries(LOC).filter(([k])=>!STOCK_SRC[k]).map(([k,v])=>'<option value="'+k+'"'+(k===sel?' selected':'')+'>'+v+'</option>').join('');
-['oSt','sSt'].forEach(id=>$(id).innerHTML=locOpts('NS'));$('mFrom').innerHTML=locOpts('FC');$('mTo').innerHTML=locOpts('NS');
+['oSt','sSt','cSt'].forEach(id=>$(id).innerHTML=locOpts('NS'));$('sSt').insertAdjacentHTML('afterbegin','<option value="ALL">Бүх байршил</option>');$('mFrom').innerHTML=locOpts('FC');$('mTo').innerHTML=locOpts('NS');
 const dtl=d=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return x.toISOString().slice(0,16)};
-$('oAt').value=dtl(new Date());$('mAt').value=dtl(new Date());
+$('oAt').value=dtl(new Date());$('aAt').value=dtl(new Date());$('mAt').value=dtl(new Date());
 let openSheet=null,movLines=null,movDocs=[],stockRows=[];
-const syncMov=()=>{const ty=$('mTy').value;$('mFromW').classList.toggle('hide',ty==='in');$('mToW').classList.toggle('hide',ty==='out');$('mRecvW').classList.toggle('hide',ty==='out'||($('mTo').value==='AG'))};$('mTo').addEventListener('change',()=>syncMov());$('mTy').onchange=syncMov;syncMov();
+const syncMov=()=>{const ty=$('mTy').value;$('mWhyW').classList.toggle('hide',ty!=='out');$('mFromW').classList.toggle('hide',ty==='in');$('mToW').classList.toggle('hide',ty==='out');$('mRecvW').classList.toggle('hide',ty==='out'||($('mTo').value==='AG'))};$('mTo').addEventListener('change',()=>syncMov());$('mTy').onchange=syncMov;syncMov();
 function sheetWith(wb,need){for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim());if(need(row))return {rows:a.slice(h+1),head:row,sheet:n}}}return null}
 $('oFile').onchange=async()=>{const f=$('oFile').files[0];if(!f)return;$('oMsg').textContent='Уншиж байна…';$('oUp').disabled=true;
   try{await xlsx();const S=sheetWith(XLSX.read(await fileBuf(f),{type:'array'}),r=>r.includes('Код'));if(!S)return $('oMsg').innerHTML='<span class="hot">«Код» багана олдсонгүй</span>';
@@ -942,20 +955,35 @@ $('oUp').onclick=async()=>{
   catch(e){$('oUp').disabled=false;$('oMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'}};
 async function showOpen(){const L=[];for(const k of Object.keys(LOC)){const d=await db.collection('pos_stock_open').doc(k).get();if(d.exists){const m=d.data();L.push(LOC[k]+': '+lt(m.asOf)+' · '+m.count.toLocaleString('en-US')+' бараа')}}$('oNow').textContent=L.length?'Хадгалсан эхний үлдэгдэл — '+L.join(' · '):'Эхний үлдэгдэл хадгалаагүй байна.'}
 $('mFile').onchange=async()=>{const f=$('mFile').files[0];if(!f)return;movLines=null;$('mUp').disabled=true;$('mPrev').textContent='Уншиж байна…';
-  try{await xlsx();const S=sheetWith(XLSX.read(await fileBuf(f),{type:'array'}),r=>r.includes('Код')&&(r.includes('Тоо')||r.includes('Тоо хэмжээ')));
+  try{await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});let S=null;
+    // баганыг нэрээр нь: код, тоо, (заавал биш) нэгж өртөг
+    for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
+      for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(HN),f=ks=>{for(const k of ks){const x=row.indexOf(k);if(x>=0)return x}return -1};
+        const ki=f(CODE_H),qi=f(['тоо','тоо хэмжээ','тоо ширхэг','ширхэг','qty','ilość']);if(ki<0||qi<0)continue;
+        let ci=-1;for(const k of COST_H){const x=row.indexOf(k);if(x>=0){ci=x;break}}
+        S={a,h,ki,qi,ci,ni:f(['барааны нэр','нэр']),sheet:n};break}if(S)break}
     if(!S)return $('mPrev').innerHTML='<span class="hot">«Код», «Тоо» багана олдсонгүй</span>';
-    const ki=S.head.indexOf('Код'),qi=S.head.includes('Тоо')?S.head.indexOf('Тоо'):S.head.indexOf('Тоо хэмжээ'),ni=S.head.findIndex(h=>h==='Барааны нэр'||h==='Нэр'),map=new Map();
-    S.rows.forEach(r=>{const c=sv(r[ki]),q=Number(r[qi]);if(c&&/^[0-9A-Za-z\-]+$/.test(c)&&isFinite(q)&&q>0){const o=map.get(c)||[c,0,ni>=0?nm(r[ni]):''];o[1]+=q;map.set(c,o)}});
-    movLines=[...map.values()];$('mPrev').textContent=movLines.length+' бараа, '+movLines.reduce((a,x)=>a+x[1],0)+' ширхэг';$('mUp').disabled=!movLines.length;
+    const map=new Map(),cv=v=>v==null?'':typeof v==='number'?String(Math.round(v)):String(v).trim();
+    S.a.slice(S.h+1).forEach(r=>{if(!r||isTotalRow(r,S.ni))return;const c=cv(r[S.ki]),q=Number(r[S.qi]);if(c&&/^[0-9A-Za-z\-]+$/.test(c)&&isFinite(q)&&q>0){const o=map.get(c)||[c,0,S.ni>=0?nm(r[S.ni]):'',null,0];o[1]+=q;
+      if(S.ci>=0){const k=Number(r[S.ci]);if(isFinite(k)&&k>0){o[4]+=k*q;o[3]=Math.round(o[4]/o[1]*100)/100}}map.set(c,o)}});
+    movLines=[...map.values()].map(x=>x[3]!=null?[x[0],x[1],x[2],x[3]]:[x[0],x[1],x[2]]);const wc=movLines.filter(x=>x[3]!=null).length;
+    $('mPrev').innerHTML=esc(S.sheet)+': '+movLines.length+' бараа, '+movLines.reduce((a,x)=>a+x[1],0)+' ширхэг'+(S.ci>=0?' · нэгж өртөгтэй '+wc+' бараа («'+esc(String(S.a[S.h][S.ci]).trim())+'»), өртгийн дүн '+money(movLines.reduce((a,x)=>a+(x[3]||0)*x[1],0)):'')+
+      ($('mTy').value==='in'&&S.ci<0?' · <span class="hot">нэгж өртөг алга — дундаж өртөг өөрчлөгдөхгүй</span>':'');$('mUp').disabled=!movLines.length;
   }catch(e){$('mPrev').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
 $('mUp').onclick=async()=>{
   const ty=$('mTy').value,at=new Date($('mAt').value),from=ty==='in'?'':$('mFrom').value,to=ty==='out'?'':$('mTo').value;
   if(!movLines||isNaN(at))return;if(ty==='move'&&from===to)return $('mMsg').innerHTML='<span class="hot">Хаанаас, хаана ижил байна</span>';
   const uid=Date.now().toString(36)+Math.random().toString(36).slice(2,8);$('mUp').disabled=true;
-  try{await db.collection('pos_stock_docs').doc(uid).set({uid,type:ty,from,to,at:at.toISOString(),note:$('mNote').value.trim(),file:($('mFile').files[0]||{}).name||'',lines:JSON.stringify(movLines),count:movLines.length,qty:movLines.reduce((a,x)=>a+x[1],0),by:auth.currentUser.email||'',saved:new Date().toISOString(),...(ty!=='out'&&to!=='AG'&&$('mRecv').checked?{status:'sent'}:{})});
-    await auditCfg('stock_doc',{uid,type:ty,from,to,qty:movLines.reduce((a,x)=>a+x[1],0)});$('mMsg').innerHTML='<span class="chip">Хадгаллаа</span>';movLines=null;$('mFile').value='';$('mPrev').textContent='';$('mNote').value=''}
+  try{let costNote='';
+    // Орлого + нэгж өртөг: жигнэсэн дундаж өртөг = (бүх байршлын үлдэгдэл × хуучин өртөг + ирсэн тоо × шинэ өртөг) / (үлдэгдэл + ирсэн)
+    if(ty==='in'&&movLines.some(x=>x[3]!=null)){$('mMsg').textContent='Жигнэсэн дундаж өртөг тооцоолж байна…';const A=await stockAll(),m=new Map(costMap);let n=0;
+      movLines.forEach(x=>{if(x[3]==null)return;const v=A.M.get(x[0]),Q=Math.max(0,v?v.reduce((a,b)=>a+b,0):0),old=m.has(x[0])?m.get(x[0]):x[3],nw=Math.round((Q*old+x[1]*x[3])/(Q+x[1])*100)/100;x.push(Q,old,nw);m.set(x[0],nw);n++});
+      await writeChunks('pos_cost',[...m.entries()],{src:'receipt',doc:uid},()=>{});costMap=m;costNote=' · дундаж өртөг шинэчилсэн '+n+' бараа'}
+    await db.collection('pos_stock_docs').doc(uid).set({uid,type:ty,from,to,at:at.toISOString(),note:(ty==='out'?$('mWhy').value+(($('mNote').value.trim())?' · ':''):'')+$('mNote').value.trim(),reason:ty==='out'?$('mWhy').value:'',file:($('mFile').files[0]||{}).name||'',lines:JSON.stringify(movLines),count:movLines.length,qty:movLines.reduce((a,x)=>a+x[1],0),
+      costSum:Math.round(movLines.reduce((a,x)=>a+(x[3]||0)*x[1],0)),by:auth.currentUser.email||'',saved:new Date().toISOString(),...(ty!=='out'&&to!=='AG'&&to!=='DF'&&$('mRecv').checked?{status:'sent'}:{})});
+    await auditCfg('stock_doc',{uid,type:ty,from,to,qty:movLines.reduce((a,x)=>a+x[1],0)});$('mMsg').innerHTML='<span class="chip">Хадгаллаа</span>'+costNote;movLines=null;$('mFile').value='';$('mPrev').textContent='';$('mNote').value=''}
   catch(e){$('mUp').disabled=false;$('mMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'}};
-const MT={in:'Орлого',out:'Зарлага',move:'Шилжүүлэг'};
+const MT={in:'Орлого',out:'Зарлага',move:'Шилжүүлэг',adj:'Тооллогын зөрүү'};
 function watchMov(){db.collection('pos_stock_docs').onSnapshot(s=>{movDocs=s.docs.map(d=>d.data()).sort((a,b)=>a.at<b.at?1:-1);movReady=true;
   xtable('mList','movs',['Огноо','Төрөл','Хаанаас','Хаана','Нийлүүлэгч / тайлбар','Төлөв','Илгээсэн','Ирсэн','Зөрүү','Илгээсэн хүн','Хүлээн авсан'],movDocs.map(m=>{const rq=m.recvLines?JSON.parse(m.recvLines).reduce((a,x)=>a+x[1],0):null;
     return [lt(m.at),MT[m.type]||m.type,LOC[m.from]||'',LOC[m.to]||'',(m.supplier?m.supplier+(m.invoice?' · '+m.invoice:''):m.note||m.file||'')+(m.recvNote?' · '+m.recvNote:''),m.status==='sent'?'замд':m.status==='received'?'хүлээн авсан':'бүртгэсэн',m.qty,rq,rq==null||m.type!=='move'?null:rq-m.qty,m.by||'',(m.recvBy||'')+(m.recvAt?' · '+lt(m.recvAt):'')]}),{cell:(x,c)=>c===5?'<span class="chip'+(x[5]==='замд'?' b':'')+'">'+x[5]+'</span>':c===8&&x[8]?'<span class="hot">'+(x[8]>0?'+':'')+x[8]+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])});
@@ -964,43 +992,120 @@ $('sRun').onclick=calcStock;$('sSt').onchange=calcStock;$('sQ').oninput=()=>draw
 // Нэг байршлын одоогийн үлдэгдэл: эхний үлдэгдэл + орлого − зарлага − борлуулалт + буцаалт (эхний үлдэгдлийн цагаас хойш)
 const sDay=iso=>new Date(iso).toLocaleDateString('sv-SE').replace(/-/g,'/');
 function stockCalc(st,O,saleDocs){
-  const asOf=O.asOf,R=new Map(),row=(c,n)=>{let r=R.get(c);if(!r){r={code:c,name:n||'',open:0,inn:0,out:0,sold:0,ret:0};R.set(c,r)}if(n&&!r.name)r.name=n;return r};
+  const asOf=O.asOf,R=new Map(),row=(c,n)=>{let r=R.get(c);if(!r){r={code:c,name:n||'',open:0,inn:0,out:0,sold:0,ret:0,adj:0};R.set(c,r)}if(n&&!r.name)r.name=n;return r};
   JSON.parse(O.d).forEach(x=>row(x[0],x[2]).open+=x[1]);
   // илгээсэн бараа шууд хасагдана; хүлээн авах ёстой шилжүүлэг (status: sent) ирэх хүртэл замд, хүлээн авсан тоо (recvLines) нэмэгдэнэ
-  movDocs.filter(m=>m.at>=asOf).forEach(m=>{if(m.from===st)JSON.parse(m.lines).forEach(x=>row(x[0],x[2]).out+=x[1]);
+  movDocs.filter(m=>m.at>=asOf).forEach(m=>{if(m.type==='adj'){if(m.to===st)JSON.parse(m.lines).forEach(x=>row(x[0],x[2]).adj+=x[1]);return}
+    if(m.from===st)JSON.parse(m.lines).forEach(x=>row(x[0],x[2]).out+=x[1]);
     if(m.to===st&&m.status!=='sent')JSON.parse(m.recvLines||m.lines).forEach(x=>row(x[0],x[2]).inn+=x[1])});
   let ns=0;saleDocs.filter(s=>(s.stockFrom||STOCK_SRC[s.store]||s.store)===st&&s.iso>=asOf).forEach(s=>{ns++;(s.lines||[]).forEach(l=>{const r=row(l.code,l.name);if(l.qty>0)r.sold+=l.qty;else r.ret+=-l.qty})});
-  return {ns,rows:[...R.values()].map(r=>({...r,now:r.open+r.inn-r.out-r.sold+r.ret}))};
+  return {ns,rows:[...R.values()].map(r=>({...r,now:r.open+r.inn-r.out-r.sold+r.ret+r.adj}))};
 }
+// Үлдэгдлийн тайлан: нэг байршил (хөдөлгөөнөөр задалсан) эсвэл «Бүх байршил» (байршил бүрээр багана). Өртгийн болон кассын үнийн дүнтэй.
+let stockHead=[],stockAllMode=false;
 async function calcStock(){
   const st=$('sSt').value;$('sMsg').textContent='Тооцоолж байна…';stockRows=[];
-  try{const od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл хадгалаагүй байна</span>'}
-    const O=od.data(),asOf=O.asOf,snap=await db.collection('pos_sales').where('date','>=',sDay(asOf)).get();
-    const C=stockCalc(st,O,snap.docs.map(d=>d.data())),ns=C.ns;
-    stockRows=C.rows.sort((a,b)=>a.now-b.now||a.code.localeCompare(b.code));
-    const neg=stockRows.filter(r=>r.now<0).length;
-    $('sKpi').innerHTML=[['Одоогийн үлдэгдэл',stockRows.reduce((a,r)=>a+Math.max(0,r.now),0).toLocaleString('en-US')+' ш',1],['Бараа (үлдэгдэлтэй)',stockRows.filter(r=>r.now>0).length.toLocaleString('en-US')],['Эхний үлдэгдэл',stockRows.reduce((a,r)=>a+r.open,0).toLocaleString('en-US')+' ш'],['Орлого − зарлага',(stockRows.reduce((a,r)=>a+r.inn-r.out,0)).toLocaleString('en-US')+' ш'],['Борлуулсан (буцаалт хассан)',stockRows.reduce((a,r)=>a+r.sold-r.ret,0).toLocaleString('en-US')+' ш'],['Хасах үлдэгдэл',neg?'<span class="hot">'+neg+'</span>':0]].map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
-    $('sMsg').textContent=LOC[st]+' · эхний үлдэгдэл '+lt(asOf)+' · '+ns+' баримт тооцсон';drawStock();
+  try{await loadPCat().catch(()=>{});const nmOf=c=>{const x=itRow(c);return x?x.name:''},cash=c=>{const x=itRow(c);return x?x.price:0};
+    if(st==='ALL'){stockAllMode=true;const A=await stockAll();if(!A.SS.length){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">Эхний үлдэгдэл алга</span>'}
+      stockHead=['Код','Нэр',...A.SS.map(x=>LOC[x]),'Нийт','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
+      stockRows=[...A.M.entries()].map(([c,v])=>{const t=v.reduce((a,b)=>a+b,0),k=costMap.get(c);return {code:c,name:nmOf(c),loc:v,now:t,cost:k==null?null:k,cash:cash(c)}});
+      $('sMsg').textContent='Бүх байршил · '+A.SS.map(x=>LOC[x]+' ('+lt(A.O[x].asOf)+'-аас)').join(' · ')}
+    else{stockAllMode=false;const od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл хадгалаагүй байна</span>'}
+      const O=od.data(),asOf=O.asOf,snap=await db.collection('pos_sales').where('date','>=',sDay(asOf)).get(),C=stockCalc(st,O,snap.docs.map(d=>d.data()));
+      stockHead=['Код','Нэр','Эхний','Орлого','Зарлага','Борлуулсан','Буцаалт','Тооллогын зөрүү','Одоо','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
+      stockRows=C.rows.map(r=>({...r,name:r.name||nmOf(r.code),cost:costMap.has(r.code)?costMap.get(r.code):null,cash:cash(r.code)}));
+      $('sMsg').textContent=LOC[st]+' · эхний үлдэгдэл '+lt(asOf)+' · '+C.ns+' баримт тооцсон'}
+    stockRows.sort((a,b)=>a.now-b.now||a.code.localeCompare(b.code));
+    const pos=stockRows.filter(r=>r.now>0),neg=stockRows.filter(r=>r.now<0).length,cv=pos.reduce((a,r)=>a+(r.cost||0)*r.now,0),kv=pos.reduce((a,r)=>a+(r.cash||0)*r.now,0),nc=pos.filter(r=>r.cost==null).length;
+    $('sKpi').innerHTML=[['Одоогийн үлдэгдэл',pos.reduce((a,r)=>a+r.now,0).toLocaleString('en-US')+' ш',1],['Бараа (үлдэгдэлтэй)',pos.length.toLocaleString('en-US')],['Өртгийн дүн',money(cv)+(nc?' <span class="small">(өртөггүй '+nc+')</span>':'')],['Кассын үнийн дүн',money(kv)],['Хасах үлдэгдэлтэй',neg?'<span class="hot">'+neg+'</span>':'0']]
+      .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
+    drawStock();
   }catch(e){$('sMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}}
 /* Кассууд руу үлдэгдэл илгээх: бүх байршлын одоогийн үлдэгдлийг pos_stock_view-д бичнэ (касс зөвхөн уншина) */
 let movReady=false,stkBusy=false;
+// Бүх байршлын одоогийн үлдэгдэл: {SS:[байршил], O:{эхний үлдэгдэл}, M: код → [байршил бүрийн тоо], R:{байршил: мөрүүд}}
+async function stockAll(){for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
+  const SS=[],O={};for(const st of Object.keys(LOC)){const d=await db.collection('pos_stock_open').doc(st).get();if(d.exists){SS.push(st);O[st]=d.data()}}
+  const M=new Map(),R={};if(!SS.length)return {SS,O,M,R};
+  const from=SS.map(s=>O[s].asOf).sort()[0],sales=(await db.collection('pos_sales').where('date','>=',sDay(from)).get()).docs.map(d=>d.data());
+  SS.forEach((st,k)=>{R[st]=stockCalc(st,O[st],sales);R[st].rows.forEach(r=>{if(!r.now)return;let v=M.get(r.code);if(!v){v=SS.map(()=>0);M.set(r.code,v)}v[k]=r.now})});
+  return {SS,O,M,R}}
 async function publishStock(silent){
   if(stkBusy)return;stkBusy=true;const out=$('sPubM');out.textContent='Бүх байршлын үлдэгдлийг тооцоолж байна…';
   try{for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
-    const SS=[],O={};for(const st of Object.keys(LOC)){const d=await db.collection('pos_stock_open').doc(st).get();if(d.exists){SS.push(st);O[st]=d.data()}}
-    if(!SS.length){out.innerHTML='<span class="hot">Эхний үлдэгдэл нэг ч байршилд алга</span>';return}
-    const from=SS.map(s=>O[s].asOf).sort()[0],sales=(await db.collection('pos_sales').where('date','>=',sDay(from)).get()).docs.map(d=>d.data());
-    const M=new Map();SS.forEach((st,k)=>stockCalc(st,O[st],sales).rows.forEach(r=>{if(!r.now)return;let v=M.get(r.code);if(!v){v=SS.map(()=>0);M.set(r.code,v)}v[k]=r.now}));
+    const A=await stockAll();if(!A.SS.length){out.innerHTML='<span class="hot">Эхний үлдэгдэл нэг ч байршилд алга</span>';return}const SS=A.SS,O=A.O,M=A.M;
     const rows=[...M.entries()].map(([c,v])=>[c,...v]).sort((a,b)=>a[0]<b[0]?-1:1),asOf={};SS.forEach(s=>asOf[s]=O[s].asOf);
     const r=await writeChunks('pos_stock_view',rows,{stores:SS,asOf},(i,n,w)=>out.textContent='Илгээж байна '+i+'/'+n);
     out.innerHTML='<span class="chip">Илгээсэн '+new Date().toTimeString().slice(0,5)+'</span> '+rows.length.toLocaleString('en-US')+' бараа · '+SS.map(s=>LOC[s]).join(', ')+(silent?' (автоматаар)':'');
   }catch(e){out.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}finally{stkBusy=false}}
+
+/* ==== Эхний үлдэгдэл бүх байршилд нэг файлаар (Smart «Ritel» / үлдэгдлийн файл) ====
+   Баганыг нэрээр нь байршилд хуваарилна. Smart манай POS-ын борлуулалтыг мэдэхгүй тул POS эхэлснээс хойших борлуулалтыг хасна (эхний үлдэгдлийн огноо = POS-ын эхний борлуулалт). */
+function locOfHead(h){const x=HN(h);if(!x||/нийт|тоо хэмжээ|өртөг|үнэ|дүн/.test(x))return '';
+  if(/деффикт|дефект|гэмтэл/.test(x))return 'DF';if(/^food ?city|^фүүд/.test(x)||x==='онлайн дэлгүүр')return 'FC';if(/^драгон|^dragon/.test(x))return 'DR';if(/^нийслэл/.test(x))return 'NS';
+  if(/дархан|үзэсгэлэн|явуулын/.test(x))return 'YV';if(/агуулах|da ?toy|эрка/.test(x))return 'AG';return ''}
+let openAll=null;
+$('aFile').onchange=async()=>{const f=$('aFile').files[0];if(!f)return;openAll=null;$('aUp').disabled=true;$('aPrev').textContent='Уншиж байна…';
+  try{await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});let S=null;
+    for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
+      for(let h=0;h<Math.min(15,a.length);h++){const row=(a[h]||[]).map(HN),ki=CODE_H.map(k=>row.indexOf(k)).find(x=>x>=0);if(ki==null)continue;
+        const cols=(a[h]||[]).map((x,i)=>[i,String(x==null?'':x).trim(),locOfHead(x)]).filter(c=>c[2]&&a.slice(h+1,h+300).some(r=>r&&typeof r[c[0]]==='number'));if(!cols.length)continue;
+        S={a,h,ki,cols,sheet:n,ni:['нэр','барааны нэр'].map(k=>row.indexOf(k)).find(x=>x>=0)};if(S.ni==null)S.ni=-1;break}if(S)break}
+    if(!S)return $('aPrev').innerHTML='<span class="hot">«Код» болон байршлын (Food city, Драгон, Агуулах …) багана олдсонгүй</span>';
+    const sc=stockCostOf(wb),cv=v=>v==null?'':typeof v==='number'?String(Math.round(v)):String(v).trim(),L={};
+    S.a.slice(S.h+1).forEach(r=>{if(!r||isTotalRow(r,S.ni))return;const c=cv(r[S.ki]);if(!c||!/^[0-9A-Za-z\-]+$/.test(c))return;
+      S.cols.forEach(([i,,lc])=>{const q=Number(r[i]);if(!isFinite(q)||!q)return;const m=(L[lc]=L[lc]||new Map());m.set(c,(m.get(c)||0)+q)})});
+    // POS-ын эхний борлуулалт байршил бүрээр (онлайн → Food city)
+    const T=new Date($('aAt').value);if(isNaN(T))return $('aPrev').innerHTML='<span class="hot">Огноо, цагаа оруулна уу</span>';
+    const first={};if($('aPos').checked){const q=await db.collection('pos_sales').where('date','>=','2026/11/01').get();q.docs.forEach(d=>{const x=d.data(),lc=x.stockFrom||STOCK_SRC[x.store]||x.store;if(x.iso&&(!first[lc]||x.iso<first[lc]))first[lc]=x.iso})}
+    const ASOF={};Object.keys(L).forEach(lc=>{const t=T.toISOString();ASOF[lc]=first[lc]&&first[lc]<t?first[lc]:t});
+    const cost=sc?sc.m:costMap,val=m=>{let v=0;m.forEach((q,c)=>{const k=cost.get(c);if(k!=null&&q>0)v+=k*q});return v};
+    openAll={L,ASOF,sc,file:f.name,cols:S.cols};
+    $('aPrev').innerHTML='<table><thead><tr><th>Байршил</th><th>Файлын баганууд</th><th class="n">Бараа</th><th class="n">Ширхэг</th><th class="n">Өртгийн дүн</th><th class="n">Эхний үлдэгдлийн огноо</th></tr></thead><tbody>'+
+      Object.keys(LOC).filter(lc=>L[lc]).map(lc=>{const m=L[lc];let q=0,neg=0;m.forEach(v=>{q+=v;if(v<0)neg++});return '<tr><td><b>'+LOC[lc]+'</b></td><td class="small">'+esc(S.cols.filter(c=>c[2]===lc).map(c=>c[1]).join(', '))+'</td><td class="n">'+m.size.toLocaleString('en-US')+'</td><td class="n">'+q.toLocaleString('en-US')+(neg?' <span class="hot">(хасах '+neg+')</span>':'')+'</td><td class="n">'+money(val(m))+'</td><td class="n">'+lt(ASOF[lc])+(ASOF[lc]!==T.toISOString()?' <span class="small">(POS эхэлсэн)</span>':'')+'</td></tr>'}).join('')+
+      '</tbody></table>'+(sc?'<div class="small">Өртөг: '+esc(sc.col)+' · '+sc.m.size.toLocaleString('en-US')+' бараа (жигнэсэн дундаж өртгийн эхлэл).</div>':'<div class="small hot">Файлд «Нэгж өртөг» багана алга — өртөг одоогийнхоороо үлдэнэ.</div>')+
+      '<div class="small">Хадгалахад байршил бүрийн хуучин эхний үлдэгдэл солигдоно. Эхний үлдэгдлийн огнооноос өмнөх хөдөлгөөн тооцогдохгүй.</div>';
+    $('aUp').disabled=false}catch(e){$('aPrev').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
+$('aAt').onchange=$('aPos').onchange=()=>{if($('aFile').files[0])$('aFile').onchange()};
+$('aUp').onclick=async()=>{if(!openAll)return;const btn=$('aUp');btn.disabled=true;const out=$('aMsg');
+  try{for(const lc of Object.keys(openAll.L)){const items=[...openAll.L[lc].entries()].filter(x=>x[1]),d=JSON.stringify(items);
+      if(new TextEncoder().encode(d).length>1000000)throw new Error(LOC[lc]+': хэт том');out.textContent=LOC[lc]+' хадгалж байна…';
+      await db.collection('pos_stock_open').doc(lc).set({store:lc,asOf:openAll.ASOF[lc],d,count:items.length,qty:items.reduce((a,x)=>a+x[1],0),column:openAll.cols.filter(c=>c[2]===lc).map(c=>c[1]).join(' + '),file:openAll.file,by:auth.currentUser.email||'',saved:new Date().toISOString()})}
+    if(openAll.sc){out.textContent='Өртөг хадгалж байна…';await writeChunks('pos_cost',mergeCost(openAll.sc.m,null),{src:'open',file:openAll.file},()=>{});await loadCost()}
+    await auditCfg('stock_open_all',{file:openAll.file,locs:Object.keys(openAll.L),asOf:openAll.ASOF});
+    out.innerHTML='<span class="chip">Хадгаллаа</span> '+Object.keys(openAll.L).map(lc=>LOC[lc]).join(', ')+'. Кассууд руу үлдэгдэл илгээж байна…';showOpen();await publishStock(true);out.innerHTML='<span class="chip">Хадгаллаа</span> Эхний үлдэгдэл, өртөг хадгалагдаж, кассууд руу илгээгдлээ.'}
+  catch(e){btn.disabled=false;out.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}};
+/* ==== Тооллогын зөрүү: тоолсон − системийн үлдэгдэл → «adj» баримт ==== */
+let cntAdj=null;
+$('cFile').onchange=$('cFull').onchange=$('cSt').onchange=async()=>{const f=$('cFile').files[0];if(!f)return;cntAdj=null;$('cUp').disabled=true;$('cPrev').textContent='Уншиж байна…';
+  try{await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});let S=null;
+    for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
+      for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(HN),f2=ks=>{for(const k of ks){const x=row.indexOf(k);if(x>=0)return x}return -1};
+        const ki=f2(CODE_H),qi=f2(['тоолсон','тоолсон тоо','бодит тоо','бодит үлдэгдэл','тоо','тоо хэмжээ','qty']);if(ki>=0&&qi>=0){S={a,h,ki,qi,ni:f2(['барааны нэр','нэр'])};break}}if(S)break}
+    if(!S)return $('cPrev').innerHTML='<span class="hot">«Код» + «Тоолсон»/«Тоо» багана олдсонгүй</span>';
+    const st=$('cSt').value,od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists)return $('cPrev').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл алга</span>';
+    const O=od.data(),sales=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(d=>d.data()),C=stockCalc(st,O,sales),now=new Map(C.rows.map(r=>[r.code,r.now]));
+    const cnt=new Map(),cv=v=>v==null?'':typeof v==='number'?String(Math.round(v)):String(v).trim();
+    S.a.slice(S.h+1).forEach(r=>{if(!r||isTotalRow(r,S.ni))return;const c=cv(r[S.ki]),q=Number(r[S.qi]);if(c&&/^[0-9A-Za-z\-]+$/.test(c)&&isFinite(q))cnt.set(c,(cnt.get(c)||0)+q)});
+    const lines=[];cnt.forEach((q,c)=>{const d=q-(now.get(c)||0);if(d)lines.push([c,d,''])});
+    if($('cFull').checked)now.forEach((q,c)=>{if(!cnt.has(c)&&q)lines.push([c,-q,''])});
+    const plus=lines.filter(x=>x[1]>0),minus=lines.filter(x=>x[1]<0),v=L2=>L2.reduce((a,x)=>a+(costMap.get(x[0])||0)*x[1],0);
+    cntAdj={st,lines,file:f.name};
+    $('cPrev').innerHTML='Тоолсон: '+cnt.size.toLocaleString('en-US')+' бараа · илүү: <b>'+plus.length+'</b> бараа (+'+plus.reduce((a,x)=>a+x[1],0)+' ш, '+money(v(plus))+') · дутуу: <b class="hot">'+minus.length+'</b> бараа ('+minus.reduce((a,x)=>a+x[1],0)+' ш, '+money(v(minus))+')'+(lines.length?'':' · зөрүүгүй');
+    $('cUp').disabled=!lines.length}catch(e){$('cPrev').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
+$('cUp').onclick=async()=>{if(!cntAdj)return;$('cUp').disabled=true;const uid=Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  try{await db.collection('pos_stock_docs').doc(uid).set({uid,type:'adj',from:'',to:cntAdj.st,at:new Date().toISOString(),note:'Тооллого'+($('cFull').checked?' (бүрэн)':'')+' · '+cntAdj.file,file:cntAdj.file,lines:JSON.stringify(cntAdj.lines),count:cntAdj.lines.length,qty:cntAdj.lines.reduce((a,x)=>a+x[1],0),
+      costSum:Math.round(cntAdj.lines.reduce((a,x)=>a+(costMap.get(x[0])||0)*x[1],0)),by:auth.currentUser.email||'',saved:new Date().toISOString()});
+    await auditCfg('stock_count',{uid,store:cntAdj.st,lines:cntAdj.lines.length});$('cMsg').innerHTML=' <span class="chip">Хадгаллаа</span> '+LOC[cntAdj.st]+': '+cntAdj.lines.length+' барааны зөрүү засагдлаа';cntAdj=null;$('cFile').value='';$('cPrev').textContent=''}
+  catch(e){$('cUp').disabled=false;$('cMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'}};
 async function autoStock(){try{const m=await db.collection('pos_stock_view').doc('meta').get();const v=m.exists?m.data().version:'';
   $('sPubM').textContent=v?'Кассууд дахь үлдэгдэл: '+lt(v)+'-ийн байдлаар':'Кассууд руу үлдэгдэл хараахан илгээгээгүй';
   if(!v||Date.now()-new Date(v)>60*60e3)publishStock(true)}catch(e){}}
-function drawStock(){const q=$('sQ').value.trim().toLowerCase(),L=stockRows.filter(r=>!q||r.code.toLowerCase().includes(q)||r.name.toLowerCase().includes(q));
-  if(!stockRows.length){$('sTbl').innerHTML='';return}
-  xtable('sTbl','stock',['Код','Нэр','Эхний','Орлого','Зарлага','Борлуулсан','Буцаалт','Одоо'],L.map(r=>[r.code,r.name,r.open,r.inn||null,r.out||null,r.sold||null,r.ret||null,r.now]),{cell:(x,c)=>c===7?'<b'+(x[7]<0?' class="hot"':'')+'>'+x[7]+'</b>':x[c]==null?'':esc(x[c])})}
+function drawStock(){const q=$('sQ').value.trim().toLowerCase(),L=stockRows.filter(r=>!q||r.code.toLowerCase().includes(q)||(r.name||'').toLowerCase().includes(q));
+  if(!stockRows.length){$('sTbl').innerHTML='';return}const n=v=>v==null?null:Math.round(v),val=r=>[r.cost==null?null:r.cost,r.cost==null?null:n(r.cost*r.now),r.cash||null,r.cash?n(r.cash*r.now):null];
+  const rows=stockAllMode?L.map(r=>[r.code,r.name,...r.loc.map(x=>x||null),r.now,...val(r)]):L.map(r=>[r.code,r.name,r.open,r.inn||null,r.out||null,r.sold||null,r.ret||null,r.adj||null,r.now,...val(r)]);
+  const ni=stockHead.indexOf(stockAllMode?'Нийт':'Одоо');
+  xtable('sTbl','stock',stockHead,rows,{cell:(x,c)=>c===ni?'<b'+(x[c]<0?' class="hot"':'')+'>'+x[c]+'</b>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}
 $('sPub').onclick=()=>publishStock(false);
 $('sXl').onclick=()=>{if(!stockRows.length)return $('sMsg').textContent='Эхлээд «Тооцоолох» дарна уу';xtXlsx('stock','uldegdel_'+$('sSt').value+'_'+iso(new Date()),'Үлдэгдэл')};
 /* ---- борлуулалт бараагаар / нийлүүлэгчээр ---- */
@@ -1239,7 +1344,7 @@ async function priceUpdate(wb,sc,out){
   out.textContent='Үүлэн дэх барааны жагсаалтыг ачаалж байна…';await loadPCat();
   const num=v=>{const x=Number(v);return isFinite(x)&&x>0?Math.round(x):0},cv=v=>v==null?'':typeof v==='number'?String(Math.round(v)):String(v).trim();
   const M=new Map(PCAT.map(r=>[r[0],r.slice()])),orig=new Set(PCAT.map(r=>r[0])),seen=new Set();let rows=0,upd=0,cashCh=0,baseCh=0,add=0,noCash=0,dupc=0,hit=0;
-  S.a.slice(S.h+1).forEach(r=>{if(!r)return;const c=cv(r[S.ci]);if(!c||!/^[0-9A-Za-z\-]+$/.test(c))return;rows++;if(seen.has(c)){dupc++;return}seen.add(c);if(orig.has(c))hit++;
+  S.a.slice(S.h+1).forEach(r=>{if(!r||isTotalRow(r,S.ni))return;const c=cv(r[S.ci]);if(!c||!/^[0-9A-Za-z\-]+$/.test(c))return;rows++;if(seen.has(c)){dupc++;return}seen.add(c);if(orig.has(c))hit++;
     const base=S.bi>=0?num(r[S.bi]):0,cash0=S.ki>=0?num(r[S.ki]):0,g=i=>i>=0?nm(r[i]):'';
     const o=M.get(c);
     if(o){const nb=base||o[3],nc=cash0||(base?base:o[4]);if(!cash0)noCash++;if(nb!==o[3])baseCh++;if(nc!==o[4])cashCh++;if(nb!==o[3]||nc!==o[4])upd++;o[3]=nb;o[4]=nc;
@@ -1260,6 +1365,8 @@ const HN=x=>String(x==null?'':x).toLowerCase().replace(/\s+/g,' ').trim();
 const COST_H=['нэгж өртөг','нэгжийн өртөг','өртөг','өртөг үнэ','нэгж өртөг үнэ','орлогод авах үнэ','худалдан авах үнэ','авах үнэ','unit cost','cost','cena zakupu'];
 const CODE_H=['код','барааны код','баар код','баркод','бар код','barcode','ean','kod'];
 const PRICE_H=['худалдах үнэ','үнэ','кассын үнэ'];
+// Smart-ын файлын төгсгөлийн «нийт» мөрийг алгасна: нэр баганатай файлд нэргүй мөр = нийлбэр мөр
+const isTotalRow=(r,ni)=>ni>=0&&(r[ni]==null||String(r[ni]).trim()==='');
 function colL(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
 function stockCostOf(wb){
   for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
@@ -1268,9 +1375,9 @@ function stockCostOf(wb){
       let ki=-1,kn='';for(const k of COST_H){const x=row.findIndex(v=>v===k);if(x>=0){ki=x;kn=k;break}}
       if(ki<0){const x=row.findIndex(v=>/өртөг|cost/.test(v)&&!/нийт|total|дүн/.test(v));if(x>=0){ki=x;kn=row[x]}}
       if(ki<0)continue;
-      const pi=PRICE_H.map(k=>row.indexOf(k)).find(x=>x>=0);
+      const pi=PRICE_H.map(k=>row.indexOf(k)).find(x=>x>=0),ni=['нэр','барааны нэр'].map(k=>row.indexOf(k)).find(x=>x>=0);
       const m=new Map();let above=0,cmp=0;
-      a.slice(h+1).forEach(r=>{if(!r)return;const raw=r[ci],c=raw==null?'':typeof raw==='number'?String(Math.round(raw)):String(raw).trim(),v=Number(r[ki]);
+      a.slice(h+1).forEach(r=>{if(!r||isTotalRow(r,ni==null?-1:ni))return;const raw=r[ci],c=raw==null?'':typeof raw==='number'?String(Math.round(raw)):String(raw).trim(),v=Number(r[ki]);
         if(c&&/^[0-9A-Za-z\-]+$/.test(c)&&isFinite(v)&&v>0){m.set(c,Math.round(v*100)/100);if(pi!=null){const p=Number(r[pi]);if(isFinite(p)&&p>0){cmp++;if(v>p)above++}}}});
       if(!m.size)continue;
       return {m,sheet:n,col:colL(ki)+' «'+String(a[h][ki]).trim()+'»',codeCol:colL(ci)+' «'+String(a[h][ci]).trim()+'»',above,cmp}}}
