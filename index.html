@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="4.3">
+<meta name="vivi-ver" content="4.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -685,13 +685,13 @@ function keptTotal(s,rem){
 }
 function refundFor(s,st,tk){const rm=st.rem.map((r,i)=>r+(tk[i]||0));return Math.max(0,Math.round((s.total-st.prior)-keptTotal(s,rm)))}
 function returnLines(s){
-  const st=retState(s);
+  const st=retState(s),crP=s.payments.find(p=>p.form==='Зээлээр');
   const rows=s.lines.map((l,i)=>({l,i,av:Math.max(0,l.qty-st.rem[i])}));
   openModal('<h2>Буцаалт — '+s.id+'</h2><div class="list"><table><thead><tr><th>Бараа</th><th class="n">Авсан</th><th class="n">Төлсөн үнэ</th><th class="n">Буцаах тоо</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.l.name)+(r.l.promo==='free'?' <span class="badge">1+1 үнэгүй</span>':(r.l.promo==='same'||r.l.promo==='pct')?' <span class="badge b30">хөнгөлөлттэй</span>':'')+'</td><td class="n">'+r.l.qty+'</td><td class="n">'+fmt(r.l.unit)+'</td><td class="n"><input data-r="'+r.i+'" inputmode="numeric" value="0" style="width:80px;text-align:right" '+(r.av?'':'disabled')+'><div class="small">боломжит: '+r.av+'</div></td></tr>').join('')+'</tbody></table></div>'+
   (s.lines.some(l=>l.prog)?'<div class="small" style="margin-top:6px">1+1 урамшуулалтай баримт: үлдэх бараанд урамшууллыг дахин тооцож, төлсөн дүнгийн зөрүүг буцаана.</div>':'')+
   '<div class="tiles" style="grid-template-columns:1fr"><div class="tile y"><div class="l">БУЦААХ ДҮН</div><div class="v" id="rsum">0</div></div></div>'+
-  '<label>Мөнгө буцаах хэлбэр</label><select id="rf"><option>Бэлнээр</option><option>Банкаар</option></select><label>Шалтгаан</label><input id="rw"><div id="rm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="rb">Болих</button><button class="pri" id="ro">Буцаалт хийх</button></div>');
-  $('rf').value=(s.payments.some(p=>p.form==='Банкаар')&&!s.payments.some(p=>p.form==='Бэлнээр'))?'Банкаар':'Бэлнээр';
+  '<label>Мөнгө буцаах хэлбэр</label><select id="rf"><option value="cash">Бэлнээр</option>'+BANKS.map((b,i)=>'<option value="b'+i+'">'+esc(b[0])+'</option>').join('')+(crP?'<option value="cr">Зээлээр · '+esc(crP.partner||'')+'</option>':'')+'</select><label>Шалтгаан</label><input id="rw"><div id="rm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="rb">Болих</button><button class="pri" id="ro">Буцаалт хийх</button></div>');
+  $('rf').value=rfDefault(s);
   const take=()=>{const t={};rows.forEach(r=>{const q=Math.floor(num($('mbox').querySelector('[data-r="'+r.i+'"]').value));if(q>0)t[r.i]=q});return t};
   const upd=()=>{const tk=take();$('rm').textContent=rows.some(r=>(tk[r.i]||0)>r.av)?'Боломжит тооноос их байна':'';$('rsum').textContent=fmt(refundFor(s,st,tk))};
   $('mbox').querySelectorAll('[data-r]').forEach(x=>x.oninput=upd);
@@ -704,11 +704,11 @@ function returnLines(s){
     idx.forEach((i,j)=>{const a=j===idx.length-1?left:Math.round(refund*w[j]/W);left-=a;const l=s.lines[i];lines.push({...l,src:i,qty:-tk[i],sum:-a});qty-=tk[i];base-=tk[i]*l.base});
     const tot=refund?-refund:0;
     const why=$('rw').value.trim();if(!why)return $('rw').focus();
-    const form=$('rf').value;
+    const pay=rfPay($('rf').value,s),form=pay.form+(pay.bank?' · '+pay.bank:pay.partner?' · '+pay.partner:'');
     const days=Math.floor((Date.now()-new Date(s.iso).getTime())/864e5),flags=[];
     if(days>cfg.returnDays)flags.push('хугацаа хэтэрсэн ('+days+' хоног)');
     if(-tot>cfg.returnLimit)flags.push('дүн босгоос их');
-    const r={ref:s.id,refUid:s.uid,refStore:s.store,refDate:s.date,lines,total:tot,qty,base,form,reason:why};
+    const r={ref:s.id,refUid:s.uid,refStore:s.store,refDate:s.date,lines,total:tot,qty,base,form,pay,reason:why};
     if(flags.length){
       if(fb.ready&&fb.user&&navigator.onLine){
         const rq={...r,uid:uuid(),status:'pending',created:now().toISOString(),store:S.user.store,storeName:STORES[S.user.store],reg:S.user.reg,cashier:S.user.name,flags};
@@ -721,9 +721,14 @@ function returnLines(s){
     finishReturn(r);
   };
 }
+// Буцаах хэлбэр: эх баримтын төлбөрөөс санал болгоно (банк бол яг тэр банк)
+function rfDefault(s){const P=s.payments||[],b=P.find(p=>p.form==='Банкаар'&&BANKS.some(x=>x[0]===p.bank));
+  if(P.some(p=>p.form==='Бэлнээр'))return 'cash';if(b)return 'b'+BANKS.findIndex(x=>x[0]===b.bank);if(P.some(p=>p.form==='Зээлээр'))return 'cr';return 'cash'}
+function rfPay(v,s){if(v==='cash')return {form:'Бэлнээр'};if(v==='cr'){const c=s.payments.find(p=>p.form==='Зээлээр')||{};const o={...c,form:'Зээлээр'};delete o.amount;return o}
+  const b=BANKS[+v.slice(1)],p={form:'Банкаар',bank:b[0],bankCode:b[1]};if(b[2]){p.partnerCode=b[2];p.partner=b[3]}return p}
 function finishReturn(r,reqUid){
   const n=nextNo(),d=now();
-  const sale={uid:uuid(),id:n.no,dayNo:n.day,type:'return',ref:r.ref,refUid:r.refUid||null,refStore:r.refStore||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{form:r.form,amount:r.total}],change:0,ebarimt:false,reason:r.reason,request:reqUid||null,synced:false};
+  const sale={uid:uuid(),id:n.no,dayNo:n.day,type:'return',ref:r.ref,refUid:r.refUid||null,refStore:r.refStore||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{...(r.pay||{form:r.form}),amount:r.total}],change:0,ebarimt:false,reason:r.reason,request:reqUid||null,synced:false};
   sales.push(sale);store.set('sales',sales);cloudSoon();log('return',{ref:r.ref,total:r.total,why:r.reason,request:reqUid||''});closeModal();printReceipt(sale);
 }
 /* ---------- shift / reports ---------- */
@@ -935,27 +940,39 @@ const rcptText=s=>(s._t=s._t||(s.id+' '+(s.lines||[]).map(l=>{const i=IDX.get(l.
 function rcptHits(s,w){if(!w.length)return '';const L=(s.lines||[]).filter(l=>{const i=IDX.get(l.code),c=i!=null?CAT[i]:null,t=(l.name+' '+l.code+' '+(c&&c[1]?c[1]:'')+' '+(c&&c[7]||'')).toLowerCase();return w.every(x=>t.includes(x))});
   return L.length?'<div class="small" style="color:var(--blue)">'+L.slice(0,3).map(l=>'▸ '+esc(l.name)+' × '+l.qty).join('<br>')+'</div>':''}
 const RCPT_UI='<div class="hbar"><input id="pq" placeholder="Баримтын дугаар, барааны нэр, баркод эсвэл модель — Enter: дэлгүүрийн бүх кассаас хайна" style="flex:1" autofocus></div><div id="pm2" class="small" style="min-height:18px"></div><div class="list"><table><thead><tr><th>Баримт</th><th>Огноо</th><th>Кассчин</th><th>Төлбөр</th><th class="n">Дүн</th></tr></thead><tbody id="pl"></tbody></table></div>';
-function rcptBind(onPick){
-  const local=sales.filter(s=>s.type==='sale'&&s.store===S.user.store).slice(-300).reverse();let extra=[],cloudDays=0;
+function rcptBind(onPick,o){o=o||{};const okT=s=>s.type==='sale'||(o.ret&&s.type==='return');
+  const local=sales.filter(s=>okT(s)&&!s.gone&&s.store===S.user.store).slice(-300).reverse();let extra=[],cloudDays=0;
   const words=()=>$('pq').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const draw=()=>{const w=words(),L=extra.concat(local.filter(s=>!extra.some(x=>x.uid===s.uid))).sort((a,b)=>(a.iso||'')<(b.iso||'')?1:-1);
     const F=L.filter(s=>!w.length||w.every(x=>rcptText(s).includes(x))).slice(0,150);
     $('pl').innerHTML=F.map(s=>'<tr data-u="'+s.uid+'" style="cursor:pointer"><td>'+esc(s.id)+(s.store!==S.user.store?' <span class="badge b30">'+esc(STORES[s.store]||s.store)+'</span>':'')+rcptHits(s,w)+'</td><td class="nw">'+esc(s.date)+' '+esc((s.time||'').slice(0,5))+'</td><td>'+esc(s.cashier)+'</td><td class="small">'+s.payments.map(p=>esc(p.form+(p.bank?' · '+p.bank:''))).join(', ')+'</td><td class="n"><b>'+fmt(s.total)+'</b></td></tr>').join('')||'<tr><td colspan="5" class="empty">Энэ кассаас олдсонгүй — Enter дарж дэлгүүрийн бүх кассаас хайна уу</td></tr>';
-    $('pl').onclick=e=>{const tr=e.target.closest('tr[data-u]');if(!tr)return;const s=F.find(x=>x.uid===tr.dataset.u);if(s)loadRets(s).then(()=>onPick(s))}};
+    $('pl').onclick=e=>{const tr=e.target.closest('tr[data-u]');if(!tr)return;const s=F.find(x=>x.uid===tr.dataset.u);if(s)rcptGuard(s,extra).then(ok=>{if(ok)return loadRets(s).then(()=>onPick(s));const i=local.indexOf(s);if(i>=0)local.splice(i,1);draw()})}};
   $('pq').oninput=draw;
   $('pq').onkeydown=async e=>{if(e.key!=='Enter')return;const q=$('pq').value.trim();if(!q)return;
     if(!(fb.ready&&fb.user&&navigator.onLine))return $('pm2').textContent='Үүлэнд холбогдоогүй — зөвхөн энэ кассын баримт харагдана';
     $('pm2').textContent='Хайж байна…';
-    try{if(/^[a-z]{2}-\d+-\d+$/i.test(q)){const r=await fb.db.collection('pos_sales').where('id','==',q.toUpperCase()).limit(10).get();const f=r.docs.map(d=>d.data()).filter(s=>s.type==='sale');f.forEach(s=>{if(!extra.some(x=>x.uid===s.uid))extra.push(s)});$('pm2').textContent=f.length?(f.some(x=>x.store!==S.user.store)?'Өөр дэлгүүрийн баримт — буцаалт, солилт энэ дэлгүүрийн кассаас хийгдэнэ':''):'«'+q+'» дугаартай баримт олдсонгүй'}
+    try{if(/^[a-z]{2}-\d+-\d+$/i.test(q)){const r=await fb.db.collection('pos_sales').where('id','==',q.toUpperCase()).limit(10).get();const f=r.docs.map(d=>d.data()).filter(okT);f.forEach(s=>{if(!extra.some(x=>x.uid===s.uid))extra.push(s)});$('pm2').textContent=f.length?(f.some(x=>x.store!==S.user.store)?'Өөр дэлгүүрийн баримт — буцаалт, солилт энэ дэлгүүрийн кассаас хийгдэнэ':''):'«'+q+'» дугаартай баримт олдсонгүй'}
         else{const N=Math.min(31,Math.max(7,cfg.returnDays||14));
           if(cloudDays<N){const days=[];for(let k=0;k<N;k++){const d=now();d.setDate(d.getDate()-k);days.push(dstr(d))}
             const qs=await Promise.all(days.map(d=>fb.db.collection('pos_sales').where('store','==',S.user.store).where('date','==',d).get()));
-            qs.forEach(r=>r.docs.forEach(x=>{const s=x.data();if(s.type==='sale'&&!extra.some(y=>y.uid===s.uid))extra.push(s)}));cloudDays=N}
+            qs.forEach(r=>r.docs.forEach(x=>{const s=x.data();if(okT(s)&&!extra.some(y=>y.uid===s.uid))extra.push(s)}));cloudDays=N}
           $('pm2').textContent='Дэлгүүрийн бүх кассын сүүлийн '+N+' хоногийн баримтаас хайлаа'}
       draw()}catch(er){$('pm2').textContent='Алдаа: '+(er&&er.code||er)}};
   draw();
 }
-function pickReceipt(title,onPick){openModal('<h2>'+esc(title)+'</h2>'+RCPT_UI+'<div class="rowbtn"><button id="pc">Болих</button></div>');$('mbox').classList.add('wide');$('pc').onclick=closeModal;rcptBind(onPick)}
+function pickReceipt(title,onPick,o){openModal('<h2>'+esc(title)+'</h2>'+RCPT_UI+'<div class="rowbtn"><button id="pc">Болих</button></div>');$('mbox').classList.add('wide');$('pc').onclick=closeModal;rcptBind(onPick,o)}
+/* Самбараас устгагдсан баримтаар буцаалт, солилт, төлбөр засах хийхгүй.
+   Касс устгасан баримтын хуулбарыг 14 хоног хадгалдаг тул сонгох бүрт үүлэнд байгаа эсэхийг шалгана. */
+async function rcptGuard(s,extra){
+  if(extra&&extra.some(x=>x.uid===s.uid))return true;          // яг одоо үүлээс ирсэн
+  if(!s.synced)return true;                                    // үүлэнд хараахан илгээгдээгүй
+  if(!(fb.ready&&fb.user&&navigator.onLine))return true;       // холболтгүй — шалгах боломжгүй
+  $('pm2').textContent='Баримтыг шалгаж байна…';
+  try{const r=await fb.db.collection('pos_sales').where('id','==',s.id).limit(20).get();
+    if(r.docs.some(d=>(d.data()||{}).uid===s.uid)){$('pm2').textContent='';return true}
+  }catch(e){$('pm2').textContent='';return true}
+  s.gone=true;store.set('sales',sales);log('receipt_gone',{id:s.id,uid:s.uid});
+  $('pm2').innerHTML='<b style="color:var(--red)">'+esc(s.id)+' — баримт самбараас устгагдсан. Буцаалт, солилт, төлбөр засах боломжгүй.</b>';return false}
 // Өөр кассаар хийсэн буцаалтыг үүлээс татаж, давхар буцаалтаас сэргийлнэ
 async function loadRets(s){s._xr=[];if(!(fb.ready&&fb.user&&navigator.onLine))return;
   // бүх дэлгүүрийн буцаалт (өөр дэлгүүрт буцаасан байж болно)
@@ -1009,7 +1026,7 @@ function exchPay(){
 }
 function openPayFix(){
   if(S.exch)return flash('Эхлээд солилтоо дуусгана уу');
-  pickReceipt('Төлбөрийн хэлбэр засах — баримт сонгох',payFix);
+  pickReceipt('Төлбөрийн хэлбэр засах — баримт сонгох (буцаалт орно)',payFix,{ret:true});
 }
 function payFix(s){
   const pend=requests.find(r=>r.kind==='paychange'&&r.saleUid===s.uid&&r.status==='pending')||reqq.find(r=>r.kind==='paychange'&&r.saleUid===s.uid);

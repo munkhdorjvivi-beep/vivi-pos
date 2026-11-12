@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="4.9">
+<meta name="vivi-ver" content="5.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -257,7 +257,7 @@ function rqBody(r){const k=r.kind||'return';
   if(k==='exchange')return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip b">Солилт · '+esc(r.diffType||'')+' · хийгдсэн</span><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">эх баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+') → буцаалт '+esc(r.retId||'')+', шинэ '+esc(r.saleId||'')+'</span></div>'+
     '<div class="small">Буцааж авсан <b>'+money(r.credit)+'</b> · шинэ бараа <b>'+money(r.newTotal)+'</b> · зөрүү <b>'+money(r.diff)+'</b>'+(r.diff?' ('+(r.diff>0?'төлсөн':'буцаасан')+': '+esc(r.form||'')+')':'')+(r.approver?' · ПИН: '+esc(r.approver):'')+' · Шалтгаан: '+esc(r.reason)+'</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="small"><b>Буцааж өгсөн</b><br>'+(r.back||[]).map(l=>l.qty+' × '+esc(l.name)+' — '+money(l.sum)).join('<br>')+'</div><div class="small"><b>Шинээр авсан</b><br>'+(r.take||[]).map(l=>l.qty+' × '+esc(l.name)+' — '+money(l.sum)).join('<br>')+'</div></div>';
-  if(k==='paychange')return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip b">Төлбөр засах</span><b>'+money(r.total)+'</b><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+', '+esc(r.refCashier||'')+')</span></div>'+
+  if(k==='paychange')return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip b">Төлбөр засах</span>'+(r.total<0?'<span class="chip r">буцаалт</span>':'')+'<b>'+money(r.total)+'</b><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+', '+esc(r.refCashier||'')+')</span></div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px"><div class="small"><b>Одоогийн</b><br>'+payTxt(r.before)+'</div><div class="small"><b>Засах</b><br>'+payTxt(r.after)+'</div></div><div class="small">Шалтгаан: '+esc(r.reason)+'</div>';
   return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip r">Буцаалт</span><b>'+money(-r.total)+'</b><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">эх баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+') · '+esc(r.form)+'</span></div><div>'+(r.flags||[]).map(f=>'<span class="chip r">'+esc(f)+'</span> ').join('')+'<span class="small">Шалтгаан: '+esc(r.reason)+'</span></div>'+(r.lines||[]).map(l=>'<div class="small">'+(-l.qty)+' × '+esc(l.name)+' — '+money(-l.sum)+'</div>').join('')}
 function drawReq(){
@@ -618,7 +618,7 @@ async function askDelete(s){
   '<div class="small" style="margin:8px 0">'+(s.lines||[]).map(l=>l.qty+' × '+esc(l.name)+' — '+money(l.sum)).join('<br>')+'</div>'+
   (rets.length?'<div class="hot" style="margin:8px 0">Энэ баримтаас буцаалт хийгдсэн байна ('+rets.map(r=>esc(r.id)).join(', ')+'). Эхлээд буцаалтын баримтыг устгана уу.</div><div style="display:flex;justify-content:flex-end"><button class="btn" id="d_c">Хаах</button></div>':
   '<label class="f">Устгах шалтгаан</label><input type="text" id="d_why"><label class="f">Админы ПИН</label><input type="password" inputmode="numeric" id="d_pin" autocomplete="off">'+
-  '<div class="small" style="margin-top:6px">Устгасан баримт тайлангаас хасагдаж, «Устгасан баримтууд (архив)»-т хадгалагдана. Буцааж сэргээх боломжгүй.</div>'+
+  '<div class="small" style="margin-top:6px">Устгасан баримт тайлангаас хасагдаж, «Устгасан баримтууд (архив)»-т хадгалагдана. Алдаатай устгасан бол архиваас «Сэргээх» товчоор буцаана.</div>'+
   '<div id="d_msg" class="small hot" style="min-height:18px;margin-top:6px"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="d_c">Болих</button><button class="btn pri" id="d_ok">Устгах</button></div>');
   $('pm').classList.remove('hide');$('d_c').onclick=pClose;if(rets.length)return;
   $('d_ok').onclick=async()=>{
@@ -638,8 +638,34 @@ function watchDel(){
   delUnsub=db.collection('pos_sales_deleted').where('deletedAt','>=',new Date(a+'T00:00:00').toISOString()).where('deletedAt','<=',new Date(b+'T23:59:59.999').toISOString()).onSnapshot(s=>{delList=s.docs.map(d=>d.data()).sort((x,y)=>x.deletedAt<y.deletedAt?1:-1);drawDel()},e=>{$('cDel').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'});
 }
 const lt=iso=>{const d=new Date(iso);return d.toLocaleString('sv-SE').slice(0,16)};
-function drawDel(){$('cDel').innerHTML=tbl(['Баримт','Устгасан','Шалтгаан','Дүн'],delList.map(s=>'<tr><td><details><summary>'+esc(s.id)+(s.type==='return'?' <span class="chip r">буцаалт</span>':'')+'<div class="small">'+esc(s.date+' '+(s.time||'').slice(0,5))+' · '+esc(s.storeName)+' · '+esc(s.cashier)+'</div></summary>'+(s.lines||[]).map(l=>'<div class="small">'+l.qty+' × '+esc(l.name)+' — '+money(l.sum)+'</div>').join('')+'</details></td><td class="n small">'+esc(lt(s.deletedAt))+'<br>'+esc(s.deletedAdmin||'')+' · '+esc(s.deletedBy||'')+'</td><td class="n small">'+esc(s.deleteReason||'')+'</td><td class="n"><b>'+money(s.total)+'</b></td></tr>'))+(delList.length?'<div class="small" style="margin-top:6px">Нийт '+delList.length+' баримт · '+money(delList.reduce((a,s)=>a+s.total,0))+'</div>':'')}
+function drawDel(){$('cDel').innerHTML=tbl(['Баримт','Устгасан','Шалтгаан','Дүн',''],delList.map(s=>'<tr><td><details><summary>'+esc(s.id)+(s.type==='return'?' <span class="chip r">буцаалт</span>':'')+'<div class="small">'+esc(s.date+' '+(s.time||'').slice(0,5))+' · '+esc(s.storeName)+' · '+esc(s.cashier)+'</div></summary>'+(s.lines||[]).map(l=>'<div class="small">'+l.qty+' × '+esc(l.name)+' — '+money(l.sum)+'</div>').join('')+'</details></td><td class="n small">'+esc(lt(s.deletedAt))+'<br>'+esc(s.deletedAdmin||'')+' · '+esc(s.deletedBy||'')+'</td><td class="n small">'+esc(s.deleteReason||'')+'</td><td class="n"><b>'+money(s.total)+'</b></td><td><button class="btn" data-rst="'+esc(s.uid)+'">Сэргээх</button></td></tr>'))+(delList.length?'<div class="small" style="margin-top:6px">Нийт '+delList.length+' баримт · '+money(delList.reduce((a,s)=>a+s.total,0))+'</div>':'')}
 $('a1').onchange=$('a2').onchange=()=>{if(db&&auth.currentUser)watchDel()};
+/* ---- устгасан баримтыг сэргээх: архиваас pos_sales руу буцаана (ижил uid, ижил дугаар) ---- */
+$('cDel').addEventListener('click',e=>{const b=e.target.closest('[data-rst]');if(!b)return;const s=delList.find(x=>x.uid===b.dataset.rst);if(s)askRestore(s)});
+function askRestore(s){
+  $('pbox').innerHTML='<h2 style="margin:0 0 6px">Баримт сэргээх</h2><table><tbody>'+[['Баримт',esc(s.id)+(s.type==='return'?' <span class="chip r">буцаалт</span>':'')],['Огноо',esc(s.date+' '+(s.time||''))],['Дэлгүүр · кассчин',esc(s.storeName+' · '+s.cashier)],['Дүн','<b>'+money(s.total)+'</b>'],['Устгасан',esc(lt(s.deletedAt)+' · '+(s.deletedAdmin||'')+' · '+(s.deleteReason||''))]].map(r=>'<tr><td class="small">'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</tbody></table>'+
+  '<label class="f">Сэргээх шалтгаан</label><input type="text" id="r_why"><label class="f">Админы ПИН</label><input type="password" inputmode="numeric" id="r_pin" autocomplete="off">'+
+  '<div class="small" style="margin-top:6px">Баримт ижил дугаартайгаар тайланд буцаж орно. Хэн, хэзээ сэргээсэн нь бүртгэлд үлдэнэ.</div>'+
+  '<div id="r_msg" class="small hot" style="min-height:18px;margin-top:6px"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="r_c">Болих</button><button class="btn pri" id="r_ok">Сэргээх</button></div>';
+  $('pm').classList.remove('hide');$('r_c').onclick=pClose;
+  $('r_ok').onclick=async()=>{
+    const why=$('r_why').value.trim(),pin=$('r_pin').value.trim(),err=m=>{$('r_msg').textContent=m};
+    if(!why)return err('Шалтгаан оруулна уу');
+    const a=users.find(u=>u.role==='admin'&&u.active&&u.pin===pin);if(!a)return err('Админы ПИН буруу');
+    $('r_ok').disabled=true;err('');
+    try{
+      const ex=await db.collection('pos_sales').doc(s.uid).get();
+      if(ex.exists){$('r_ok').disabled=false;return err('Энэ баримт аль хэдийн тайланд байна')}
+      const doc={...s};['deletedAt','deletedBy','deletedAdmin','deleteReason'].forEach(k=>delete doc[k]);
+      doc.restoredAt=new Date().toISOString();doc.restoredBy=auth.currentUser.email||'';doc.restoredAdmin=a.name;doc.restoreReason=why;
+      doc.deletedOnce={at:s.deletedAt||'',by:s.deletedBy||'',admin:s.deletedAdmin||'',reason:s.deleteReason||''};
+      await db.collection('pos_sales').doc(s.uid).set(doc);
+      await db.collection('pos_sales_deleted').doc(s.uid).delete();
+      await auditCfg('receipt_restore',{id:s.id,date:s.date,store:s.store,cashier:s.cashier,total:s.total,reason:why,admin:a.name});pClose();
+    }catch(e){$('r_ok').disabled=false;err('Сэргээсэнгүй: '+(e.code||e))}
+  };
+}
+
 $('aXl').onclick=async()=>{
   if(!delList.length)return $('aMsg').textContent='Энэ хугацаанд устгасан баримт алга';
   try{await xlsx();const pay=s=>(s.payments||[]).map(p=>p.form+(p.bank?' · '+p.bank:'')+' '+p.amount).join('; ');
