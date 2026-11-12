@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="4.9">
+<meta name="vivi-ver" content="5.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -698,7 +698,7 @@ function returnLines(s){
   (s.lines.some(l=>l.prog)?'<div class="small" style="margin-top:6px">1+1 урамшуулалтай баримт: үлдэх бараанд урамшууллыг дахин тооцож, төлсөн дүнгийн зөрүүг буцаана.</div>':'')+
   '<div class="tiles" style="grid-template-columns:1fr"><div class="tile y"><div class="l">БУЦААХ ДҮН</div><div class="v" id="rsum">0</div></div></div>'+
   '<label>Мөнгө буцаах хэлбэр</label><select id="rf"><option value="cash">Бэлнээр</option>'+BANKS.map((b,i)=>'<option value="b'+i+'">'+esc(b[0])+'</option>').join('')+(crP?'<option value="cr">Зээлээр · '+esc(crP.partner||'')+'</option>':'')+'</select><label>Шалтгаан</label><input id="rw">'+custForm('r')+'<div id="rm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="rb">Болих</button><button class="pri" id="ro">Буцаалт хийх</button></div>');
-  $('rf').value=rfDefault(s);custBind('r',()=>/шилжүүлэг/i.test($('rf').selectedOptions[0].text));
+  $('rf').value=rfDefault(s);custBind('r',()=>{try{return refundFor(s,st,take())>0}catch(e){return true}});
   const take=()=>{const t={};rows.forEach(r=>{const q=Math.floor(num($('mbox').querySelector('[data-r="'+r.i+'"]').value));if(q>0)t[r.i]=q});return t};
   const upd=()=>{const tk=take();$('rm').textContent=rows.some(r=>(tk[r.i]||0)>r.av)?'Боломжит тооноос их байна':'';$('rsum').textContent=fmt(refundFor(s,st,tk))};
   $('mbox').querySelectorAll('[data-r]').forEach(x=>x.oninput=upd);
@@ -737,13 +737,15 @@ function rfPay(v,s){if(v==='cash')return {form:'Бэлнээр'};if(v==='cr'){co
 /* ---- Буцаалтын маягт (цаасны оронд): үйлчлүүлэгчийн утас, нэр; шилжүүлгээр буцаавал данс ---- */
 const MN_BANKS=['Хаан банк','Голомт банк','Худалдаа хөгжлийн банк','Төрийн банк','Хас банк','Капитрон банк','Богд банк','М банк','Ариг банк','Тээвэр хөгжлийн банк','Үндэсний хөрөнгө оруулалтын банк','Чингис хаан банк'];
 function custForm(p,noAcc){return '<div style="margin-top:8px;padding:8px 10px;border:1px solid var(--line,#ddd);border-radius:8px"><b class="small">ҮЙЛЧЛҮҮЛЭГЧ</b><div class="two" style="grid-template-columns:1fr 1fr"><div><label>Утасны дугаар *</label><input id="'+p+'Ph" inputmode="numeric" maxlength="12"></div><div><label>Нэр</label><input id="'+p+'Nm"></div></div>'+
-  (noAcc?'':'<div id="'+p+'Acc" class="hide"><div class="small" style="margin-top:6px">Шилжүүлгээр буцаах данс</div><div class="two" style="grid-template-columns:1fr 1fr"><div><label>Банк *</label><select id="'+p+'Bk"><option value="">— сонгох —</option>'+MN_BANKS.map(b=>'<option>'+b+'</option>').join('')+'</select></div><div><label>Дансны дугаар *</label><input id="'+p+'An" inputmode="numeric"></div></div><label>Дансны эзэмшигчийн нэр *</label><input id="'+p+'Ah"></div>')+'</div>'}
-function custBind(p,needAcc){const t=()=>{const a=$(p+'Acc');if(a)a.classList.toggle('hide',!needAcc())};custBind.f=custBind.f||{};custBind.f[p]=needAcc;t();const sel=$('rf')||$('xf');if(sel)sel.addEventListener('change',t)}
+  (noAcc?'':'<div id="'+p+'Acc" class="hide"><div class="small" style="margin-top:6px">Үйлчлүүлэгчийн данс (нягтлан шилжүүлэх)</div><div class="two" style="grid-template-columns:1fr 1fr"><div><label>Банк *</label><select id="'+p+'Bk"><option value="">— сонгох —</option>'+MN_BANKS.map(b=>'<option>'+b+'</option>').join('')+'</select></div><div><label>Дансны дугаар *</label><input id="'+p+'An" inputmode="numeric"></div></div><label>Дансны эзэмшигчийн нэр *</label><input id="'+p+'Ah"></div>')+'</div>'}
+function custBind(p,needAcc){const t=()=>{const a=$(p+'Acc');if(a)a.classList.toggle('hide',p!=='r'&&!needAcc())};custBind.f=custBind.f||{};custBind.f[p]=needAcc;t();const sel=$('rf')||$('xf');if(sel)sel.addEventListener('change',t)}
 function custRead(p,err){const ph=($(p+'Ph').value||'').replace(/\D/g,''),c={phone:ph,name:$(p+'Nm').value.trim()};
-  if(ph.length<8){err('Үйлчлүүлэгчийн утасны дугаар (8 орон) оруулна уу');$(p+'Ph').focus();return null}
+  if(!/^[5-9]\d{7}$/.test(ph)){err('Утасны дугаар буруу — 8 оронтой дугаар оруулна уу (жишээ 99112233)');$(p+'Ph').focus();return null}
   const need=custBind.f&&custBind.f[p]&&custBind.f[p]();
-  if(need){c.bank=$(p+'Bk').value;c.acct=($(p+'An').value||'').replace(/\s/g,'');c.holder=$(p+'Ah').value.trim();
-    if(!c.bank||c.acct.length<6||!c.holder){err('Шилжүүлгээр буцаах бол банк, дансны дугаар, эзэмшигчийн нэрийг бөглөнө үү');return null}}
+  if(need){c.bank=$(p+'Bk').value;c.acct=($(p+'An').value||'').replace(/[\s-]/g,'').toUpperCase();c.holder=$(p+'Ah').value.trim();
+    if(!c.bank){err('Үйлчлүүлэгчийн банкыг сонгоно уу');$(p+'Bk').focus();return null}
+    if(!/^(\d{8,20}|MN\d{18})$/.test(c.acct)){err('Дансны дугаар буруу — 8–20 оронтой тоо эсвэл MN-ээр эхэлсэн IBAN');$(p+'An').focus();return null}
+    if(c.holder.length<3){err('Дансны эзэмшигчийн нэрийг бичнэ үү');$(p+'Ah').focus();return null}}
   return c}
 // Баримт дээр хэвлэх маягт + гарын үсгийн мөрүүд
 function retFormHtml(s){const c=s.cust||{},L=(a,b)=>'<tr><td>'+a+'</td><td style="text-align:right">'+b+'</td></tr>';
