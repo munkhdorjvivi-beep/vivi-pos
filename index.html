@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="4.8">
+<meta name="vivi-ver" content="4.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -1506,7 +1506,8 @@ function chatBadge(){const n=chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).l
 function chatDraw(){CHAT.draw($('chatThread'),curAcc(),chatMsgs,'till')}
 function chatRead(){const st=curAcc();chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).forEach(m=>{m.readTill=true;CHAT.col(st).doc(m.id).update({readTill:true,readTillAt:new Date().toISOString()}).catch(()=>{})});chatBadge()}
 $('chatBtn').onclick=()=>{if(chatOpen()){chatBox.classList.add('hide');$('scan').focus();return}
-  if(!(fb.ready&&fb.user&&curAcc())){flash('Чат ашиглахын тулд касс үүлэнд холбогдсон байх ёстой');return}
+  if(!(fb.ready&&fb.user)){flash('Чат ашиглахын тулд касс үүлэнд холбогдсон байх ёстой');return}
+  if(!curAcc()){flash('Энэ компьютер «'+fb.user.email+'» бүртгэлээр холбогдсон. Чат зөвхөн дэлгүүрийн kasa-…@ бүртгэлээр ажиллана — «Үүлээс салгах» → kasa-'+String(device.store||'xx').toLowerCase()+'@vivi-pos-test.mn-ээр холбоно уу');return}
   chatListen();chatBox.classList.remove('hide');$('chatSt').textContent=STORES[curAcc()]||'';chatDraw();chatRead();chatComp.focus()};
 $('chatX').onclick=()=>{chatBox.classList.add('hide');$('scan').focus()};
 </script>
