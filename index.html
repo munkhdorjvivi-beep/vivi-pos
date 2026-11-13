@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.6">
+<meta name="vivi-ver" content="5.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -253,12 +253,15 @@ function promoWhy(l){
 // «Бусдыг түр зогсоох» (solo) урамшууллын үйлчлэлийг computePromo мөр бүрээр шийднэ
 function activePromos(){const st=S.user&&S.user.store;return promos.filter(p=>promoState(p)==='on'&&(!p.stores.length||!st||p.stores.includes(st)))}
 function plPrice(p,l){if(p.type!=='plist'||!p.prices)return null;const v=p.prices[l.code]!=null?p.prices[l.code]:(l.bc&&p.prices[l.bc]!=null?p.prices[l.bc]:null);return v}
-function promoBase(p,l){if(p.type==='plist')return plPrice(p,l)!=null;return !!(p.all||p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||p.codes.includes(l.code)||(l.bc&&p.codes.includes(l.bc)))}
+// урамшууллын кодын жагсаалтыг Set болгож кэшлэнэ (WeakMap — объектод талбар нэмэхгүй, хадгалахад орохгүй)
+const PSET=new WeakMap();function pset(p,k,arr){let m=PSET.get(p);if(!m){m={};PSET.set(p,m)}return m[k]||(m[k]=new Set(arr||[]))}
+function promoBase(p,l){if(p.type==='plist')return plPrice(p,l)!=null;if(p.all)return true;const C=pset(p,'cd',p.codes);return !!(p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||C.has(l.code)||(l.bc&&C.has(l.bc)))}
 // Үл хамаарах: тодорхой код, нийлүүлэгч; «өөр урамшуулалтай бараа» (жишээ нь Black Friday −50% нь 1+1, тусгай үнэтэй бараанд хэрэглэгдэхгүй)
 function promoMatch(p,l){if(!promoBase(p,l))return false;
-  if(p.excl&&p.excl.length&&(p.excl.includes(l.code)||(l.bc&&p.excl.includes(l.bc))))return false;
+  // том жагсаалтыг (мянга мянган код) Set болгож хурдан шалгана
+  if(p.excl&&p.excl.length){const X=pset(p,'ex',p.excl);if(X.has(l.code)||(l.bc&&X.has(l.bc)))return false}
   if(p.exSup&&p.exSup.length&&p.exSup.includes(l.sup))return false;
-  if(p.exOther&&activePromos().some(q=>q.id!==p.id&&q.type!=='gift'&&!q.exOther&&promoBase(q,l)&&!(q.excl&&(q.excl.includes(l.code)||(l.bc&&q.excl.includes(l.bc))))&&!(q.exSup&&q.exSup.includes(l.sup))))return false;
+  if(p.exOther&&activePromos().some(q=>q.id!==p.id&&q.type!=='gift'&&!q.exOther&&promoBase(q,l)&&!(q.excl&&q.excl.length&&(pset(q,'ex',q.excl).has(l.code)||(l.bc&&pset(q,'ex',q.excl).has(l.bc))))&&!(q.exSup&&q.exSup.includes(l.sup))))return false;
   return true}
 /* ---------- catalog index ---------- */
 let IDX,NAMES,catInfo={src:'file',count:CAT.length,version:'2026/11/10'};
