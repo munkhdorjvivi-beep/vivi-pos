@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.7">
+<meta name="vivi-ver" content="5.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -596,15 +596,15 @@ function openPay(){
     openModal('<h2>Төлбөр төлөлт</h2>'+(ON?'<div class="ordbox"><b>Онлайн захиалга</b><div class="ordg"><input id="oNo" placeholder="Захиалгын №" value="'+esc(ord.no)+'"><input id="oPh" placeholder="Утас *" inputmode="tel" value="'+esc(ord.phone)+'"><input id="oNm" placeholder="Үйлчлүүлэгчийн нэр" value="'+esc(ord.name)+'"><input id="oAd" placeholder="Хүргэлтийн хаяг" value="'+esc(ord.addr)+'"></div></div>':'')+'<div class="tiles"><div class="tile y"><div class="l">НИЙТ ТӨЛӨХ ДҮН</div><div class="v">'+fmt(t.total)+'</div></div><div class="tile"><div class="l">ЗЭЭЛЭЭР (F9)</div><div class="v">'+fmt(sum('Зээлээр'))+'</div></div><div class="tile"><div class="l">БАНКААР (F10)</div><div class="v">'+fmt(sum('Банкаар'))+'</div></div><div class="tile"><div class="l">БЭЛНЭЭР (F11)</div><div class="v">'+fmt(sum('Бэлнээр'))+'</div></div></div>'+
     '<div class="tiles" style="grid-template-columns:1fr 1fr"><div class="tile y"><div class="l">'+(rest>=0?'ТӨЛӨХ ҮЛДЭГДЭЛ':'ХАРИУЛТ')+'</div><div class="v">'+fmt(Math.abs(rest))+'</div></div><div><label style="margin-top:0">Төлсөн дүн</label><input id="pa" inputmode="numeric" autofocus value="'+(rest>0?rest:'')+'"></div></div>'+
     '<div class="banks">'+BANKS.map((b,i)=>'<button data-b="'+i+'">'+b[0]+'<br><kbd>Ctrl+'+(i+1)+'</kbd></button>').join('')+'</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="blue" id="pcash">Бэлнээр <kbd>F11</kbd></button><button class="blue" id="pcred">Зээлээр <kbd>F9</kbd></button></div>'+
-    (pays.length?'<div class="list" style="margin-top:8px"><table><tbody>'+pays.map((p,i)=>'<tr><td>'+p.form+(p.bank?' · '+esc(p.bank):'')+(p.partner?' · '+esc(p.partner):'')+'</td><td class="n">'+fmt(p.amount)+'</td><td class="n"><button data-rm="'+i+'" style="min-height:32px;padding:4px 10px">✕</button></td></tr>').join('')+'</tbody></table></div>':'')+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><button class="blue" id="pcash">Бэлнээр <kbd>F11</kbd></button><button class="blue" id="pcred">Зээлээр <kbd>F9</kbd></button><button class="blue" id="pvch">🎫 Ваучер <kbd>F8</kbd></button></div>'+
+    (pays.length?'<div class="list" style="margin-top:8px"><table><tbody>'+pays.map((p,i)=>'<tr><td>'+p.form+(p.bank?' · '+esc(p.bank):'')+(p.partner?' · '+esc(p.partner):'')+(p.voucher?' · '+esc(p.voucher)+' <span class="small">(үлдэх '+fmt(p.vBal)+')</span>':'')+'</td><td class="n">'+fmt(p.amount)+'</td><td class="n"><button data-rm="'+i+'" style="min-height:32px;padding:4px 10px">✕</button></td></tr>').join('')+'</tbody></table></div>':'')+
     '<label style="display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink);font-size:15px"><input type="checkbox" id="peb" style="width:22px;min-height:22px" '+(ebar?'checked':'')+'> И-баримтыг банкны терминалаас өгсөн</label>'+
     '<div id="pm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="pcancel">Болих <kbd>Esc</kbd></button><button class="ok" id="psave" style="min-width:200px;font-size:18px">Хадгалах <kbd>F12</kbd></button></div>');
     $('peb').onchange=e=>ebar=e.target.checked;
     if(ON)[['oNo','no'],['oPh','phone'],['oNm','name'],['oAd','addr']].forEach(([id,k])=>$(id).oninput=()=>ord[k]=$(id).value);
     $('mbox').querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>add('Банкаар',+b.dataset.b));
     $('mbox').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{pays.splice(+b.dataset.rm,1);draw()});
-    $('pcash').onclick=()=>add('Бэлнээр');$('pcred').onclick=credit;$('pcancel').onclick=closeModal;$('psave').onclick=save;
+    $('pcash').onclick=()=>add('Бэлнээр');$('pcred').onclick=credit;$('pvch').onclick=vch;$('pcancel').onclick=closeModal;$('psave').onclick=save;
   };
   const add=(form,bi,partner)=>{
     const rest=t.total-paid();let a=num($('pa').value);
@@ -617,30 +617,78 @@ function openPay(){
     openModal('<h2>Зээлээр</h2><label>Харилцагч / ажилтан (жагсаалтаас сонгоно)</label><input id="cn" autofocus list="plist" autocomplete="off" placeholder="Нэрээр хайх"><datalist id="plist">'+PARTNERS.map(p=>'<option value="'+esc(p[1])+'">'+esc(p[0])+'</option>').join('')+'</datalist><div id="cm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="cc">Болих</button><button class="pri" id="co">Нэмэх</button></div>',true);
     $('cc').onclick=draw;$('co').onclick=()=>{const n=$('cn').value.trim(),code=PIDX.get(n.toLowerCase());if(!code)return $('cm').textContent='Жагсаалтад байгаа харилцагчийг сонгоно уу';draw();$('pa').value=a;add('Зээлээр',null,{name:n,code})};
   };
-  const save=()=>{
+  // Ваучер: кодоор үүлнээс шалгана; бүртгэлгүй бол ваучер дээрх дүн, хугацааг оруулж бүртгэнэ. Хасалт нь «Хадгалах» үед хийгдэнэ.
+  const vch=()=>{const rest=t.total-paid();if(rest<=0)return $('pm').textContent='Төлөх үлдэгдэл алга';
+    openModal('<h2>🎫 Ваучер</h2><label>Ваучерын код (ваучер дээр бичсэн)</label><div style="display:flex;gap:8px"><input id="vc" autofocus autocomplete="off" style="flex:1"><button class="pri" id="vk">Шалгах</button></div><div id="vi" style="margin-top:8px"></div><div id="vm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="vx">Болих</button><button class="ok" id="vo" disabled>Ашиглах</button></div>',true);
+    let V=null,code='',known=false;const msg=x=>$('vm').textContent=x;
+    $('vx').onclick=draw;$('vc').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();chk()}};$('vk').onclick=()=>chk();
+    const chk=async()=>{code=$('vc').value.replace(/\s+/g,'').toUpperCase();$('vi').innerHTML='';$('vo').disabled=true;msg('');if(!code)return msg('Код оруулна уу');
+      if(pays.some(p=>p.voucher===code))return msg('Энэ ваучер энэ баримтад аль хэдийн нэмэгдсэн');
+      if(!(fb.ready&&fb.user&&navigator.onLine))return msg('Ваучер шалгахад интернэт холболт шаардлагатай. Холболтгүй бол өөр хэлбэрээр төлнө үү.');
+      msg('Шалгаж байна…');try{const d=await fb.db.collection('pos_vouchers').doc(code).get();V=d.exists?d.data():null}catch(e){return msg('Шалгаж чадсангүй: '+(e&&e.code||e))}msg('');known=!!V;const today=isoDay();
+      if(V){const used=(V.hist||[]).filter(h=>h.t==='use').length;
+        $('vi').innerHTML='<div class="tiles" style="grid-template-columns:1fr 1fr 1fr;margin:0"><div class="tile"><div class="l">ВАУЧЕРЫН ДҮН</div><div class="v">'+fmt(V.face)+'</div></div><div class="tile y"><div class="l">ҮЛДЭГДЭЛ</div><div class="v">'+fmt(V.balance)+'</div></div><div class="tile"><div class="l">ХҮЧИНТЭЙ</div><div class="v" style="font-size:18px">'+esc(V.expires||'—')+'</div></div></div><div class="small">'+used+' удаа ашигласан'+(V.lastUsed?' · сүүлд '+esc(V.lastUsed.slice(0,10)):'')+'</div>';
+        if(V.active===false)return msg('Ваучер идэвхгүй болсон (оффис хаасан)');if(V.expires&&V.expires<today)return msg('Ваучерын хугацаа дууссан ('+V.expires+')');if(!(V.balance>0))return msg('Ваучерын үлдэгдэл 0 — бүрэн ашиглагдсан');
+        $('vi').insertAdjacentHTML('beforeend','<label>Энэ баримтад ашиглах дүн</label><input id="va" inputmode="numeric" value="'+Math.min(V.balance,rest)+'">')}
+      else{$('vi').innerHTML='<div class="small" style="color:var(--ink);background:var(--soft,#f4f4f4);padding:8px;border-radius:8px">Шинэ ваучер — системд бүртгэлгүй. Ваучер дээрх <span style="font-weight:700">дүн</span>, <span style="font-weight:700">хүчинтэй хугацааг</span> оруулбал бүртгэгдэнэ. Дараа нь энэ кодоор үлдэгдлийг ашиглана.</div><div class="two" style="grid-template-columns:1fr 1fr"><div><label>Ваучерын дүн *</label><input id="vf" inputmode="numeric"></div><div><label>Хүчинтэй хугацаа (хүртэл) *</label><input id="ve" type="date"></div></div><label>Энэ баримтад ашиглах дүн</label><input id="va" inputmode="numeric">';
+        $('vf').oninput=()=>{$('va').value=Math.min(num($('vf').value)||0,rest)||''};$('vf').focus()}
+      $('vo').disabled=false};
+    $('vo').onclick=()=>{const a=Math.round(num($('va').value)),r=t.total-paid();if(!(a>0))return msg('Ашиглах дүн оруулна уу');if(a>r)return msg('Төлөх үлдэгдлээс ('+fmt(r)+') их байж болохгүй');
+      const p={form:'Ваучер',amount:a,voucher:code};
+      if(known){if(a>V.balance)return msg('Үлдэгдлээс их байна');p.vBal=V.balance-a}
+      else{const f=Math.round(num($('vf').value)),ex=$('ve').value;if(!(f>0))return msg('Ваучерын дүнг оруулна уу');if(!ex)return msg('Хүчинтэй хугацааг оруулна уу');if(ex<isoDay())return msg('Хугацаа дууссан ваучер');if(a>f)return msg('Ваучерын дүнгээс их байна');p.vNew={face:f,expires:ex};p.vBal=f-a}
+      pays.push(p);draw()}};
+  const save=async()=>{
+    if(save.busy)return;
     const rest=t.total-paid();
     if(rest>0)return $('pm').textContent='Төлбөр дутуу: '+fmt(rest);
     const change=-rest;
     if(change>0){const c=pays.filter(p=>p.form==='Бэлнээр').reduce((a,p)=>a+p.amount,0);if(change>c)return $('pm').textContent='Хариулт бэлэн мөнгөнөөс их байна';}
     if(ON&&!ord.phone.trim()&&!ord.no.trim())return $('pm').textContent='Онлайн захиалга: утас эсвэл захиалгын дугаар заавал';
-    const sale=makeSale(S.cart,t,pays,change,ebar,'sale');if(ON){sale.order={no:ord.no.trim(),phone:ord.phone.trim(),name:ord.name.trim(),addr:ord.addr.trim()};store.set('sales',sales);openPay.ord=null}
+    let pre=null;const vp=pays.filter(p=>p.form==='Ваучер');
+    if(vp.length){if(!(fb.ready&&fb.user&&navigator.onLine))return $('pm').textContent='Ваучер хасахад интернэт шаардлагатай — холболтоо шалгана уу, эсвэл ваучерыг хасаад өөр хэлбэрээр төлнө үү';
+      pre={uid:uuid(),id:peekNo()};save.busy=true;$('psave').disabled=true;$('pm').textContent='Ваучерын үлдэгдэл хасаж байна…';
+      try{await vchUse(vp,pre)}catch(e){save.busy=false;$('psave').disabled=false;return $('pm').textContent='Ваучер: '+(e&&e.code?'холболтын алдаа ('+e.code+') — дахин «Хадгалах» дарна уу':(e&&e.message||e))}save.busy=false;
+      vp.forEach(p=>{delete p.vNew})}
+    const sale=makeSale(S.cart,t,pays,change,ebar,'sale',null,pre);if(ON){sale.order={no:ord.no.trim(),phone:ord.phone.trim(),name:ord.name.trim(),addr:ord.addr.trim()};store.set('sales',sales);openPay.ord=null}
     S.cart=[];S.sel=-1;S.fromPark=null;closeModal();render();custThanks(sale);printReceipt(sale);
   };
-  openPay.add=add;openPay.credit=credit;openPay.save=save;openPay.active=true;
+  openPay.add=add;openPay.credit=credit;openPay.save=save;openPay.vch=vch;openPay.active=true;
   draw();
 }
+// дараагийн баримтын дугаарыг (тоолуурыг өсгөхгүйгээр) урьдчилан харах — ваучерын түүхэнд бичнэ
+function peekNo(){const k=S.user.store+'-'+S.user.reg;return k+'-'+pad((counters[k]||0)+1,6)}
+const isoDay=()=>dstr(now()).replace(/\//g,'-');
+/* ---------- Ваучер (pos_vouchers/{код}) ----------
+   {code, face, balance, expires 'YYYY-MM-DD', active, created, createdStore, createdBy, hist:[{t:'use'|'refund', at, uid, id, store, reg, cashier, amt, ref}]}
+   Хасалт, буцаалтыг transaction-оор хийнэ: хоёр касс нэг ваучерыг зэрэг ашиглаж чадахгүй. */
+async function vchUse(vp,info){const at=now().toISOString(),today=isoDay();
+  await fb.db.runTransaction(async tx=>{const refs=vp.map(p=>fb.db.collection('pos_vouchers').doc(p.voucher)),ds=[];for(const r of refs)ds.push(await tx.get(r));
+    vp.forEach((p,i)=>{const d=ds[i],h={t:'use',at,uid:info.uid,id:info.id,store:S.user.store,reg:S.user.reg||'',cashier:S.user.name,amt:-p.amount};
+      if(d.exists){const v=d.data();if(v.active===false)throw new Error(p.voucher+' идэвхгүй ваучер');if(v.expires&&v.expires<today)throw new Error(p.voucher+' хугацаа дууссан');
+        if(!(v.balance>=p.amount))throw new Error(p.voucher+' үлдэгдэл '+fmt(v.balance||0)+' ₮ — хүрэлцэхгүй. Ваучерыг хасаад дахин нэмнэ үү');
+        p.vBal=v.balance-p.amount;tx.update(refs[i],{balance:p.vBal,hist:(v.hist||[]).concat([h]),lastUsed:at,lastStore:S.user.store})}
+      else{if(!p.vNew)throw new Error(p.voucher+' бүртгэлгүй ваучер');p.vBal=p.vNew.face-p.amount;
+        tx.set(refs[i],{code:p.voucher,face:p.vNew.face,balance:p.vBal,expires:p.vNew.expires,active:true,created:at,createdStore:S.user.store,createdBy:S.user.name,src:'till',hist:[h],lastUsed:at,lastStore:S.user.store})}})})}
+// Буцаалт: ваучераар төлсөн хэсгийг тэр ваучерын үлдэгдэлд буцааж нэмнэ (тухайн баримтаар төлсөн дүнгээс хэтрэхгүй)
+async function vchRefund(code,amt,info){const at=now().toISOString();
+  await fb.db.runTransaction(async tx=>{const ref=fb.db.collection('pos_vouchers').doc(code),d=await tx.get(ref);if(!d.exists)throw new Error('Ваучер '+code+' олдсонгүй');
+    const v=d.data(),H=v.hist||[],paid=-H.filter(h=>h.t==='use'&&h.uid===info.refUid).reduce((a,h)=>a+h.amt,0),back=H.filter(h=>h.t==='refund'&&h.refUid===info.refUid).reduce((a,h)=>a+h.amt,0);
+    if(amt>paid-back)throw new Error('Энэ баримтаар ваучерт хамгийн ихдээ '+fmt(Math.max(0,paid-back))+' ₮ буцаах боломжтой — үлдсэнийг өөр хэлбэрээр буцаана уу');
+    const bal=Math.min(v.face,v.balance+amt);info.vBal=bal;
+    tx.update(ref,{balance:bal,hist:H.concat([{t:'refund',at,uid:info.uid,id:info.id,ref:info.ref,refUid:info.refUid,store:S.user.store,reg:S.user.reg||'',cashier:S.user.name,amt}]),lastUsed:at,lastStore:S.user.store})})}
 function nextNo(){
   const k=S.user.store+'-'+S.user.reg;counters[k]=(counters[k]||0)+1;
   const dk=k+'|'+dstr(now());counters[dk]=(counters[dk]||0)+1;store.set('counters',counters);
   return {no:k+'-'+pad(counters[k],6),day:counters[dk]};
 }
-function makeSale(cart,t,pays,change,ebar,type,ref){
+function makeSale(cart,t,pays,change,ebar,type,ref,pre){
   const n=nextNo(),d=now();
   const lines=[];cart.forEach(l=>l.parts.forEach(p=>lines.push({code:l.code,name:l.name,sup:l.sup,grp:l.grp,base:l.base,price:l.price,qty:p.qty,unit:p.unit,sum:p.sum,promo:p.promo,pname:p.pname,prog:(l.promoName&&!l.pct&&!l.disc)?l.promoName:'',samePct:l.progSame||0})));
   // хариултыг бэлэн мөнгөнөөс хасаж цэвэр дүнг хадгална
   const net=pays.map(p=>({...p}));let ch=change;
   for(const p of net){if(p.form==='Бэлнээр'&&ch>0){const x=Math.min(ch,p.amount);p.tendered=p.amount;p.amount-=x;ch-=x}}
-  const sale={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type,ref:ref||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,
+  const sale={uid:pre&&pre.uid||uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type,ref:ref||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,
     lines,qty:t.qty,base:t.base,discount:t.disc,total:t.total,payments:net,change,ebarimt:!!ebar,synced:false};
   sales.push(sale);store.set('sales',sales);cloudSoon();return sale;
 }
@@ -664,7 +712,7 @@ function printReceipt(s,copy){
   if(device.oneJob)printDocs([docs.join('<div class="pb"></div>')]);else printDocs(docs);
 }
 function receiptHtml(s,copy,label){
-  const pl=s.payments.map(p=>'<tr><td>'+p.form+(p.bank?' ('+esc(p.bank)+')':'')+(p.partner?' ('+esc(p.partner)+')':'')+':</td><td style="text-align:right">'+fmt(p.tendered||p.amount)+'</td></tr>').join('');
+  const pl=s.payments.map(p=>'<tr><td>'+p.form+(p.bank?' ('+esc(p.bank)+')':'')+(p.partner?' ('+esc(p.partner)+')':'')+(p.voucher?' ('+esc(p.voucher)+')':'')+':</td><td style="text-align:right">'+fmt(p.tendered||p.amount)+'</td></tr>'+(p.voucher&&p.vBal!=null?'<tr><td style="padding-left:8px">Ваучерын үлдэгдэл:</td><td style="text-align:right">'+fmt(p.vBal)+'</td></tr>':'')).join('');
   return '<div class="c" style="font-size:9px">Хэвлэсэн огноо: '+dstr(now())+' '+tstr(now())+'</div><div class="c big">VIVI · '+esc(s.storeName)+'</div>'+(label?'<div class="c"><b>'+label+'</b></div>':'')+
   (s.exch&&s.type==='sale'?'<div class="c big">СОЛИЛТ</div>':s.type==='return'?'<div class="c big">БУЦААЛТ</div>':'')+(copy?'<div class="c">ХУУЛБАР</div>':'')+
   '<div class="hr"></div><table><tr><td>Огноо: '+s.date+' '+s.time.slice(0,5)+'</td><td style="text-align:right">№: '+s.dayNo+'</td></tr><tr><td>Касс: '+s.reg+' · '+esc(s.cashier)+'</td><td style="text-align:right">'+s.id+'</td></tr>'+(s.order?'<tr><td colspan="2">Захиалга '+esc(s.order.no||'')+' · '+esc(s.order.phone||'')+(s.order.name?' · '+esc(s.order.name):'')+(s.order.addr?'<br>'+esc(s.order.addr):'')+'</td></tr>':'')+(s.ref?'<tr><td colspan="2">'+(s.exch?'Солилт, эх баримт: ':'Эх баримт: ')+s.ref+(s.refStore&&s.refStore!==s.store?' ('+(STORES[s.refStore]||s.refStore)+')':'')+(s.exch&&s.exch.ret?' · буцаалт '+s.exch.ret:'')+'</td></tr>':'')+'</table>'+
@@ -683,7 +731,7 @@ function openReturn(){
   openModal('<h2>Буцаалт — баримт сонгох</h2>'+(rqs.length?'<b>Хүсэлтүүд</b><div class="list"><table><tbody id="rqs">'+rqs.map(r=>'<tr data-u="'+r.uid+'"'+(r.status==='approved'?' style="cursor:pointer"':'')+'><td>'+esc(r.ref)+'<div class="small">'+esc(r.cashier)+' · '+esc((r.flags||[]).join(', '))+'</div></td><td class="n">'+fmt(-r.total)+'</td><td><span class="badge '+RS[r.status][1]+'">'+RS[r.status][0]+'</span>'+(r.note?'<div class="small">'+esc(r.note)+'</div>':'')+'</td></tr>').join('')+'</tbody></table></div><b>Баримтаар хайх</b>':'')+RCPT_UI+'<div class="small" style="margin-top:6px">Smart-ын хуучин баримтын буцаалт дараагийн хувилбарт.</div><div class="rowbtn"><button id="rc">Хаах</button></div>');$('mbox').classList.add('wide');
   $('rc').onclick=closeModal;rcptBind(returnLines);
   if($('rqs'))$('rqs').onclick=e=>{const tr=e.target.closest('tr[data-u]'),r=tr&&requests.find(x=>x.uid===tr.dataset.u);if(!r||r.status!=='approved')return;
-    r.status='done';fb.db.collection('pos_requests').doc(r.uid).update({status:'done',doneAt:now().toISOString(),doneBy:S.user.name}).catch(()=>{});finishReturn(r,r.uid)};
+    finishReturn(r,r.uid).then(ok=>{if(!ok)return;r.status='done';fb.db.collection('pos_requests').doc(r.uid).update({status:'done',doneAt:now().toISOString(),doneBy:S.user.name}).catch(()=>{})})};
 }
 /* Буцаалт: үлдэх бараанд урамшууллыг дахин тооцоод, төлсөн дүнгийн зөрүүг буцаана.
    Жишээ: 1+1-ээр A 35 900 + B 29 900 (үнэгүй) = 35 900. A-г буцаавал B бүтэн үнээр 29 900 болж, 6 000 буцаана. */
@@ -714,8 +762,8 @@ function returnLines(s){
   openModal('<h2>Буцаалт — '+s.id+'</h2><div class="list"><table><thead><tr><th>Бараа</th><th class="n">Авсан</th><th class="n">Төлсөн үнэ</th><th class="n">Буцаах тоо</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.l.name)+(r.l.promo==='free'?' <span class="badge">1+1 үнэгүй</span>':(r.l.promo==='same'||r.l.promo==='pct')?' <span class="badge b30">хөнгөлөлттэй</span>':'')+'</td><td class="n">'+r.l.qty+'</td><td class="n">'+fmt(r.l.unit)+'</td><td class="n"><input data-r="'+r.i+'" inputmode="numeric" value="0" style="width:80px;text-align:right" '+(r.av?'':'disabled')+'><div class="small">боломжит: '+r.av+'</div></td></tr>').join('')+'</tbody></table></div>'+
   (s.lines.some(l=>l.prog)?'<div class="small" style="margin-top:6px">1+1 урамшуулалтай баримт: үлдэх бараанд урамшууллыг дахин тооцож, төлсөн дүнгийн зөрүүг буцаана.</div>':'')+
   '<div class="tiles" style="grid-template-columns:1fr"><div class="tile y"><div class="l">БУЦААХ ДҮН</div><div class="v" id="rsum">0</div></div></div>'+
-  '<label>Мөнгө буцаах хэлбэр</label><select id="rf"><option value="cash">Бэлнээр</option>'+BANKS.map((b,i)=>'<option value="b'+i+'">'+esc(b[0])+'</option>').join('')+(crP?'<option value="cr">Зээлээр · '+esc(crP.partner||'')+'</option>':'')+'</select><label>Шалтгаан</label><input id="rw">'+custForm('r')+'<div id="rm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="rb">Болих</button><button class="pri" id="ro">Буцаалт хийх</button></div>');
-  $('rf').value=rfDefault(s);custBind('r',()=>{try{return refundFor(s,st,take())>0}catch(e){return true}});
+  '<label>Мөнгө буцаах хэлбэр</label><select id="rf"><option value="cash">Бэлнээр</option>'+BANKS.map((b,i)=>'<option value="b'+i+'">'+esc(b[0])+'</option>').join('')+(crP?'<option value="cr">Зээлээр · '+esc(crP.partner||'')+'</option>':'')+(s.payments||[]).filter(p=>p.form==='Ваучер'&&p.voucher&&p.amount>0).map(p=>'<option value="v:'+esc(p.voucher)+'">Ваучерт буцаах · '+esc(p.voucher)+' (төлсөн '+fmt(p.amount)+')</option>').join('')+'</select><label>Шалтгаан</label><input id="rw">'+custForm('r')+'<div id="rm" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="rb">Болих</button><button class="pri" id="ro">Буцаалт хийх</button></div>');
+  $('rf').value=rfDefault(s);custBind('r',()=>{if(($('rf').value||'').startsWith('v:'))return false;try{return refundFor(s,st,take())>0}catch(e){return true}});
   const take=()=>{const t={};rows.forEach(r=>{const q=Math.floor(num($('mbox').querySelector('[data-r="'+r.i+'"]').value));if(q>0)t[r.i]=q});return t};
   const upd=()=>{const tk=take();$('rm').textContent=rows.some(r=>(tk[r.i]||0)>r.av)?'Боломжит тооноос их байна':'';$('rsum').textContent=fmt(refundFor(s,st,tk))};
   $('mbox').querySelectorAll('[data-r]').forEach(x=>x.oninput=upd);
@@ -729,7 +777,8 @@ function returnLines(s){
     const tot=refund?-refund:0;
     const why=$('rw').value.trim();if(!why)return $('rw').focus();
     const cust=custRead('r',m=>$('rm').textContent=m);if(!cust)return;
-    const pay=rfPay($('rf').value,s),form=pay.form+(pay.bank?' · '+pay.bank:pay.partner?' · '+pay.partner:'');
+    const pay=rfPay($('rf').value,s),form=pay.form+(pay.bank?' · '+pay.bank:pay.partner?' · '+pay.partner:pay.voucher?' · '+pay.voucher:'');
+    if(pay.voucher&&!(fb.ready&&fb.user&&navigator.onLine))return $('rm').textContent='Ваучерт буцаахад интернэт шаардлагатай';
     const days=Math.floor((Date.now()-new Date(s.iso).getTime())/864e5),flags=[];
     if(days>cfg.returnDays)flags.push('хугацаа хэтэрсэн ('+days+' хоног)');
     if(-tot>cfg.returnLimit)flags.push('дүн босгоос их');
@@ -748,14 +797,15 @@ function returnLines(s){
 }
 // Буцаах хэлбэр: эх баримтын төлбөрөөс санал болгоно (банк бол яг тэр банк)
 function rfDefault(s){const P=s.payments||[],b=P.find(p=>p.form==='Банкаар'&&BANKS.some(x=>x[0]===p.bank));
+  const vc=P.find(p=>p.form==='Ваучер'&&p.voucher&&p.amount>0);if(vc)return 'v:'+vc.voucher;
   if(P.some(p=>p.form==='Бэлнээр'))return 'cash';if(b)return 'b'+BANKS.findIndex(x=>x[0]===b.bank);if(P.some(p=>p.form==='Зээлээр'))return 'cr';return 'cash'}
-function rfPay(v,s){if(v==='cash')return {form:'Бэлнээр'};if(v==='cr'){const c=s.payments.find(p=>p.form==='Зээлээр')||{};const o={...c,form:'Зээлээр'};delete o.amount;return o}
+function rfPay(v,s){if(v==='cash')return {form:'Бэлнээр'};if(v.startsWith('v:'))return {form:'Ваучер',voucher:v.slice(2)};if(v==='cr'){const c=s.payments.find(p=>p.form==='Зээлээр')||{};const o={...c,form:'Зээлээр'};delete o.amount;return o}
   const b=BANKS[+v.slice(1)],p={form:'Банкаар',bank:b[0],bankCode:b[1]};if(b[2]){p.partnerCode=b[2];p.partner=b[3]}return p}
 /* ---- Буцаалтын маягт (цаасны оронд): үйлчлүүлэгчийн утас, нэр; шилжүүлгээр буцаавал данс ---- */
 const MN_BANKS=['Хаан банк','Голомт банк','Худалдаа хөгжлийн банк','Төрийн банк','Хас банк','Капитрон банк','Богд банк','М банк','Ариг банк','Тээвэр хөгжлийн банк','Үндэсний хөрөнгө оруулалтын банк','Чингис хаан банк'];
 function custForm(p,noAcc){return '<div style="margin-top:8px;padding:8px 10px;border:1px solid var(--line,#ddd);border-radius:8px"><b class="small">ҮЙЛЧЛҮҮЛЭГЧ</b><div class="two" style="grid-template-columns:1fr 1fr"><div><label>Утасны дугаар *</label><input id="'+p+'Ph" inputmode="numeric" maxlength="12"></div><div><label>Нэр</label><input id="'+p+'Nm"></div></div>'+
   (noAcc?'':'<div id="'+p+'Acc" class="hide"><div class="small" style="margin-top:6px">Үйлчлүүлэгчийн данс (нягтлан шилжүүлэх)</div><div class="two" style="grid-template-columns:1fr 1fr"><div><label>Банк *</label><select id="'+p+'Bk"><option value="">— сонгох —</option>'+MN_BANKS.map(b=>'<option>'+b+'</option>').join('')+'</select></div><div><label>Дансны дугаар *</label><input id="'+p+'An" inputmode="numeric"></div></div><label>Дансны эзэмшигчийн нэр *</label><input id="'+p+'Ah"></div>')+'</div>'}
-function custBind(p,needAcc){const t=()=>{const a=$(p+'Acc');if(a)a.classList.toggle('hide',p!=='r'&&!needAcc())};custBind.f=custBind.f||{};custBind.f[p]=needAcc;t();const sel=$('rf')||$('xf');if(sel)sel.addEventListener('change',t)}
+function custBind(p,needAcc){const t=()=>{const a=$(p+'Acc');if(a)a.classList.toggle('hide',p==='r'?(($('rf')||{}).value||'').startsWith('v:'):!needAcc())};custBind.f=custBind.f||{};custBind.f[p]=needAcc;t();const sel=$('rf')||$('xf');if(sel)sel.addEventListener('change',t)}
 function custRead(p,err){const ph=($(p+'Ph').value||'').replace(/\D/g,''),c={phone:ph,name:$(p+'Nm').value.trim()};
   if(!/^[5-9]\d{7}$/.test(ph)){err('Утасны дугаар буруу — 8 оронтой дугаар оруулна уу (жишээ 99112233)');$(p+'Ph').focus();return null}
   const need=custBind.f&&custBind.f[p]&&custBind.f[p]();
@@ -773,10 +823,16 @@ function retFormHtml(s){const c=s.cust||{},L=(a,b)=>'<tr><td>'+a+'</td><td style
     L('Буцаасан дүн:',fmt(Math.abs(s.type==='return'?s.total:s.exchCredit||0)))+'<tr><td colspan="2">Шалтгаан: '+esc(s.reason||'')+'</td></tr>'+
     '<tr><td colspan="2">Үйлчлүүлэгч: '+esc(c.name||'')+' · '+esc(c.phone||'')+'</td></tr>'+(c.acct?'<tr><td colspan="2">Данс: '+esc(c.bank)+' '+esc(c.acct)+' · '+esc(c.holder)+'</td></tr>':'')+
     '</table><br><table><tr><td>Үйлчлүүлэгчийн гарын үсэг:</td><td style="text-align:right">________</td></tr><tr><td>Кассчин: '+esc(s.cashier)+'</td><td style="text-align:right">________</td></tr><tr><td>Менежер: '+esc(s.approvedBy||'')+'</td><td style="text-align:right">________</td></tr></table>'}
-function finishReturn(r,reqUid){
+async function finishReturn(r,reqUid){
+  const P=r.pay||{form:r.form},pre={uid:uuid()};
+  if(P.form==='Ваучер'&&P.voucher&&r.total<0){
+    if(finishReturn.busy)return false;if(!(fb.ready&&fb.user&&navigator.onLine)){flash('Ваучерт буцаахад интернэт шаардлагатай');return false}
+    finishReturn.busy=true;pre.id=peekNo();const info={uid:pre.uid,id:pre.id,ref:r.ref,refUid:r.refUid||null};
+    try{await vchRefund(P.voucher,-r.total,info)}catch(e){finishReturn.busy=false;const m=$('rm');if(m)m.textContent='Ваучер: '+(e&&e.message||e);else flash('Ваучер: '+(e&&e.message||e));return false}
+    finishReturn.busy=false;r.pay={...P,vBal:info.vBal}}
   const n=nextNo(),d=now();
-  const sale={uid:uuid(),id:n.no,dayNo:n.day,type:'return',ref:r.ref,refUid:r.refUid||null,refStore:r.refStore||null,refDate:r.refDate||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{...(r.pay||{form:r.form}),amount:r.total}],change:0,ebarimt:false,cust:r.cust||null,refTotal:r.refTotal==null?null:r.refTotal,approvedBy:r.approvedBy||r.decidedBy||null,reason:r.reason,request:reqUid||null,synced:false};
-  sales.push(sale);store.set('sales',sales);cloudSoon();log('return',{ref:r.ref,total:r.total,why:r.reason,request:reqUid||''});closeModal();printReceipt(sale);
+  const sale={uid:pre.uid,id:n.no,dayNo:n.day,type:'return',ref:r.ref,refUid:r.refUid||null,refStore:r.refStore||null,refDate:r.refDate||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{...(r.pay||{form:r.form}),amount:r.total}],change:0,ebarimt:false,cust:r.cust||null,refTotal:r.refTotal==null?null:r.refTotal,approvedBy:r.approvedBy||r.decidedBy||null,reason:r.reason,request:reqUid||null,synced:false};
+  sales.push(sale);store.set('sales',sales);cloudSoon();log('return',{ref:r.ref,total:r.total,why:r.reason,request:reqUid||''});closeModal();printReceipt(sale);return true;
 }
 /* ---------- shift / reports ---------- */
 function shiftSales(){return sales.filter(s=>s.shift===S.shift.id)}
@@ -1379,6 +1435,7 @@ document.addEventListener('keydown',e=>{
     if(e.key==='F12'){e.preventDefault();$('psave').click()}
     else if(e.key==='F11'){e.preventDefault();$('pcash').click()}
     else if(e.key==='F9'){e.preventDefault();$('pcred').click()}
+    else if(e.key==='F8'){e.preventDefault();$('pvch').click()}
     else if(e.ctrlKey&&e.key>='1'&&e.key<='7'){e.preventDefault();$('mbox').querySelector('[data-b="'+(e.key-1)+'"]').click()}
     return;
   }
