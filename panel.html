@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.6">
+<meta name="vivi-ver" content="7.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -268,7 +268,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
         <div class="scroll" id="itRes" style="max-height:320px;overflow:auto;margin-top:8px"></div></div>
     </div>
     <div style="margin-top:12px"><b>Бүртгэсэн бараа, үнийн өөрчлөлт</b> <span class="small">(касс бүр каталогийн дээр хэрэглэнэ)</span>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><input id="itLq2" class="inp" style="width:70px" value="1"><button id="itLbl2" class="btn">Сонгосныг шошгонд нэмэх</button><button id="itOff" class="btn warn">Сонгосныг цуцлах</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><input id="itLq2" class="inp" style="width:70px" value="1"><button id="itLbl2" class="btn">Сонгосныг шошгонд нэмэх</button><button id="itOn" class="btn">✓ Идэвхжүүлэх</button><button id="itOff" class="btn warn">⏸ Идэвхгүй болгох / үнийн өөрчлөлт цуцлах</button><button id="itDel" class="btn warn">🗑 Устгах</button></div><div class="small" style="margin-bottom:4px">Мөр бүрийн «Засах» — нэр, модель, хэмжээ, нийлүүлэгч, үнэ, өртөг, төлөв засах. «Идэвхгүй» бараа касс дээр зарагдахгүй (буцаалт хийж болно). «Устгах» — зөвхөн буруу бүртгэсэн шинэ бараанд.</div>
       <div class="scroll" id="itList" style="max-height:360px;overflow:auto"></div></div>
     <div style="margin-top:12px;border:1px dashed var(--line);border-radius:10px;padding:10px"><b>Шошгоны дараалал (<span id="lbCnt">0</span> ш)</b>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0"><span class="small">Хэмжээ (мм):</span><input id="lbW" class="inp" style="width:70px" value="40"><span>×</span><input id="lbH" class="inp" style="width:70px" value="30"><label class="inl small"><input type="checkbox" id="lbBase" checked> хямдарсан бол үндсэн үнийг зурааслах</label><button id="lbPrint" class="btn pri">Шошго хэвлэх</button><button id="lbClr" class="btn">Хоослох</button></div>
@@ -1345,8 +1345,8 @@ async function itSave(x,note){const by=auth.currentUser.email||'',at=new Date().
   const doc={code:x.code,bc:x.bc||'',name:x.name,model:x.model||'',size:x.size||'',sup:x.sup||'',grp:x.grp||'',base:Math.round(x.base),price:Math.round(x.price),active:x.active!==false,isNew:old?!!old.isNew:!!x.isNew,created:old&&old.created||at,updated:at,by,hist};
   await db.collection('pos_items').doc(x.code).set(doc);if(x.cost>0)await db.collection('pos_itemcost').doc(x.code).set({code:x.code,cost:Math.round(x.cost*100)/100,by,at})}
 function drawItems(){const L=Object.values(PITX).sort((a,b)=>a.updated<b.updated?1:-1);
-  xtable('itList','items',['','Код','Нэр','Модель','Хэмжээ','Нийлүүлэгч','Үндсэн үнэ','Кассын үнэ','Төрөл','Өөрчилсөн','Хэн'],L.map(x=>[x.code,x.code,x.name,x.model,x.size,x.sup,x.base,x.price,(x.active===false?'идэвхгүй · ':'')+(x.isNew?'шинэ бараа':'үнэ өөрчилсөн'),lt(x.updated),x.by]),
-    {cell:(r,c)=>c===0?'<input type="checkbox" class="itck" value="'+esc(r[0])+'">':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])})}
+  xtable('itList','items',['','Код','Нэр','Модель','Хэмжээ','Нийлүүлэгч','Үндсэн үнэ','Кассын үнэ','Төлөв','Төрөл','Өөрчилсөн','Хэн',''],L.map(x=>[x.code,x.code,x.name,x.model,x.size,x.sup,x.base,x.price,x.active===false?'идэвхгүй':'идэвхтэй',x.isNew?'шинэ бараа':'үнэ өөрчилсөн',lt(x.updated),(x.by||'').split('@')[0],x.code]),
+    {cell:(r,c)=>c===0?'<input type="checkbox" class="itck" value="'+esc(r[0])+'">':c===12?'<button class="btn" data-ited="'+esc(r[0])+'" style="min-height:28px;padding:1px 10px">Засах</button>':c===8?'<span class="chip'+(r[8]==='идэвхгүй'?' r':'')+'">'+r[8]+'</span>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])})}
 // шинэ бараа
 $('itNew').onclick=async()=>{const m=$('itMsg'),v=id=>$(id).value.trim();
   const name=v('itN'),sup=v('itS'),base=num0(v('itB')),price=num0(v('itP'))||base,cost=num0(v('itC')),sizes=v('itZ').split(/[,;]+/).map(x=>x.trim()).filter(Boolean),bc=v('itBC');
@@ -1366,7 +1366,7 @@ async function itSearch(){try{await loadPCat()}catch(e){return $('itMsg').innerH
   const ex=PCATi.get($('itQs').value.trim());if(ex!=null){const m=PCAT[ex][7];res.push(PCAT[ex][0]);if(m)PCAT.forEach(r=>{if(r[7]===m&&r[0]!==PCAT[ex][0]&&res.length<200)res.push(r[0])})}
   else{Object.values(PITX).forEach(x=>{if(w.every(t=>(x.code+' '+x.name+' '+x.model).toLowerCase().includes(t)))res.push(x.code)});for(const r of PCAT){if(res.length>=200)break;if(w.every(t=>(r[0]+' '+(r[1]||'')+' '+r[2]+' '+(r[7]||'')).toLowerCase().includes(t))&&!res.includes(r[0]))res.push(r[0])}}
   const L=res.map(itRow).filter(Boolean);
-  xtable('itRes','itres',['','Код','Нэр','Модель','Хэмжээ','Нийлүүлэгч','Үндсэн үнэ','Кассын үнэ','Өртөг'],L.map(x=>[x.code,x.code,x.name,x.model,x.size,x.sup,x.base,x.price,costMap.get(x.code)||null]),{cell:(r,c)=>c===0?'<input type="checkbox" class="itck2" value="'+esc(r[0])+'" checked>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])});
+  xtable('itRes','itres',['','Код','Нэр','Модель','Хэмжээ','Нийлүүлэгч','Үндсэн үнэ','Кассын үнэ','Өртөг',''],L.map(x=>[x.code,x.code,x.name,x.model,x.size,x.sup,x.base,x.price,costMap.get(x.code)||null,x.code]),{cell:(r,c)=>c===9?'<button class="btn" data-ited="'+esc(r[0])+'" style="min-height:28px;padding:1px 10px">Засах</button>':c===0?'<input type="checkbox" class="itck2" value="'+esc(r[0])+'" checked>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])});
   $('itAct').classList.toggle('hide',!L.length)}
 const itSel=cls=>[...document.querySelectorAll('.'+cls+':checked')].map(x=>x.value);
 $('itPr').onclick=async()=>{const codes=itSel('itck2'),m=$('itMsg');if(!codes.length)return m.innerHTML='<span class="hot">Бараа сонгоно уу</span>';
@@ -1382,6 +1382,26 @@ $('itLbl2').onclick=()=>{const q=Math.max(1,Math.round(num0($('itLq2').value)||1
 $('itOff').onclick=async()=>{const codes=itSel('itck');if(!codes.length||!confirm(codes.length+' бараа: үнийн өөрчлөлтийг цуцлах (шинэ бараа бол касс дээр идэвхгүй болно) уу?'))return;
   for(const c of codes){const x=PITX[c];if(!x)continue;if(x.isNew)await db.collection('pos_items').doc(c).update({active:false,updated:new Date().toISOString(),by:auth.currentUser.email||''});else await db.collection('pos_items').doc(c).delete()}
   await auditCfg('item_off',{by:auth.currentUser.email,codes})};
+
+/* ==== Бараа засах, идэвхжүүлэх, устгах ==== */
+function itEdit(code){const x0=itRow(code);if(!x0)return;const x={...x0,active:x0.active!==false},f=(id,l,v,t)=>'<div><label class="f">'+l+'</label><input id="'+id+'" class="inp" '+(t||'')+' value="'+esc(v==null?'':v)+'"></div>';
+  $('pbox').innerHTML='<h2 style="margin:0 0 6px">Бараа засах · '+esc(code)+'</h2><div class="frm">'+f('ie_n','Нэр *',x.name)+f('ie_m','Модель',x.model)+f('ie_z','Хэмжээ',x.size)+f('ie_s','Нийлүүлэгч',x.sup,'list="mSupL"')+f('ie_g','Бүлэг',x.grp)+
+    f('ie_b','Үндсэн үнэ (₮) *',x.base,'inputmode="numeric"')+f('ie_p','Кассын үнэ (₮)',x.price,'inputmode="numeric"')+f('ie_c','Өртөг (₮)',costMap.get(code)||'','inputmode="numeric"')+'</div>'+
+    '<label class="inl" style="margin-top:8px"><input type="checkbox" id="ie_a" '+(x.active?'checked':'')+'> Идэвхтэй (касс дээр зарагдана)</label>'+
+    '<div id="ie_msg" class="small hot" style="min-height:18px;margin-top:6px"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="ie_x">Болих</button><button class="btn pri" id="ie_ok">Хадгалах</button></div>';
+  $('pm').classList.remove('hide');$('ie_x').onclick=pClose;
+  $('ie_ok').onclick=async()=>{const v=id=>$(id).value.trim(),n={...x,name:v('ie_n'),model:v('ie_m'),size:v('ie_z'),sup:v('ie_s'),grp:v('ie_g'),base:num0(v('ie_b')),price:num0(v('ie_p'))||num0(v('ie_b')),cost:num0(v('ie_c')),active:$('ie_a').checked};
+    if(!n.name||!(n.base>0))return $('ie_msg').textContent='Нэр, үндсэн үнэ заавал';if(n.price>n.base)return $('ie_msg').textContent='Кассын үнэ үндсэн үнээс их байж болохгүй';
+    $('ie_ok').disabled=true;try{await itSave(n,'засвар');await auditCfg('item_edit',{by:auth.currentUser.email,code,name:n.name,base:n.base,price:n.price,active:n.active});pClose();$('itMsg').innerHTML='<span class="chip">Хадгаллаа</span> '+esc(code)+' — кассууд автоматаар авна.';if($('itQs').value.trim())itSearch()}
+    catch(e){$('ie_ok').disabled=false;$('ie_msg').textContent='Алдаа: '+(e.code||e.message||e)}}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ited]');if(b){loadPCat().catch(()=>{}).then(()=>itEdit(b.dataset.ited))}});
+$('itOn').onclick=async()=>{const codes=itSel('itck').filter(c=>PITX[c]&&PITX[c].active===false);if(!codes.length)return $('itMsg').innerHTML='<span class="hot">Идэвхгүй бараа сонгоно уу</span>';
+  for(const c of codes)await db.collection('pos_items').doc(c).update({active:true,updated:new Date().toISOString(),by:auth.currentUser.email||''});
+  await auditCfg('item_on',{by:auth.currentUser.email,codes});$('itMsg').innerHTML='<span class="chip">'+codes.length+' бараа идэвхжлээ</span>'};
+$('itDel').onclick=async()=>{const codes=itSel('itck');if(!codes.length)return;const nw=codes.filter(c=>PITX[c]&&PITX[c].isNew),ch=codes.filter(c=>PITX[c]&&!PITX[c].isNew);
+  if(!confirm((nw.length?nw.length+' шинэ барааг бүрмөсөн устгана (касс дээрээс алга болно). Борлуулалт хийгдсэн бол «Идэвхгүй болгох»-ыг ашиглана уу.\n':'')+(ch.length?ch.length+' барааны үнийн өөрчлөлтийг устгаж Smart-ын үнэ рүү буцаана.\n':'')+'Үргэлжлүүлэх үү?'))return;
+  for(const c of codes){await db.collection('pos_items').doc(c).delete();if(PITX[c]&&PITX[c].isNew)await db.collection('pos_itemcost').doc(c).delete().catch(()=>{})}
+  await auditCfg('item_delete',{by:auth.currentUser.email,codes});$('itMsg').innerHTML='<span class="chip">'+codes.length+' устгалаа</span>'};
 /* -- шошго -- */
 function lblAdd(x,q){const e=LBL.find(l=>l.code===x.code);if(e)e.q+=q;else LBL.push({code:x.code,name:x.name,model:x.model||'',size:x.size||'',base:x.base,price:x.price,q});drawLbl()}
 function drawLbl(){$('lbCnt').textContent=LBL.reduce((a,l)=>a+l.q,0);
