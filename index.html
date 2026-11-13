@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.8">
+<meta name="vivi-ver" content="5.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -379,6 +379,8 @@ function cloudStatus(){
   if(!ok)t+=offlineNote();
   $('tSync').textContent=t;$('tSync').className='tag'+(ok?' ok':'');
   $('lCloud').textContent=fb.ready?(fb.user?'Үүлэнд холбогдсон: '+(fb.user.email||''):'Үүлэнд холбоогүй'):'Үүлгүй горим'+(fb.err?' ('+fb.err+')':'');
+  // буруу бүртгэл (жишээ нь kasa-online@): дүрэм зөвшөөрөхгүй тул ажилтан, урамшуулал, бараа ачаалагдахгүй — тодорхой анхааруулна
+  if(fb.ready&&fb.user&&!accStore(fb.user.email))$('lCloud').innerHTML='<span style="color:var(--red);font-weight:700">⚠ Буруу бүртгэл: '+esc(fb.user.email||'')+'</span><br><span style="color:var(--red)">Кассын бүртгэл яг kasa-fc@, kasa-dr@, kasa-ns@, kasa-on@, kasa-yv@ байх ёстой. Ажилтан, урамшуулал энэ бүртгэлээр ачаалагдахгүй. «Салгах» дараад зөв бүртгэлээр холбоно уу.</span>';
   $('lCon').classList.toggle('hide',!fb.ready);$('lCon').textContent=fb.user?'Салгах':'Үүлэнд холбох';
 }
 async function push(col,id,obj){
