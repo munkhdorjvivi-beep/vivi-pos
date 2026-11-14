@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.5">
+<meta name="vivi-ver" content="8.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1371,15 +1371,21 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-nchk]');if
 /* ==== 📋 Тооллогын даалгавар: pos_counts/{uid} {store, codes:[[код,нэр,хэмжээ]], status open→counted→applied|cancelled, counts:[[код,тоо]]} ==== */
 let CNTS=[];const TILL_LOC=['FC','DR','NS','YV'];
 function watchCnts(){db.collection('pos_counts').orderBy('created','desc').limit(200).onSnapshot(s=>{CNTS=s.docs.map(d=>d.data());drawCnts()},()=>{})}
-const groupOf=code=>{const it=itRow(code)||{},m=(it.model||'').trim();let L=[];
-  if(m&&PCAT)L=PCAT.filter(r=>(r[7]||'').trim()===m).map(r=>r[0]);
-  if(!L.length){const nb=(it.name||'').replace(/size[-\s]*\S+.*$/i,'').trim();if(nb.length>6&&PCAT)L=PCAT.filter(r=>(r[2]||'').startsWith(nb)).map(r=>r[0])}
+/* Загварын түлхүүр: (1) каталогийн «модель»; (2) LPP нэр «SINSAY 5485C …» → брэнд + артикул; (3) нэрээс хэмжээ/size-ийг хассан хэсэг.
+   Ингэснээр ижил загварын бүх хэмжээ (өнгө) нэг бүлэгт орно. */
+const SZ_T=/\s+(\d{2,3}(\/\d{2,3})?|\d?X{0,3}[SML]|\dXL|X{1,3}L|ONE|\d{1,2}Y|\d{2}-\d{2}|00X)$/i;
+function modelOf(code,it){it=it||itRow(code)||{};const m=(it.model||'').trim();if(m)return {k:'M:'+m.toLowerCase(),label:m};
+  const nm=(it.name||'').trim(),l=/^(sinsay|reserved|cropp|house|mohito)\s+(\S+)/i.exec(nm);if(l)return {k:'L:'+l[2].toUpperCase(),label:l[1].toUpperCase()+' '+l[2].toUpperCase()};
+  let b=nm.replace(/\s+size\b.*$/i,'').replace(/\bsize[-\s]*\S+.*$/i,'').trim();for(let i=0;i<2;i++)b=b.replace(SZ_T,'').trim();
+  return b.length>=8?{k:'N:'+b.toLowerCase(),label:b}:{k:'C:'+code,label:code}}
+let MK=null;const mkey=c=>{if(!MK&&PCAT){MK=new Map();PCAT.forEach(r=>MK.set(r[0],modelOf(r[0],{name:r[2],model:r[7]||''}).k))}const x=PITX[c];return x&&x.model?modelOf(c,x).k:(MK&&MK.get(c))||modelOf(c).k};
+const groupOf=code=>{const k=mkey(code);let L=PCAT?PCAT.filter(r=>mkey(r[0])===k).map(r=>r[0]):[];
   if(!L.includes(code))L.unshift(code);return L.slice(0,80)};
-document.addEventListener('click',e=>{const b=e.target.closest('[data-ncnt]');if(!b)return;const [loc,...cc]=b.dataset.ncnt.split('_');cntNew(loc,cc.join('_'))});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ncnt]');if(!b)return;const [loc,...cc]=b.dataset.ncnt.split('_');cntNew.q=null;cntNew(loc,cc.join('_'))});
 // байршлын одоогийн үлдэгдлийн мөрүүд (тооцоолсон бол дахин ашиглана)
 async function locRows(loc){if(negSrc&&negSrc.R[loc])return negSrc.R[loc].rows;const od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)return [];
   const O=od.data(),SD=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(d=>d.data());return stockCalc(loc,O,SD).rows}
-async function cntNew(loc,code){if(!TILL_LOC.includes(loc))return alert((LOC[loc]||loc)+'-д касс байхгүй — «Тооллого» Excel-ээр тоолно уу.');
+async function cntNew(loc,code){const q0=cntNew.q;if(!TILL_LOC.includes(loc))return alert((LOC[loc]||loc)+'-д касс байхгүй — «Тооллого» Excel-ээр тоолно уу.');
   if(CNTS.some(t=>t.store===loc&&t.status==='open'&&JSON.parse(t.codes).some(x=>x[0]===code)))return alert('Энэ барааны тооллого аль хэдийн кассад илгээгдсэн (хүлээгдэж байна).');
   await loadPCat().catch(()=>{});const G=groupOf(code),it=itRow(code)||{},rows=await locRows(loc).catch(()=>[]),nowOf=c=>(rows.find(x=>x.code===c)||{}).now||0;
   $('pbox').innerHTML='<h2 style="margin:0 0 6px">📋 Тоолуулах — '+esc(LOC[loc])+'</h2><div class="small" style="margin-bottom:6px">'+esc(it.model||it.name||code)+' загварын кодууд. Тоолуулах кодоо сонгоно (анхдагч: бүгд). Касс системийн тоог харахгүй (сохор тооллого).</div>'+
@@ -1388,27 +1394,28 @@ async function cntNew(loc,code){if(!TILL_LOC.includes(loc))return alert((LOC[loc
   $('pm').classList.remove('hide');$('cg_x').onclick=pClose;
   $('cg_ok').onclick=async()=>{const sel=[...document.querySelectorAll('.cg:checked')].map(i=>i.value);if(!sel.length)return $('cg_m').textContent='Код сонгоно уу';
     const uid='cnt_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),at=new Date().toISOString();
-    try{await db.collection('pos_counts').doc(uid).set({uid,store:loc,title:(it.model||'')+' '+((it.name||'').replace(/size[-\s]*\S+.*$/i,'').trim()||code),negCode:code,codes:JSON.stringify(sel.map(c=>{const j=itRow(c)||{};return [c,j.name||'',j.size||'']})),note:$('cg_n').value.trim(),status:'open',created:at,createdBy:auth.currentUser.email||''});
+    try{await db.collection('pos_counts').doc(uid).set({uid,store:loc,title:modelOf(code).label,model:modelOf(code).label,q:q0||code,kind:q0?'manual':'neg',negCode:code,codes:JSON.stringify(sel.map(c=>{const j=itRow(c)||{};return [c,j.name||'',j.size||'']})),note:$('cg_n').value.trim(),status:'open',created:at,createdBy:auth.currentUser.email||''});
       await auditCfg('count_task_new',{by:auth.currentUser.email,uid,store:loc,codes:sel.length});pClose()}catch(er){$('cg_m').textContent='Алдаа: '+(er.code||er.message||er)}}}
 const cntTaskDoc=(loc,code,codes,note,kind)=>{const it=itRow(code)||{},uid='cnt_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  return {uid,store:loc,title:(it.model||'')+' '+((it.name||'').replace(/size[-\s]*\S+.*$/i,'').trim()||code),negCode:code,codes:JSON.stringify(codes.map(c=>{const j=itRow(c)||{};return [c,j.name||'',j.size||'']})),note:note||'',kind:kind||'manual',status:'open',created:new Date().toISOString(),createdBy:auth.currentUser.email||''}};
+  return {uid,store:loc,title:modelOf(code).label,model:modelOf(code).label,q:code,negCode:code,codes:JSON.stringify(codes.map(c=>{const j=itRow(c)||{};return [c,j.name||'',j.size||'']})),note:note||'',kind:kind||'manual',status:'open',created:new Date().toISOString(),createdBy:auth.currentUser.email||''}};
 function cnFill(){const o=TILL_LOC.map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('');['cnSt','cnRSt'].forEach(id=>{if($(id)&&!$(id).options.length)$(id).innerHTML=o})}
 $('cnGo').onclick=async()=>{await loadPCat().catch(()=>{});const q=$('cnQ').value.trim();if(!q)return $('cnMsg').textContent='Код, баркод эсвэл модель оруулна уу';
-  let code=null;if(PCATi&&PCATi.has(q))code=PCAT[PCATi.get(q)][0];else if(PCAT){const r=PCAT.find(r=>(r[7]||'').trim().toLowerCase()===q.toLowerCase());if(r)code=r[0]}
-  if(!code)return $('cnMsg').innerHTML='<span class="hot">'+esc(q)+' олдсонгүй</span>';$('cnMsg').textContent='';cntNew($('cnSt').value,code)};
+  let code=null;if(PCATi&&PCATi.has(q))code=PCAT[PCATi.get(q)][0];else if(PCAT){const ql=q.toLowerCase(),r=PCAT.find(r=>(r[7]||'').trim().toLowerCase()===ql)||PCAT.find(r=>{const m=modelOf(r[0],{name:r[2],model:r[7]||''});return m.label.toLowerCase()===ql||m.k==='L:'+q.toUpperCase()})||PCAT.find(r=>(r[2]||'').toLowerCase().includes(' '+ql+' '));if(r)code=r[0]}
+  if(!code)return $('cnMsg').innerHTML='<span class="hot">'+esc(q)+' олдсонгүй</span>';$('cnMsg').textContent='';cntNew.q=q;await cntNew($('cnSt').value,code);cntNew.q=null};
 $('cnQ').onkeydown=e=>{if(e.key==='Enter')$('cnGo').click()};
 $('cnRGo').onclick=async()=>{const loc=$('cnRSt').value,n=Math.max(1,Math.min(30,Math.round(num0($('cnRN').value)||5))),m=$('cnMsg');m.textContent='Сонгож байна…';
   try{await loadPCat();const rows=await locRows(loc),busy=new Set();CNTS.filter(t=>t.store===loc&&t.status==='open').forEach(t=>JSON.parse(t.codes).forEach(x=>busy.add(x[0])));
-    const byM=new Map();rows.filter(r=>r.now>0&&!busy.has(r.code)).forEach(r=>{const md=((itRow(r.code)||{}).model||'').trim();if(md&&!byM.has(md))byM.set(md,r.code)});
-    const M=[...byM.values()].sort(()=>Math.random()-.5).slice(0,n);if(!M.length)return m.innerHTML='<span class="hot">Тоолуулах загвар олдсонгүй (үлдэгдэл/модель алга)</span>';
+    const byM=new Map(),bk=new Set([...busy].map(mkey));rows.filter(r=>r.now>0&&!busy.has(r.code)).forEach(r=>{const md=mkey(r.code);if(md.startsWith('C:')||bk.has(md))return;if(!byM.has(md))byM.set(md,r.code)});
+    const M=[...byM.values()].sort(()=>Math.random()-.5).slice(0,n);if(!M.length)return m.innerHTML='<span class="hot">Тоолуулах загвар олдсонгүй</span>';if(M.length<n)m.textContent=M.length+' загвар л олдлоо';
     if(!confirm((LOC[loc]||loc)+': '+M.length+' санамсаргүй загварыг кассад тоолуулах уу?'))return m.textContent='';
     for(const c of M){const d=cntTaskDoc(loc,c,groupOf(c),'Санамсаргүй тооллого','cycle');await db.collection('pos_counts').doc(d.uid).set(d)}
     await auditCfg('count_task_cycle',{by:auth.currentUser.email,store:loc,n:M.length});m.innerHTML='<span class="chip">'+M.length+' даалгавар илгээлээ</span>'}
   catch(er){m.innerHTML='<span class="hot">Алдаа: '+esc(er.code||er.message||er)+'</span>'}};
 function drawCnts(){if(!$('cntTasks'))return;cnFill();drawAcct();stkBan();const SN={open:['илгээсэн — касс тоолж байна','b'],counted:['✓ тоолсон — үр дүн харах',''],applied:['зөрүү засагдсан',''],cancelled:['цуцалсан','r']};
   if(!CNTS.length){$('cntTasks').innerHTML='<div class="small">Даалгавар алга</div>';return}
-  $('cntTasks').innerHTML='<table class="xt" data-xe="1"><thead><tr><th>Илгээсэн</th><th>Дэлгүүр</th><th>Загвар</th><th class="n">Код</th><th>Төлөв</th><th>Тоолсон</th><th></th></tr></thead><tbody>'+CNTS.map(t=>{const st=SN[t.status]||[t.status,''];
-    return '<tr><td class="small">'+esc(lt(t.created))+'</td><td>'+esc(LOC[t.store]||t.store)+'</td><td>'+esc(t.title||'')+'</td><td class="n">'+JSON.parse(t.codes||'[]').length+'</td><td><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="small">'+esc((t.countedBy||'')+(t.countedAt?' · '+lt(t.countedAt):''))+'</td><td>'+(t.status==='counted'||t.status==='applied'?'<button class="btn'+(t.status==='counted'?' pri':'')+'" data-cres="'+esc(t.uid)+'" style="min-height:28px;padding:1px 10px">Үр дүн</button>':'')+(t.status==='open'?'<button class="btn" data-ccan="'+esc(t.uid)+'" style="min-height:28px;padding:1px 10px">Цуцлах</button>':'')+'</td></tr>'}).join('')+'</tbody></table>'}
+  const nm1=t=>{const c=JSON.parse(t.codes||'[]');const x=c.find(y=>y[0]===t.negCode)||c[0]||[];return ((x[1]||'').replace(/\s+size\b.*$/i,'').replace(/\bsize[-\s]*\S+.*$/i,'').trim())};
+  $('cntTasks').innerHTML='<table class="xt" data-xe="1" style="border-spacing:0"><thead><tr><th style="padding:6px 8px">Илгээсэн</th><th style="padding:6px 8px">Дэлгүүр</th><th style="padding:6px 8px">Модель / оруулсан код</th><th style="padding:6px 8px">Барааны нэр</th><th class="n" style="padding:6px 8px">Кодын тоо</th><th style="padding:6px 8px">Төрөл</th><th style="padding:6px 8px">Төлөв</th><th style="padding:6px 8px">Тоолсон</th><th></th></tr></thead><tbody>'+CNTS.map(t=>{const st=SN[t.status]||[t.status,''];
+    return '<tr><td class="small">'+esc(lt(t.created))+'</td><td>'+esc(LOC[t.store]||t.store)+'</td><td><b>'+esc(t.model||t.title||'')+'</b>'+(t.q&&t.q!==t.model?'<div class="small">'+esc(t.q)+'</div>':'')+'</td><td class="small">'+esc(nm1(t))+'</td><td class="n">'+JSON.parse(t.codes||'[]').length+'</td><td class="small">'+({cycle:'санамсаргүй',manual:'гараар',neg:'хасах үлдэгдэл'}[t.kind]||'')+'</td><td><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="small">'+esc((t.countedBy||'')+(t.countedAt?' · '+lt(t.countedAt):''))+'</td><td>'+(t.status==='counted'||t.status==='applied'?'<button class="btn'+(t.status==='counted'?' pri':'')+'" data-cres="'+esc(t.uid)+'" style="min-height:28px;padding:1px 10px">Үр дүн</button>':'')+(t.status==='open'?'<button class="btn" data-ccan="'+esc(t.uid)+'" style="min-height:28px;padding:1px 10px">Цуцлах</button>':'')+'</td></tr>'}).join('')+'</tbody></table>'}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-ccan]');if(!b)return;if(!confirm('Даалгаврыг цуцлах уу? (касс дээрээс алга болно)'))return;await db.collection('pos_counts').doc(b.dataset.ccan).update({status:'cancelled',cancelledBy:auth.currentUser.email||'',cancelledAt:new Date().toISOString()})});
 // үр дүн: тоолсон мөчийн системийн үлдэгдэлтэй харьцуулж, шалтгааныг тайлбарлана
 async function cntResult(t){await loadPCat().catch(()=>{});const loc=t.store,od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)return alert(LOC[loc]+': эхний үлдэгдэл алга');
@@ -1608,7 +1615,7 @@ function newCodes(n){const base=Math.floor(Date.now()/10)%1e10,out=[];for(let k=
 async function loadPCat(){if(PCAT)return;$('itMsg').textContent='Барааны жагсаалт ачаалж байна…';
   const m=await db.collection('pos_catalog').doc('meta').get();if(!m.exists)throw new Error('Үүлэнд барааны жагсаалт алга');
   const rows=[];for(const c of m.data().chunks){const d=await db.collection('pos_catalog').doc(c.id).get();if(d.exists)rows.push(...JSON.parse(d.data().d))}
-  PCAT=rows;PCATi=new Map();rows.forEach((r,i)=>{PCATi.set(r[0],i);if(r[1])PCATi.set(String(r[1]),i)});$('itMsg').textContent='Барааны жагсаалт: '+rows.length.toLocaleString('en-US')+' бараа'}
+  PCAT=rows;MK=null;PCATi=new Map();rows.forEach((r,i)=>{PCATi.set(r[0],i);if(r[1])PCATi.set(String(r[1]),i)});$('itMsg').textContent='Барааны жагсаалт: '+rows.length.toLocaleString('en-US')+' бараа'}
 const itRow=code=>{const x=PITX[code];if(x)return x;const i=PCATi&&PCATi.get(code);if(i==null)return null;const r=PCAT[i];return {code:r[0],bc:r[1]||'',name:r[2],base:r[3],price:r[4],sup:r[5]||'',grp:r[6]||'',model:r[7]||'',size:r[8]||''}};
 async function itSave(x,note){const by=auth.currentUser.email||'',at=new Date().toISOString(),old=PITX[x.code],hist=(old&&old.hist||[]).concat([{at,by,base:x.base,price:x.price,note}]).slice(-30);
   const doc={code:x.code,bc:x.bc||'',name:x.name,model:x.model||'',size:x.size||'',sup:x.sup||'',grp:x.grp||'',base:Math.round(x.base),price:Math.round(x.price),active:x.active!==false,isNew:old?!!old.isNew:!!x.isNew,created:old&&old.created||at,updated:at,by,hist};
