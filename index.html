@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="5.9">
+<meta name="vivi-ver" content="6.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -172,7 +172,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
     </div></div>
     <div class="grp"><h3>Ээлж</h3><div class="g">
       <button id="bHist">Борлуулалтын түүх <kbd>F10</kbd></button><button id="bStk">Үлдэгдэл <kbd>F2</kbd></button>
-      <button id="bDel" class="hide">Хүргэлтийн төлбөр нэмэх</button><button id="bMov">Бараа хөдөлгөөн <span id="movCnt2"></span></button><button id="bCash">Бэлэн мөнгө</button><button id="bRep">Тайлан</button><button id="bClose">Ээлж хаах</button>
+      <button id="bDlv" class="hide">🚚 Хүргэлтийн төлбөр</button><button id="bMov">Бараа хөдөлгөөн <span id="movCnt2"></span></button><button id="bCash">Бэлэн мөнгө</button><button id="bRep">Тайлан</button><button id="bClose">Ээлж хаах</button>
       <button id="bSet">Тохиргоо</button><button id="bOut">Гарах</button><button id="bCust" style="grid-column:1/3">Харилцагчийн дэлгэц нээх</button>
     </div></div>
   </div>
@@ -222,6 +222,10 @@ if(!promos){promos=[{id:'p1',name:'LPP 1+1',type:'pair',pct:0,samePct:30,all:fal
 const APP_VER=document.querySelector('meta[name=vivi-ver]').content;document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
 let device=store.get('device',{store:'',reg:''});
 let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
+// Хүргэлтийн бүс, үнийг самбараас (Касс, ажилтан → Хүргэлтийн төлбөр) өөрчилнө
+const DLV_DEF=[{n:'А бүс',p:8000},{n:'Б бүс',p:10000},{n:'Алслагдсан бүс',p:12000}];
+const dlvZones=()=>(Array.isArray(cfg.delivery)&&cfg.delivery.length?cfg.delivery:DLV_DEF).filter(z=>z&&z.n&&z.p>0);
+const dlvOn=()=>!!S.user&&(Array.isArray(cfg.dlvStores)?cfg.dlvStores:['ON']).includes(S.user.store);
 const cfgList=k=>k==='promos'?promos:k==='users'?users:[cfg];
 /* Дэлгүүрийн хамгаалалт: касс бүр нэг дэлгүүрийн үүлийн бүртгэлээр (kasa-ns@…, kasa-fc@…) холбогдоно.
    Бүртгэл нь дэлгүүрийг тогтоох тул кассчин өөр дэлгүүрт нэвтэрч, өөр дэлгүүрийн нэрээр борлуулалт бичих боломжгүй (Firestore дүрэм ч шалгана). */
@@ -459,7 +463,7 @@ function computePromo(cart,ps){
       else if(p.type==='plist'){const v=plPrice(p,l);u=Math.min(l.price,Math.round(v));tx=fmt(v)+' ₮'}
       if(u!=null&&u<l.price&&(!best||u<best.u))best={u,p,tx}});
     if(best){l.pct=best.p.type==='pct'?best.p.pct:1;l.pu=best.u;l.ptxt=best.tx;l.promoName=best.p.name}
-    if(!l.pct&&l.d5){l.pct=5;l.pu=Math.round(l.price*0.95);l.ptxt='−5%';l.promoName='Кассын хөнгөлөлт'}
+    if(!l.pct&&l.d5&&!l.noPromo){l.pct=5;l.pu=Math.round(l.price*0.95);l.ptxt='−5%';l.promoName='Кассын хөнгөлөлт'}
   });
   Object.values(byPair).forEach(({p,units})=>{
     units.sort((a,b)=>b.price-a.price);const left=[];
@@ -549,7 +553,7 @@ function openSearch(q){
   if(q)run();
 }
 /* ---------- line actions ---------- */
-function chgQty(d){const l=S.cart[S.sel];if(!l)return;if(l.qty+d<1)return delLine();l.qty+=d;if(d<0)log('qty_minus',{code:l.code,name:l.name,price:l.price,parked:!!S.fromPark});render()}
+function chgQty(d){const l=S.cart[S.sel];if(!l)return;if(l.code==='DELIVERY'&&d>0)return flash('Хүргэлт нэг баримтад нэг удаа');if(l.qty+d<1)return delLine();l.qty+=d;if(d<0)log('qty_minus',{code:l.code,name:l.name,price:l.price,parked:!!S.fromPark});render()}
 function delLine(){const l=S.cart[S.sel];if(!l)return;log('line_delete',{code:l.code,name:l.name,qty:l.qty,price:l.price,parked:!!S.fromPark});S.cart.splice(S.sel,1);S.sel=Math.min(S.sel,S.cart.length-1);render()}
 function disc5(){
   if(!S.cart.length)return flash('Эхлээд бараа уншуулна уу');
@@ -866,10 +870,15 @@ function scanBox(st,exp){
       $('msm').textContent=(i==null?'⚠ Танигдаагүй код: ':'')+nm+' +'+n;$('msm').style.color=i==null?'var(--red)':'';draw()};
     draw()}}
 }
-function addDelivery(){if(S.exch)return;
-  openModal('<h2>Хүргэлтийн төлбөр</h2><label>Дүн (₮)</label><input id="dlA" inputmode="numeric" autofocus value="5000"><div class="rowbtn"><button id="dlC">Болих</button><button class="pri" id="dlO">Нэмэх</button></div>',true);
-  $('dlC').onclick=closeModal;$('dlO').onclick=()=>{const a=Math.round(num($('dlA').value));if(!(a>0))return;const ex=S.cart.find(l=>l.code==='DELIVERY');
-    if(ex){ex.price=ex.base=a}else S.cart.push({code:'DELIVERY',bc:'',name:'Хүргэлтийн төлбөр',base:a,price:a,sup:'',grp:'Хүргэлт',model:'',size:'',qty:1,disc:0,d5:false,noPromo:true});S.sel=S.cart.length-1;closeModal();render()}}
+function addDelivery(){if(S.exch)return;const Z=dlvZones(),ex=S.cart.find(l=>l.code==='DELIVERY');
+  openModal('<h2>🚚 Хүргэлтийн төлбөр</h2><div class="small" style="margin-bottom:8px">Хүргэлтийн бүсийг сонгоно — баримтад тусдаа мөрөөр орно (урамшуулал хамаарахгүй).</div><div style="display:grid;gap:8px">'+
+    Z.map((z,i)=>'<button class="blue" data-z="'+i+'" style="display:flex;justify-content:space-between;align-items:center;font-size:17px;padding:14px 16px'+(ex&&ex.zone===z.n?';outline:3px solid var(--green)':'')+'"><span>'+esc(z.n)+'</span><span style="color:#fff;font-weight:800;font-size:18px">'+fmt(z.p)+' ₮</span></button>').join('')+'</div>'+
+    '<div class="rowbtn">'+(ex?'<button class="warn" id="dlR">Хүргэлт хасах</button>':'')+'<button id="dlC">Болих</button></div>',true);
+  $('dlC').onclick=closeModal;if($('dlR'))$('dlR').onclick=()=>{S.cart.splice(S.cart.indexOf(ex),1);S.sel=Math.min(S.sel,S.cart.length-1);closeModal();render()};
+  document.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{const z=Z[+b.dataset.z],nm='Хүргэлт · '+z.n;
+    if(ex){Object.assign(ex,{price:z.p,base:z.p,name:nm,zone:z.n,qty:1,disc:0});S.sel=S.cart.indexOf(ex)}
+    else{S.cart.push({code:'DELIVERY',bc:'',name:nm,zone:z.n,base:z.p,price:z.p,sup:'',grp:'Хүргэлт',model:'',size:'',qty:1,disc:0,d5:false,noPromo:true});S.sel=S.cart.length-1}
+    closeModal();render()})}
 function openMov(tab){
   if(!S.user)return;if(movListen.on&&movListen.st!==S.user.store)movStop();movListen();tab=tab||'in';const own=S.user.store;
   const tabs=[['in','Ирсэн — хүлээн авах'],['send','Шилжүүлэг илгээх'],['sup','Нийлүүлэгчээс орлого'],['hist','Түүх']];
@@ -1178,7 +1187,7 @@ const H={rows:[],src:'',range:'',all:false,by:''};
 const PERM_DEF={cashier:{hist:'own',xl:true,stock:true},manager:{hist:'store',xl:true,stock:true},admin:{hist:'store',xl:true,stock:true}};
 function perm(){const u=S.user&&users.find(x=>x.id===S.user.uid);return Object.assign({},PERM_DEF[(u||S.user||{}).role]||PERM_DEF.cashier,u&&u.perm||{})}
 function mine(s){return s.cashierId?s.cashierId===S.user.uid:s.cashier===S.user.name}
-function permButtons(){if(!S.user)return;$('bDel').classList.toggle('hide',S.user.store!=='ON');const p=perm();$('bHist').classList.toggle('hide',p.hist==='none');$('bStk').classList.toggle('hide',!p.stock)}
+function permButtons(){if(!S.user)return;$('bDlv').classList.toggle('hide',!dlvOn());const p=perm();$('bHist').classList.toggle('hide',p.hist==='none');$('bStk').classList.toggle('hide',!p.stock)}
 const ymd=d=>d.toLocaleDateString('sv-SE');
 async function loadXlsx(){if(!window.XLSX)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('Excel сан ачаалагдсангүй (интернэт хэрэгтэй)'));document.head.appendChild(s)})}
 function openHist(keep){
@@ -1428,7 +1437,7 @@ function logout(){if(S.cart.length)return flash('Эхлээд баримтаа �
 $('scan').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();onScan()}};
 $('bSearch').onclick=()=>openSearch($('scan').value.trim());
 $('bPay').onclick=openPay;$('bPlus').onclick=()=>chgQty(1);$('bMinus').onclick=()=>chgQty(-1);$('bDel').onclick=delLine;
-$('bHist').onclick=openHist;$('bDel').onclick=addDelivery;$('bMov').onclick=()=>openMov();$('bCash').onclick=openCash;$('bExch').onclick=openExch;$('bPfix').onclick=openPayFix;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
+$('bHist').onclick=openHist;$('bDlv').onclick=addDelivery;$('bMov').onclick=()=>openMov();$('bCash').onclick=openCash;$('bExch').onclick=openExch;$('bPfix').onclick=openPayFix;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
 document.addEventListener('keydown',e=>{
   if($('sale').classList.contains('hide'))return;
   const m=modalOpen(),pay=m&&$('psave');

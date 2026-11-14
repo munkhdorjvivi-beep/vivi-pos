@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.9">
+<meta name="vivi-ver" content="8.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -315,6 +315,11 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <label class="inl" style="margin-top:10px"><input type="checkbox" id="r_pin"> Энгийн буцаалтад ч менежерийн ПИН шаардах</label>
     <div class="small" style="margin-top:6px">Хугацаандаа, босгоос бага буцаалтыг кассчин өөрөө хийнэ. Бусад нь энэ самбарт хүсэлтээр ирнэ.</div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button id="r_ok" class="btn pri">Хадгалах</button><span id="r_msg" class="small"></span></div></div>
+  <div class="card"><h2>🚚 Хүргэлтийн төлбөр</h2>
+    <div class="small" style="margin:-4px 0 8px">Кассчин «Хүргэлтийн төлбөр» товчоор бүсийг сонгоход баримтад тусдаа мөр («Хүргэлт · А бүс») болж орно. Урамшуулал, 5% хөнгөлөлт хамаарахгүй, үлдэгдэлд нөлөөлөхгүй. Бүсийн нэр, үнийг энд өөрчилнө; хоосон мөр хасагдана.</div>
+    <div id="dlRows"></div><button id="dlAdd" class="btn" style="margin-top:6px">+ Бүс нэмэх</button>
+    <div style="margin-top:10px;font-weight:650">Аль дэлгүүрийн кассад гарах вэ</div><div id="dlSt" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:4px"></div>
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button id="dlOk" class="btn pri">Хадгалах</button><span id="dlMsg" class="small"></span></div></div>
   </div>
 </section>
 <section class="pnl" data-panel="users" hidden>
@@ -950,10 +955,22 @@ function editUser(i){
     catch(e){$('u_ok').disabled=false;err('Хадгалсангүй: '+(e.code||e))}
   };
 }
-function watchCfg(){db.collection('pos_config').doc('settings').onSnapshot(d=>{if(d.exists&&Array.isArray(d.data().list)&&d.data().list[0])rcfg=Object.assign(rcfg,d.data().list[0]);$('r_days').value=rcfg.returnDays;$('r_lim').value=rcfg.returnLimit;$('r_pin').checked=!!rcfg.returnPin},()=>{})}
+function watchCfg(){db.collection('pos_config').doc('settings').onSnapshot(d=>{if(d.exists&&Array.isArray(d.data().list)&&d.data().list[0])rcfg=Object.assign(rcfg,d.data().list[0]);$('r_days').value=rcfg.returnDays;$('r_lim').value=rcfg.returnLimit;$('r_pin').checked=!!rcfg.returnPin;dlDraw()},()=>{})}
+/* ---- Хүргэлтийн бүс, үнэ: pos_config/settings.list[0].delivery=[{n,p}], dlvStores=['ON',…] ---- */
+const DLV_DEF=[{n:'А бүс',p:8000},{n:'Б бүс',p:10000},{n:'Алслагдсан бүс',p:12000}];
+function dlDraw(rows){const Z=rows||(Array.isArray(rcfg.delivery)&&rcfg.delivery.length?rcfg.delivery:DLV_DEF),S=Array.isArray(rcfg.dlvStores)?rcfg.dlvStores:['ON'];
+  $('dlRows').innerHTML=Z.map(z=>'<div class="dlr" style="display:grid;grid-template-columns:1fr 160px;gap:8px;margin-bottom:6px"><input class="inp dn" placeholder="Бүсийн нэр" value="'+esc(z.n||'')+'"><input class="inp dp" inputmode="numeric" placeholder="Үнэ ₮" value="'+(z.p||'')+'"></div>').join('');
+  $('dlSt').innerHTML=Object.entries(STN).filter(([k])=>k!=='AG'&&k!=='DF').map(([k,v])=>'<label class="inl"><input type="checkbox" value="'+k+'" '+(S.includes(k)?'checked':'')+'> '+esc(v)+'</label>').join('')}
+const dlRead=()=>[...document.querySelectorAll('#dlRows .dlr')].map(r=>({n:r.querySelector('.dn').value.trim(),p:Math.round(num0(r.querySelector('.dp').value))}));
+$('dlAdd').onclick=()=>dlDraw(dlRead().concat([{n:'',p:''}]));
+$('dlOk').onclick=async()=>{const m=$('dlMsg'),Z=dlRead().filter(z=>z.n||z.p),st=[...document.querySelectorAll('#dlSt input:checked')].map(i=>i.value);
+  if(Z.some(z=>!z.n||!(z.p>0)))return m.innerHTML='<span class="hot">Бүс бүрт нэр, үнэ заавал</span>';if(!Z.length)return m.innerHTML='<span class="hot">Дор хаяж нэг бүс</span>';
+  const before={...rcfg},after={...rcfg,delivery:Z,dlvStores:st};
+  try{await db.collection('pos_config').doc('settings').set({list:[after],updated:new Date().toISOString(),by:auth.currentUser.email||''});await auditCfg('delivery_save',{by:auth.currentUser.email,before:{delivery:before.delivery,dlvStores:before.dlvStores},after:{delivery:Z,dlvStores:st}});m.innerHTML='<span class="chip">Хадгаллаа</span> кассууд автоматаар авна'}
+  catch(e){m.innerHTML='<span class="hot">Хадгалсангүй: '+esc(e.code||e)+'</span>'}};
 $('r_ok').onclick=async()=>{const d=Number($('r_days').value),l=Number($('r_lim').value),m=$('r_msg');
   if(!(d>=0&&d<=365))return m.innerHTML='<span class="hot">Хоног 0–365 байна</span>';if(!(l>=0))return m.innerHTML='<span class="hot">Босго 0-ээс бага байж болохгүй</span>';
-  const before={...rcfg},after={returnDays:Math.floor(d),returnLimit:Math.round(l),returnPin:$('r_pin').checked};
+  const before={...rcfg},after={...rcfg,returnDays:Math.floor(d),returnLimit:Math.round(l),returnPin:$('r_pin').checked};
   try{await db.collection('pos_config').doc('settings').set({list:[after],updated:new Date().toISOString(),by:auth.currentUser.email||''});await auditCfg('settings_save',{by:auth.currentUser.email,before,after});m.innerHTML='<span class="chip">Хадгаллаа</span>'}
   catch(e){m.innerHTML='<span class="hot">Хадгалсангүй: '+esc(e.code||e)+'</span>'}};
 /* ---- баримт устгах: эхлээд pos_sales_deleted архивт, дараа нь pos_sales-аас (дүрэм энэ дарааллыг шаардана) ---- */
@@ -1167,7 +1184,7 @@ function stockCalc(st,O,saleDocs){
   movDocs.filter(m=>m.at>=asOf).forEach(m=>{if(m.type==='adj'){if(m.to===st)JSON.parse(m.lines).forEach(x=>row(x[0],x[2]).adj+=x[1]);return}
     if(m.from===st)JSON.parse(m.lines).forEach(x=>row(x[0],x[2]).out+=x[1]);
     if(m.to===st&&m.status!=='sent')JSON.parse(m.recvLines||m.lines).forEach(x=>row(x[0],x[2]).inn+=x[1])});
-  let ns=0;saleDocs.filter(s=>(s.stockFrom||STOCK_SRC[s.store]||s.store)===st&&s.iso>=asOf).forEach(s=>{ns++;(s.lines||[]).forEach(l=>{const r=row(l.code,l.name);if(l.qty>0)r.sold+=l.qty;else r.ret+=-l.qty})});
+  let ns=0;saleDocs.filter(s=>(s.stockFrom||STOCK_SRC[s.store]||s.store)===st&&s.iso>=asOf).forEach(s=>{ns++;(s.lines||[]).forEach(l=>{if(l.code==='DELIVERY')return;const r=row(l.code,l.name);if(l.qty>0)r.sold+=l.qty;else r.ret+=-l.qty})});
   return {ns,rows:[...R.values()].map(r=>({...r,now:r.open+r.inn-r.out-r.sold+r.ret+r.adj}))};
 }
 // Үлдэгдлийн тайлан: нэг байршил (хөдөлгөөнөөр задалсан) эсвэл «Бүх байршил» (байршил бүрээр багана). Өртгийн болон кассын үнийн дүнтэй.
