@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.1">
+<meta name="vivi-ver" content="8.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -188,6 +188,11 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div id="sMsg" class="small" style="margin-top:6px"></div>
     <div class="kpi" id="sKpi" style="margin-top:8px"></div>
     <div class="scroll" id="sTbl" style="max-height:520px;overflow:auto;margin-top:8px"></div>
+    <div id="negCard" class="hide" style="margin-top:14px;padding:12px;border:2px solid var(--red);border-radius:12px;background:#fff8f8">
+      <h2 style="margin:0 0 4px">⚠ Хасах үлдэгдэл — шалгах</h2>
+      <div class="small" style="margin-bottom:8px">Үлдэгдэл хасах болсон бараа бүрийг <b>аль баримтаар, хэзээ, аль кассчин</b> зарсныг доор харуулна. Ихэвчлэн кассчин өөр хэмжээ/өнгийг уншуулснаас болдог — «Ижил загварын бусад хэмжээ» баганаас илүү гарсан байж магадгүй барааг харна. Шалгаад «Шалгасан» дарж тайлбар бичнэ (ж: «L-ийн оронд XL уншуулсан, тооллогоор засна»). Бодит үлдэгдлийг «Тооллого» алхмаар засна.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><select id="negF" class="inp" style="width:auto"><option value="">Бүгд</option><option value="open">Шалгаагүй</option><option value="done">Шалгасан</option></select><span id="negSum" class="small" style="flex:1"></span><button id="negXl" class="btn">⬇ Excel</button></div>
+      <div class="scroll" id="negTbl" style="max-height:520px;overflow:auto"></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>Кассууд:</b><button id="sPub" class="btn">Кассууд руу илгээх</button><span id="sPubM" class="small" style="flex:1"></span><span class="small">Кассчин «Үлдэгдэл (F2)» цонхонд бүх дэлгүүрийн үлдэгдлийг харна. 1 цагаас хуучин бол автоматаар шинэчилнэ.</span></div>
   </div>
 
@@ -439,7 +444,7 @@ function drawReqHist(){const k=$('rhK').value,L=allReqs.filter(r=>(!gSt||r.store
   $('cRqH').innerHTML=tbl(['Огноо','Төрөл','Дэлгүүр · кассчин','Баримт','Дүн','Юу өөрчлөгдөх / өөрчлөгдсөн','Төлөв','Шийдвэрлэсэн'],L.map(r=>{const st=stOf(r),kk=r.kind||'return';
     return '<tr><td class="small">'+lt(r.created)+'</td><td>'+RQK[kk]+(r.diffType?' <span class="small">'+esc(r.diffType)+'</span>':'')+'</td><td class="n small">'+esc(r.storeName)+' · '+esc(r.cashier)+'</td><td class="n small">'+esc(r.ref)+'</td><td class="n">'+(kk==='exchange'?'зөрүү '+money(r.diff):kk==='paychange'?money(r.total):money(-r.total))+'</td><td class="small" style="text-align:left;max-width:340px">'+chg(r)+'</td><td class="n"><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="n small">'+esc((r.decidedBy||'').split('@')[0])+(r.decidedAt?'<br>'+lt(r.decidedAt):'')+(r.note?'<br>'+esc(r.note):'')+'</td></tr>'}));}
 function listen(){
-  if(!reqOn){reqOn=true;watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchDevs();watchPart();watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
+  if(!reqOn){reqOn=true;watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchDevs();watchPart();watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(can('stock'))watchNchk();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
@@ -1211,18 +1216,20 @@ async function calcStock(){
   try{await loadPCat().catch(()=>{});const nmOf=c=>{const x=itRow(c);return x?x.name:''},cash=c=>{const x=itRow(c);return x?x.price:0};
     if(st==='ALL'){stockAllMode=true;const A=await stockAll();if(!A.SS.length){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">Эхний үлдэгдэл алга.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
       stockHead=['Код','Нэр',...A.SS.map(x=>LOC[x]),'Нийт','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
+      negSrc={sales:A.sales,R:A.R,O:A.O,locs:A.SS};
       stockRows=[...A.M.entries()].map(([c,v])=>{const t=v.reduce((a,b)=>a+b,0),k=costMap.get(c);return {code:c,name:nmOf(c),loc:v,now:t,cost:k==null?null:k,cash:cash(c)}});
       $('sMsg').textContent='Бүх байршил · '+A.SS.map(x=>LOC[x]+' ('+lt(A.O[x].asOf)+'-аас)').join(' · ')}
     else{stockAllMode=false;const od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл хадгалаагүй байна.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
-      const O=od.data(),asOf=O.asOf,snap=await db.collection('pos_sales').where('date','>=',sDay(asOf)).get(),C=stockCalc(st,O,snap.docs.map(d=>d.data()));
+      const O=od.data(),asOf=O.asOf,snap=await db.collection('pos_sales').where('date','>=',sDay(asOf)).get(),SD=snap.docs.map(d=>d.data()),C=stockCalc(st,O,SD);
+      negSrc={sales:SD,R:{[st]:C},O:{[st]:O},locs:[st]};
       stockHead=['Код','Нэр','Эхний','Орлого','Зарлага','Борлуулсан','Буцаалт','Тооллогын зөрүү','Одоо','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
       stockRows=C.rows.map(r=>({...r,name:r.name||nmOf(r.code),cost:costMap.has(r.code)?costMap.get(r.code):null,cash:cash(r.code)}));
       $('sMsg').textContent=LOC[st]+' · эхний үлдэгдэл '+lt(asOf)+' · '+C.ns+' баримт тооцсон'}
     stockRows.sort((a,b)=>a.now-b.now||a.code.localeCompare(b.code));
     const pos=stockRows.filter(r=>r.now>0),neg=stockRows.filter(r=>r.now<0).length,cv=pos.reduce((a,r)=>a+(r.cost||0)*r.now,0),kv=pos.reduce((a,r)=>a+(r.cash||0)*r.now,0),nc=pos.filter(r=>r.cost==null).length;
-    $('sKpi').innerHTML=[['Одоогийн үлдэгдэл',pos.reduce((a,r)=>a+r.now,0).toLocaleString('en-US')+' ш',1],['Бараа (үлдэгдэлтэй)',pos.length.toLocaleString('en-US')],['Өртгийн дүн',money(cv)+(nc?' <span class="small">(өртөггүй '+nc+')</span>':'')],['Кассын үнийн дүн',money(kv)],['Хасах үлдэгдэлтэй',neg?'<span class="hot">'+neg+'</span>':'0']]
+    $('sKpi').innerHTML=[['Одоогийн үлдэгдэл',pos.reduce((a,r)=>a+r.now,0).toLocaleString('en-US')+' ш',1],['Бараа (үлдэгдэлтэй)',pos.length.toLocaleString('en-US')],['Өртгийн дүн',money(cv)+(nc?' <span class="small">(өртөггүй '+nc+')</span>':'')],['Кассын үнийн дүн',money(kv)],['Хасах үлдэгдэлтэй',neg?'<a href="#" class="hot" style="text-decoration:none" onclick="$(\'negCard\').scrollIntoView({behavior:\'smooth\'});return false">'+neg+' › шалгах</a>':'0']]
       .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
-    drawStock();
+    drawStock();drawNeg();
   }catch(e){$('sMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}}
 /* Кассууд руу үлдэгдэл илгээх: бүх байршлын одоогийн үлдэгдлийг pos_stock_view-д бичнэ (касс зөвхөн уншина) */
 let movReady=false,stkBusy=false;
@@ -1232,7 +1239,7 @@ async function stockAll(){for(let i=0;i<50&&!movReady;i++)await new Promise(r=>s
   const M=new Map(),R={};if(!SS.length)return {SS,O,M,R};
   const from=SS.map(s=>O[s].asOf).sort()[0],sales=(await db.collection('pos_sales').where('date','>=',sDay(from)).get()).docs.map(d=>d.data());
   SS.forEach((st,k)=>{R[st]=stockCalc(st,O[st],sales);R[st].rows.forEach(r=>{if(!r.now)return;let v=M.get(r.code);if(!v){v=SS.map(()=>0);M.set(r.code,v)}v[k]=r.now})});
-  return {SS,O,M,R}}
+  return {SS,O,M,R,sales}}
 async function publishStock(silent){
   if(stkBusy)return;stkBusy=true;const out=$('sPubM');out.textContent='Бүх байршлын үлдэгдлийг тооцоолж байна…';
   try{for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
@@ -1311,6 +1318,37 @@ function drawStock(){const q=$('sQ').value.trim().toLowerCase(),L=stockRows.filt
   xtable('sTbl','stock',stockHead,rows,{cell:(x,c)=>c===ni?'<b'+(x[c]<0?' class="hot"':'')+'>'+x[c]+'</b>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}
 $('sPub').onclick=()=>publishStock(false);
 $('sXl').onclick=()=>{if(!stockRows.length)return $('sMsg').textContent='Эхлээд «Тооцоолох» дарна уу';xtXlsx('stock','uldegdel_'+$('sSt').value+'_'+iso(new Date()),'Үлдэгдэл')};
+
+/* ==== Хасах үлдэгдэл: баримт, кассчин, огноо + ижил загварын бусад хэмжээ; «Шалгасан» тэмдэглэл pos_stock_chk/{байршил_код} ==== */
+let negSrc=null,NCHK={},negRows=[];
+function watchNchk(){db.collection('pos_stock_chk').onSnapshot(s=>{NCHK={};s.docs.forEach(d=>NCHK[d.id]=d.data());if(negSrc)drawNeg()},()=>{})}
+function drawNeg(){const card=$('negCard');if(!negSrc){card.classList.add('hide');return}
+  const out=[],items=[];let nItems=0,nOpen=0;
+  negSrc.locs.forEach(loc=>{const C=negSrc.R[loc];if(!C)return;const rows=C.rows,asOf=negSrc.O[loc].asOf,byCode=new Map(rows.map(r=>[r.code,r]));
+    const sl=negSrc.sales.filter(x=>(x.stockFrom||STOCK_SRC[x.store]||x.store)===loc&&x.iso>=asOf);
+    rows.filter(r=>r.now<0).forEach(r=>{nItems++;const it=itRow(r.code)||{},k=loc+'_'+r.code,ch=NCHK[k],ok=ch&&ch.now===r.now;if(!ok)nOpen++;
+      // ижил загвар (модель) эсвэл ижил нэр (хэмжээгүй) — энэ байршилд үлдэгдэлтэй бусад код
+      const base=(it.model||'').trim(),nmBase=(it.name||r.name||'').replace(/size[-\s]*\S+.*$/i,'').trim();
+      const sib=rows.filter(o=>o.code!==r.code&&o.now>0&&(()=>{const j=itRow(o.code)||{};return base?(j.model||'').trim()===base:nmBase.length>6&&(j.name||o.name||'').startsWith(nmBase)})()).slice(0,6)
+        .map(o=>{const j=itRow(o.code)||{};return (j.size||o.code)+' ('+o.code+'): '+o.now}).join('; ');
+      const hit=[];sl.forEach(x=>(x.lines||[]).forEach(l=>{if(l.code===r.code)hit.push([x,l])}));
+      hit.sort((a,b)=>a[0].iso<b[0].iso?-1:1);
+      const base0=[LOC[loc]||loc,r.code,r.name||it.name||'',String(r.now),String(r.open)];
+      const st=ok?'шалгасан':ch?'дахин шалгах':'шалгаагүй',note=ch?(ch.note||'')+' · '+(ch.by||'').split('@')[0]+' '+lt(ch.at):'';
+      if(!hit.length)out.push([...base0,'(баримт алга — эхний үлдэгдэл / хөдөлгөөн шалгана)','','','',null,null,sib,st,note,k]);
+      hit.forEach(([x,l])=>out.push([...base0,x.id+(x.type==='return'?' (буцаалт)':''),x.date+' '+(x.time||'').slice(0,5),x.cashier||'',x.reg?'Касс '+x.reg:'',l.qty,l.sum!=null?l.sum:null,sib,st,note,k]))})});
+  negRows=out;card.classList.toggle('hide',!nItems);if(!nItems)return;
+  const f=$('negF').value,L=out.filter(r=>!f||(f==='done'?r[13]==='шалгасан':r[13]!=='шалгасан'));
+  $('negSum').innerHTML='<b>'+nItems+'</b> бараа хасах үлдэгдэлтэй · шалгаагүй <b class="hot">'+nOpen+'</b>';
+  xtable('negTbl','neg',['Байршил','Код','Нэр','Одоо','Эхний','Баримт','Огноо, цаг','Кассчин','Касс','Тоо','Дүн','Ижил загварын бусад хэмжээ (үлдэгдэлтэй)','Төлөв','Тайлбар',''],L,
+    {cell:(x,c)=>c===3?'<b class="hot">'+x[3]+'</b>':c===12?'<span class="chip'+(x[12]==='шалгасан'?'':' r')+'">'+x[12]+'</span>':c===14?'<button class="btn" data-nchk="'+esc(x[14])+'" style="min-height:28px;padding:1px 10px">'+(x[12]==='шалгасан'?'Засах':'Шалгасан')+'</button>':c===11?'<span class="small">'+esc(x[11]||'—')+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}
+$('negF').onchange=drawNeg;$('negXl').onclick=()=>xtXlsx('neg','hasah_uldegdel_'+iso(new Date()),'Хасах үлдэгдэл');
+document.addEventListener('click',e=>{const b=e.target.closest('[data-nchk]');if(!b)return;const k=b.dataset.nchk,r=negRows.find(x=>x[14]===k);if(!r)return;const ch=NCHK[k]||{};
+  $('pbox').innerHTML='<h2 style="margin:0 0 6px">Хасах үлдэгдэл шалгасан</h2><div class="small">'+esc(r[0])+' · '+esc(r[1])+' · '+esc(r[2])+' · одоо <b class="hot">'+r[3]+'</b></div><label class="f" style="margin-top:8px">Юу болсон, яаж засах вэ *</label><textarea id="nc_n" class="inp" rows="3" placeholder="ж: Кассчин Б.Ану-Үржин L-ийн оронд XL (60003351) уншуулсан — тооллогоор засна">'+esc(ch.note||'')+'</textarea><div id="nc_m" class="small hot" style="min-height:18px"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="nc_x">Болих</button><button class="btn pri" id="nc_ok">Хадгалах</button></div>';
+  $('pm').classList.remove('hide');$('nc_x').onclick=pClose;
+  $('nc_ok').onclick=async()=>{const n=$('nc_n').value.trim();if(!n)return $('nc_m').textContent='Тайлбар бичнэ үү';const [loc,...cc]=k.split('_');
+    try{await db.collection('pos_stock_chk').doc(k).set({loc,code:cc.join('_'),now:Number(r[3]),note:n,by:auth.currentUser.email||'',at:new Date().toISOString()});await auditCfg('stock_neg_check',{by:auth.currentUser.email,loc,code:cc.join('_'),now:Number(r[3]),note:n});pClose()}
+    catch(er){$('nc_m').textContent='Алдаа: '+(er.code||er.message||er)}}});
 /* ---- борлуулалт бараагаар / нийлүүлэгчээр ---- */
 const ORION='ORION WOJCIECH BARANKIEWICZ';
 // Нэгж өртөг: Smart-ын өртөг; ORION бараа өртөггүй (0) бол 6 500 ₮ гэж тооцно
