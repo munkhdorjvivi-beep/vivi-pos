@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.0">
+<meta name="vivi-ver" content="8.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -125,6 +125,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </section>
 <section class="pnl" data-panel="req" hidden>
   <div class="card hide" id="rqCard" style="border-color:var(--red)"><h2>Хүсэлтүүд — шийдвэр хүлээж байна <span id="rqCnt"></span></h2><div class="small" style="margin:-4px 0 6px">Буцаалт (зөвшөөрөл) · Солилт (касс дээр хийгдсэн, баталгаажуулна) · Төлбөрийн хэлбэр засах (батлахад баримт өөрчлөгдөнө)</div><div id="cReq"></div></div>
+  <div id="rqDone"></div>
   <div class="card" id="rqNone"><h2>Хүсэлтүүд — шийдвэр хүлээж байна</h2><div class="small">Шийдвэр хүлээж буй хүсэлт алга.</div></div>
   <div class="card" style="margin-top:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Хүсэлтийн түүх (сонгосон хугацаанд)</h2><select id="rhK" class="inp" style="width:auto"><option value="">Бүх төрөл</option><option value="return">Буцаалт</option><option value="exchange">Солилт</option><option value="paychange">Төлбөр засах</option></select></div><div class="scroll" id="cRqH" style="max-height:360px;overflow:auto;margin-top:8px"></div></div>
   <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Буцаалтын маягт — нягтлан шалгах <span id="rfCnt" class="small"></span></h2><select id="rfFlt" class="inp" style="width:auto"><option value="">Бүгд</option><option value="no">Шалгаагүй</option><option value="yes">Шалгасан</option></select></div>
@@ -400,12 +401,13 @@ function rqBody(r){const k=r.kind||'return';
     '<div class="small">Буцааж авсан <b>'+money(r.credit)+'</b> · шинэ бараа <b>'+money(r.newTotal)+'</b> · зөрүү <b>'+money(r.diff)+'</b>'+(r.diff?' ('+(r.diff>0?'төлсөн':'буцаасан')+': '+esc(r.form||'')+')':'')+(r.approver?' · ПИН: '+esc(r.approver):'')+' · Шалтгаан: '+esc(r.reason)+'</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="small"><b>Буцааж өгсөн</b><br>'+(r.back||[]).map(l=>l.qty+' × '+esc(l.name)+' — '+money(l.sum)).join('<br>')+'</div><div class="small"><b>Шинээр авсан</b><br>'+(r.take||[]).map(l=>l.qty+' × '+esc(l.name)+' — '+money(l.sum)).join('<br>')+'</div></div>';
   if(k==='paychange')return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip b">Төлбөр засах</span>'+(r.total<0?'<span class="chip r">буцаалт</span>':'')+'<b>'+money(r.total)+'</b><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+', '+esc(r.refCashier||'')+')</span></div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px"><div class="small"><b>Одоогийн</b><br>'+payTxt(r.before)+'</div><div class="small"><b>Засах</b><br>'+payTxt(r.after)+'</div></div><div class="small">Шалтгаан: '+esc(r.reason)+'</div>';
+    '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:6px;padding:8px 10px;background:var(--soft);border-radius:8px"><div class="small"><b>Одоо баримтад бичигдсэн</b><br>'+payTxt(r.before)+'</div><div style="font-size:22px">→</div><div class="small"><b>Батлавал ингэж өөрчлөгдөнө</b><br>'+payTxt(r.after)+'</div></div>'+
+    '<div class="small" style="margin-top:4px">Шалтгаан: '+esc(r.reason)+'</div><div class="small" style="margin-top:2px;opacity:.8">«Батлах» — баримтын төлбөрийн хэлбэр шууд өөрчлөгдөж, тайлан, касс дээр тусна. «Татгалзах» — юу ч өөрчлөгдөхгүй.</div>';
   return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip r">Буцаалт</span><b>'+money(-r.total)+'</b><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">эх баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+') · '+esc(r.form)+'</span></div><div>'+(r.flags||[]).map(f=>'<span class="chip r">'+esc(f)+'</span> ').join('')+'<span class="small">Шалтгаан: '+esc(r.reason)+'</span></div>'+(r.lines||[]).map(l=>'<div class="small">'+(-l.qty)+' × '+esc(l.name)+' — '+money(-l.sum)+'</div>').join('')}
 function drawReq(){
   const L=reqs.filter(r=>!gSt||r.store===gSt);$('rqCard').classList.toggle('hide',!L.length);$('rqCnt').textContent=L.length?'('+L.length+')':'';
   $('rqNone').classList.toggle('hide',!!L.length);$('tnReq').textContent=L.length;$('tnReq').classList.toggle('hide',!L.length);$('rqBan').classList.toggle('hide',!L.length);$('rqBan').textContent='⚠ '+L.length+' хүсэлт шийдвэр хүлээж байна (буцаалт, солилт, төлбөр засах) — харах ›';
-  $('cReq').innerHTML=L.sort((a,b)=>a.created<b.created?-1:1).map(r=>{const k=r.kind||'return',ok=k==='exchange'?'Баталгаажуулах':k==='paychange'?'Батлах (баримт өөрчлөгдөнө)':'Зөвшөөрөх',no=k==='exchange'?'Тодруулга шаардах':'Татгалзах';
+  $('cReq').innerHTML=L.sort((a,b)=>a.created<b.created?-1:1).map(r=>{const k=r.kind||'return',ok=k==='exchange'?'Баталгаажуулах':k==='paychange'?'✓ Батлах — төлбөр өөрчлөх':'Зөвшөөрөх',no=k==='exchange'?'Тодруулга шаардах':k==='paychange'?'✗ Татгалзах — өөрчлөхгүй':'Татгалзах';
     return '<div style="border-top:1px solid var(--line);padding:10px 0"><div class="small" style="opacity:.7">'+lt(r.created)+'</div>'+rqBody(r)+custLine(r.cust)+'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><input data-n="'+r.uid+'" placeholder="Тайлбар'+(k==='exchange'?' (тодруулга шаардвал заавал)':' (заавал биш)')+'" style="font:inherit;flex:1;min-width:160px;min-height:40px;border:1px solid var(--line);border-radius:8px;padding:6px 10px"><button data-a="approved" data-u="'+r.uid+'" style="'+bstyle+';background:var(--ok)">'+ok+'</button><button data-a="rejected" data-u="'+r.uid+'" style="'+bstyle+';background:var(--red)">'+no+'</button></div></div>'}).join('');
 }
 $('cReq').onclick=async e=>{const b=e.target.closest('button[data-u]');if(!b)return;const r=reqs.find(x=>x.uid===b.dataset.u);if(!r)return;const n=$('cReq').querySelector('input[data-n="'+r.uid+'"]'),note=n?n.value.trim():'';
@@ -416,11 +418,26 @@ $('cReq').onclick=async e=>{const b=e.target.closest('button[data-u]');if(!b)ret
       await ref.update({payments:r.after,payFix:{req:r.uid,by,at,before:d.data().payments}});}
     await db.collection('pos_requests').doc(r.uid).update({status:b.dataset.a,note,decidedBy:by,decidedAt:at});
     await auditCfg('request_'+b.dataset.a,{kind:r.kind||'return',ref:r.ref,uid:r.uid,note,by});
+    rqDoneMsg(r,b.dataset.a,note);reqs=reqs.filter(x=>x.uid!==r.uid);drawReq();
   }catch(er){b.disabled=false;alert('Алдаа: '+(er.code||er.message||er))}};
+// шийдвэрийн дараа юу болсныг тодорхой харуулна (жагсаалтаас алга болсон ч)
+function rqDoneMsg(r,a,note){const k=r.kind||'return',ok=a==='approved';let t;
+  if(k==='paychange')t=ok?'✓ <b>Баталлаа.</b> Баримт <b>'+esc(r.ref)+'</b>-ийн төлбөрийн хэлбэр <b>өөрчлөгдлөө</b>: '+payTxt(r.before).replace(/<br>/g,', ')+' &nbsp;→&nbsp; '+payTxt(r.after).replace(/<br>/g,', ')+'. Борлуулалтын тайлан, «Баримтууд»-д шинэ хэлбэрээр харагдана.'
+    :'✗ <b>Татгалзлаа.</b> Баримт <b>'+esc(r.ref)+'</b>-ийн төлбөр <b>өөрчлөгдөөгүй</b> ('+payTxt(r.before).replace(/<br>/g,', ')+'). Кассчинд «татгалзсан» гэж харагдана.';
+  else if(k==='exchange')t=ok?'✓ <b>Солилтыг баталгаажууллаа</b> ('+esc(r.ref)+').':'⚠ <b>Солилтод тодруулга шаардлаа</b> ('+esc(r.ref)+'): '+esc(note);
+  else t=ok?'✓ <b>Буцаалтыг зөвшөөрлөө</b> ('+esc(r.ref)+', '+money(-r.total)+'). Касс одоо буцаалтыг гүйцээнэ.':'✗ <b>Буцаалтаас татгалзлаа</b> ('+esc(r.ref)+'). Буцаалт хийгдэхгүй.';
+  const el=document.createElement('div');el.className='card';el.style.cssText='margin-bottom:12px;border-color:'+(ok?'var(--ok)':'var(--red)')+';background:'+(ok?'#effaf3':'#fff3f3');
+  el.innerHTML='<div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1">'+t+'<div class="small" style="opacity:.7;margin-top:4px">'+new Date().toLocaleTimeString().slice(0,5)+' · доорх «Хүсэлтийн түүх»-д хадгалагдсан</div></div><button class="btn" style="min-height:30px;padding:2px 10px">✕</button></div>';
+  el.querySelector('button').onclick=()=>el.remove();$('rqDone').prepend(el)}
 function drawReqHist(){const k=$('rhK').value,L=allReqs.filter(r=>(!gSt||r.store===gSt)&&(!k||(r.kind||'return')===k)).sort((a,b)=>a.created<b.created?1:-1);
   const SN={pending:['хүлээгдэж байна','b'],approved:['баталсан',''],rejected:['татгалзсан / тодруулах','r'],done:['гүйцээсэн','']};
-  $('cRqH').innerHTML=tbl(['Огноо','Төрөл','Дэлгүүр · кассчин','Баримт','Дүн','Төлөв','Шийдвэрлэсэн'],L.map(r=>{const st=SN[r.status]||[r.status,''],kk=r.kind||'return';
-    return '<tr><td class="small">'+lt(r.created)+'</td><td>'+RQK[kk]+(r.diffType?' <span class="small">'+esc(r.diffType)+'</span>':'')+'</td><td class="n small">'+esc(r.storeName)+' · '+esc(r.cashier)+'</td><td class="n small">'+esc(r.ref)+'</td><td class="n">'+(kk==='exchange'?'зөрүү '+money(r.diff):kk==='paychange'?money(r.total):money(-r.total))+'</td><td class="n"><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="n small">'+esc(r.decidedBy||'')+(r.note?'<br>'+esc(r.note):'')+'</td></tr>'}));}
+  const stOf=r=>{const kk=r.kind||'return';if(kk==='paychange')return r.status==='approved'?['✓ баталсан — төлбөр өөрчлөгдсөн','']:r.status==='rejected'?['✗ татгалзсан — өөрчлөгдөөгүй','r']:['хүлээгдэж байна — өөрчлөгдөөгүй','b'];
+    if(kk==='return')return r.status==='approved'?['✓ зөвшөөрсөн — касс гүйцээнэ','']:r.status==='done'?['✓ буцаалт хийгдсэн','']:r.status==='rejected'?['✗ татгалзсан','r']:['хүлээгдэж байна','b'];
+    return SN[r.status]||[r.status,'']};
+  const chg=r=>{const kk=r.kind||'return',pt=L=>(L||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))+' '+money(p.amount)).join(', ');
+    if(kk==='paychange')return pt(r.before)+' <b>→</b> '+pt(r.after);if(kk==='exchange')return 'буцаасан '+money(r.credit)+' · шинэ '+money(r.newTotal);return esc(r.form||'')};
+  $('cRqH').innerHTML=tbl(['Огноо','Төрөл','Дэлгүүр · кассчин','Баримт','Дүн','Юу өөрчлөгдөх / өөрчлөгдсөн','Төлөв','Шийдвэрлэсэн'],L.map(r=>{const st=stOf(r),kk=r.kind||'return';
+    return '<tr><td class="small">'+lt(r.created)+'</td><td>'+RQK[kk]+(r.diffType?' <span class="small">'+esc(r.diffType)+'</span>':'')+'</td><td class="n small">'+esc(r.storeName)+' · '+esc(r.cashier)+'</td><td class="n small">'+esc(r.ref)+'</td><td class="n">'+(kk==='exchange'?'зөрүү '+money(r.diff):kk==='paychange'?money(r.total):money(-r.total))+'</td><td class="small" style="text-align:left;max-width:340px">'+chg(r)+'</td><td class="n"><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="n small">'+esc((r.decidedBy||'').split('@')[0])+(r.decidedAt?'<br>'+lt(r.decidedAt):'')+(r.note?'<br>'+esc(r.note):'')+'</td></tr>'}));}
 function listen(){
   if(!reqOn){reqOn=true;watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchDevs();watchPart();watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
@@ -498,7 +515,7 @@ function draw(){
     xtable('cRec','rec',['Баримт','Огноо','Дэлгүүр','Кассчин','Төрөл','Төлбөр','Дүн',''],R,{limit:300,cell:(x,c)=>{const s=sales.find(y=>y.uid===x[7]);
       if(c===0)return '<details><summary>'+esc(x[0])+'</summary>'+(s.lines||[]).map(l=>'<div class="small">'+l.qty+' × '+esc(l.name)+' — '+money(l.sum)+(l.pname?' ('+esc(l.pname)+')':'')+'</div>').join('')+'</details>';
       if(c===4)return x[4]==='Борлуулалт'?'<span class="small">Борлуулалт</span>':'<span class="chip '+(x[4].startsWith('Солилт')?'b':'r')+'">'+esc(x[4])+'</span>';
-      if(c===5)return '<span class="small">'+esc(x[5])+'</span>';if(c===6)return '<b>'+money(x[6])+'</b>';
+      if(c===5)return '<span class="small">'+esc(x[5])+'</span>'+(s&&s.payFix&&s.payFix.before?'<div><span class="chip b" title="'+esc((s.payFix.before||[]).map(p=>p.form+(p.bank?' · '+p.bank:'')+' '+p.amount).join(', '))+'">төлбөр засварласан</span> <span class="small">өмнө: '+esc((s.payFix.before||[]).map(p=>p.form+(p.bank?' · '+p.bank:'')).join(', '))+'</span></div>':'');if(c===6)return '<b>'+money(x[6])+'</b>';
       if(c===7)return '<button class="btn warn" data-del="'+esc(x[7])+'" style="min-height:32px;padding:3px 10px">Устгах</button>';return esc(x[c])}}) }
 }
 const REPORTS={
