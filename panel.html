@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.6">
+<meta name="vivi-ver" content="8.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -159,6 +159,13 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       <div class="small" style="margin-top:6px">Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Байршил = борлуулсан дэлгүүрийн тасгийн код. Харьцсан данс: зээлээр бол зээлийн данс, бусад үед дэлгүүрийн данс.</div>
     </div>
     <div class="scroll" id="cRep" style="max-height:420px;overflow:auto"></div></div>
+  <div class="card" style="margin-top:12px"><h2>🔍 Хөнгөлөлтийн хяналт — кассын үнээс зөв хөнгөлсөн үү</h2>
+    <div class="small" style="margin:-4px 0 8px">Сонгосон огноо, дэлгүүрийн борлуулсан мөр бүрийг шалгана: урамшуулалд хамаарах бараа яг <b>хувиар</b> (жишээ нь −50%) хөнгөлөгдсөн эсэх, үл хамаарах бараа өөрийн үнээрээ зарагдсан эсэх, мөн <b>гараар хөнгөлөлт</b>, <b>кассын 5%</b>, <b>бэлэг</b>, урамшууллыг алгассан (бүтэн үнээр зарсан) мөрүүд. Буцаалт тооцохгүй.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><span>Шалгах урамшуулал:</span><select id="pcP" class="inp" style="width:auto"></select>
+      <label class="inl"><input type="checkbox" id="pcAll"> Зөв мөрүүдийг ч харуулах</label><span style="flex:1"></span><button id="pcX" class="btn">⬇ Excel</button></div>
+    <div id="pcKpi" class="kpi" style="margin-bottom:8px"></div>
+    <div class="scroll" id="pcTbl" style="max-height:520px;overflow:auto"></div>
+    <h3 style="margin:12px 0 4px;font-size:14px">Кассчнаар</h3><div class="scroll" id="pcCash"></div></div>
 </section>
 <section class="pnl" data-panel="rcpt" hidden>
   <div class="card"><h2>Баримтууд (сонгосон хугацаанд)</h2><div class="scroll" id="cRec" style="max-height:560px;overflow:auto"></div></div>
@@ -531,7 +538,7 @@ function draw(){
     if(a.type==='line_delete'||a.type==='qty_minus'){r.del++;r.v+=(i.price||0)*(i.qty||1)}else if(a.type==='receipt_cancel'){r.canc++;r.v+=i.total||0}else if((a.type==='manual_discount'&&i.pct>0)||a.type==='disc5_on'){r.disc++;r.v+=i.value||0}else if(a.type==='return'){r.ret++;r.v+=-(i.total||0)}});
   sales.forEach(s=>{if(s.type!=='sale'||!s.cashier)return;(s.lines||[]).forEach(l=>{if(l.promo!=='gift')return;const r=A[s.cashier]=A[s.cashier]||{c:s.cashier,del:0,canc:0,disc:0,ret:0,gift:0,giftV:0,v:0};r.gift+=l.qty;r.giftV+=(l.price||0)*l.qty})});
   $('cAud').innerHTML=tbl(['Кассчин','Устгасан','Цуцалсан','Хөнгөлөлт','Буцаалт','Бэлэг (ш · үнэ)','Дүн'],Object.values(A).filter(r=>r.del+r.canc+r.disc+r.ret+r.gift).sort((a,b)=>b.v-a.v).map(r=>'<tr><td>'+esc(r.c)+'</td><td class="n'+(r.del>=3?' hot':'')+'">'+r.del+'</td><td class="n'+(r.canc>=2?' hot':'')+'">'+r.canc+'</td><td class="n">'+r.disc+'</td><td class="n">'+r.ret+'</td><td class="n">'+r.gift+(r.gift?'<div class="small">'+money(r.giftV)+'</div>':'')+'</td><td class="n">'+money(r.v)+'</td></tr>'));
-  drawRep();drawSup();try{drawAcct();stkBan()}catch(e){}
+  drawRep();drawSup();try{drawAcct();stkBan()}catch(e){}try{drawPchk()}catch(e){console.warn(e)}
   { const PF=s=>(s.payments||[]).map(p=>p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:'')).join(', ');
     const R=sales.slice().sort((a,b)=>a.iso<b.iso?1:-1).map(s=>[s.id,s.date+' '+(s.time||'').slice(0,5),s.storeName,s.cashier,s.type==='return'?(s.exch?'Солилт (буцаалт)':'Буцаалт'):s.exch?'Солилт':'Борлуулалт',PF(s),s.total,s.uid]);
     xtable('cRec','rec',['Баримт','Огноо','Дэлгүүр','Кассчин','Төрөл','Төлбөр','Дүн',''],R,{limit:300,cell:(x,c)=>{const s=sales.find(y=>y.uid===x[7]);
@@ -1509,6 +1516,41 @@ $('clGo').onclick=async()=>{const d=$('clD').value,m=$('clMsg');if(!d)return m.t
       done.push((LOC[loc]||loc)+': '+rows.length+' бараа, '+rows.reduce((a,x)=>a+x[1],0)+' ш ('+C.ns+' баримт тооцов)')}
     await auditCfg('stock_close',{by,cut,locs:done});m.innerHTML='<span class="chip">Хаалаа</span> '+esc(done.join(' · '));clDraw();if(typeof showOpen==='function')showOpen()}
   catch(e){m.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}finally{$('clGo').disabled=false}};
+
+/* ==== 🔍 Хөнгөлөлтийн хяналт: борлуулалтын мөр бүрийг тухайн өдрийн урамшууллын дүрэмтэй тулгана ==== */
+const dIso=d=>(d||'').replace(/\//g,'-');
+const pOnDay=(p,day,st)=>(!p.start||day>=p.start)&&(!p.end||day<=p.end)&&(!(p.stores||[]).length||p.stores.includes(st));
+function pcBase(p,l){if(p.type==='plist')return !!(p.prices&&(p.prices[l.code]!=null||(l.bc&&p.prices[l.bc]!=null)));if(p.all)return true;const C=new Set(p.codes||[]);return !!((p.suppliers||[]).includes(l.sup)||(p.groups||[]).includes(l.grp)||C.has(l.code)||(l.bc&&C.has(l.bc)))}
+const pcEx=new WeakMap();const exSet=p=>{let x=pcEx.get(p);if(!x){x=new Set(p.excl||[]);pcEx.set(p,x)}return x};
+function pcMatch(p,l,day,st){if(!pcBase(p,l))return false;const X=exSet(p);if(X.has(l.code)||(l.bc&&X.has(l.bc)))return false;if((p.exSup||[]).includes(l.sup))return false;
+  if(p.exOther&&promos.some(q=>q.id!==p.id&&q.type!=='gift'&&!q.exOther&&pOnDay(q,day,st)&&pcBase(q,l)&&!exSet(q).has(l.code)&&!(l.bc&&exSet(q).has(l.bc))&&!(q.exSup||[]).includes(l.sup)))return false;return true}
+let pcRows=[];
+function drawPchk(){if(!$('pcP'))return;const sel=$('pcP').value,PP=promos.filter(p=>p.type==='pct'||p.type==='price'||p.type==='amount');
+  const opts=PP.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+' ('+(p.type==='pct'?'−'+p.pct+'%':p.type==='price'?nfx(p.price)+' ₮':'−'+nfx(p.amount)+' ₮')+(p.start?' · '+p.start+(p.end?' → '+p.end:''):'')+')</option>').join('');
+  if($('pcP').dataset.o!==opts){$('pcP').innerHTML=opts;$('pcP').dataset.o=opts;const big=PP.slice().sort((a,b)=>(b.pct||0)-(a.pct||0))[0];$('pcP').value=sel&&PP.some(p=>p.id===sel)?sel:(big?big.id:'')}
+  const P=PP.find(p=>p.id===$('pcP').value);const rows=[],K={ok:0,okx:0,full:0,dev:0,man:0,d5:0,gift:0,other:0},C={};let lossSum=0,overSum=0,n=0;
+  const exp=(p,price)=>p.type==='pct'?Math.round(price*(1-p.pct/100)):p.type==='price'?Math.min(price,Math.round(p.price)):Math.max(0,price-Math.round(p.amount));
+  sales.filter(s=>s.type==='sale'&&(!gSt||s.store===gSt)).forEach(s=>{const day=dIso(s.date),on=P&&pOnDay(P,day,s.store);
+    (s.lines||[]).forEach(l0=>{if(l0.code==='DELIVERY'||!(l0.qty>0))return;n++;const it=itRow(l0.code)||{},l={...l0,bc:it.bc||''},q=l.qty,unit=l.unit!=null?l.unit:Math.round((l.sum||0)/q),price=l.price||0;
+      const inP=on&&pcMatch(P,l,day,s.store),e=inP?exp(P,price):price;let st,cls='',diff=0;
+      if(l.promo==='manual'){st='🔴 Гараар хөнгөлөлт ('+(l.pname||'')+')';cls='r';K.man++;diff=(unit-e)*q}
+      else if(l.pname==='Кассын хөнгөлөлт'){st='🟠 Кассын 5% хөнгөлөлт';cls='r';K.d5++;diff=(unit-e)*q}
+      else if(l.promo==='gift'){st='🎁 Бэлэг (0 ₮)';cls='b';K.gift++}
+      else if(inP){if(Math.abs(unit-e)<=1){st='✓ '+P.name+' зөв';K.ok++}
+        else if(unit>e&&!l.promo){st='⚠ '+P.name+' хэрэгжээгүй — бүтэн үнээр';cls='r';K.full++;diff=(unit-e)*q}
+        else if(unit<e&&l.promo&&l.pname!==P.name){st='✓ Өөр урамшуулал илүү хямд ('+(l.pname||l.promo)+')';K.okx++}
+        else{st='⚠ Дүн зөрүүтэй ('+(l.pname||l.promo||'урамшуулалгүй')+')';cls='r';K.dev++;diff=(unit-e)*q}}
+      else{if(!l.promo){st=on?'✓ Үл хамаарах бараа — бүтэн үнэ':'✓ Урамшуулалгүй';K.okx++}else{st='✓ '+(on?'Үл хамаарах — ':'')+(l.promo==='free'?'1+1 үнэгүй':l.promo==='same'?'ижил үнэ −'+(l.samePct||'')+'%':(l.pname||l.promo));K.other++}}
+      if(diff<0)lossSum+=-diff;if(diff>0)overSum+=diff;
+      const bad=cls==='r';if(bad){const c=C[s.cashier]||(C[s.cashier]={m:0,d5:0,f:0,dv:0,loss:0,over:0});if(l.promo==='manual')c.m++;else if(l.pname==='Кассын хөнгөлөлт')c.d5++;else if(st.includes('бүтэн үнээр'))c.f++;else c.dv++;if(diff<0)c.loss+=-diff;else c.over+=diff}
+      if(bad||cls==='b'||$('pcAll').checked)rows.push([s.date+' '+(s.time||'').slice(0,5),s.storeName||s.store,s.cashier||'',s.id,l.code,l.name||'',price,q,unit,price?Math.round((1-unit/price)*100):0,e,diff||null,st])})});
+  pcRows=rows;const pct=x=>n?Math.round(x/n*1000)/10+'%':'0%';
+  $('pcKpi').innerHTML=[['Шалгасан мөр',n.toLocaleString('en-US'),1],['✓ '+(P?P.name:'')+' зөв',K.ok+' ('+pct(K.ok)+')'],['✓ Үл хамаарах / өөр урамшуулал',(K.okx+K.other)],['⚠ Урамшуулал хэрэгжээгүй',K.full?'<span class="hot">'+K.full+'</span>':'0'],['⚠ Дүн зөрүүтэй',K.dev?'<span class="hot">'+K.dev+'</span>':'0'],['🔴 Гараар хөнгөлөлт',K.man?'<span class="hot">'+K.man+'</span>':'0'],['🟠 Кассын 5%',K.d5?'<span class="hot">'+K.d5+'</span>':'0'],['🎁 Бэлэг',K.gift],['Илүү хөнгөлсөн дүн',lossSum?'<span class="hot">'+money(lossSum)+'</span>':'0 ₮'],['Илүү авсан дүн',money(overSum)]]
+    .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v" style="font-size:18px">'+k[1]+'</div></div>').join('');
+  xtable('pcTbl','pchk',['Огноо','Дэлгүүр','Кассчин','Баримт','Код','Нэр','Кассын үнэ','Тоо','Төлсөн нэгж','Хөнгөлөлт %','Байх ёстой нэгж','Зөрүү (₮, нийт)','Төлөв'],rows,
+    {limit:500,cell:(x,c)=>c===12?'<span class="'+(/^(⚠|🔴|🟠)/.test(x[12])?'hot':'')+'">'+esc(x[12])+'</span>':c===9?x[9]+'%':c===11&&x[11]?'<b class="hot">'+nfx(x[11])+'</b>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])});
+  xtable('pcCash','pchkc',['Кассчин','Гараар хөнгөлөлт','Кассын 5%','Урамшуулал хэрэгжээгүй','Дүн зөрүүтэй','Илүү хөнгөлсөн (₮)','Илүү авсан (₮)'],Object.entries(C).sort((a,b)=>b[1].loss-a[1].loss).map(([k,c])=>[k,c.m||null,c.d5||null,c.f||null,c.dv||null,c.loss||null,c.over||null]))}
+$('pcP').onchange=drawPchk;$('pcAll').onchange=drawPchk;$('pcX').onclick=()=>xtXlsx('pchk','hongololt_hyanalt','Хөнгөлөлт');
 /* ---- борлуулалт бараагаар / нийлүүлэгчээр ---- */
 const ORION='ORION WOJCIECH BARANKIEWICZ';
 // Нэгж өртөг: Smart-ын өртөг; ORION бараа өртөггүй (0) бол 6 500 ₮ гэж тооцно
