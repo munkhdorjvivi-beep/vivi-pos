@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.0">
+<meta name="vivi-ver" content="6.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -221,6 +221,8 @@ let promos=store.get('promos',null);
 if(!promos){promos=[{id:'p1',name:'LPP 1+1',type:'pair',pct:0,samePct:30,all:false,suppliers:['ORION WOJCIECH BARANKIEWICZ','Network 360'],groups:[],codes:[],start:'2026-10-10',end:'',stores:[],active:true}];store.set('promos',promos)}
 const APP_VER=document.querySelector('meta[name=vivi-ver]').content;document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS '+APP_VER;
 let device=store.get('device',{store:'',reg:''});
+// 6.1: баримт нэг хувь хэвлэх нь анхдагч — хуучин «2 хувь» тохиргоог нэг удаа 1 болгоно (дараа нь Тохиргоо → Төхөөрөмжөөс өөрчилж болно)
+if(device.cpv!==1){device.copies=1;device.cpv=1;store.set('device',device)}
 let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
 // Хүргэлтийн бүс, үнийг самбараас (Касс, ажилтан → Хүргэлтийн төлбөр) өөрчилнө
 const DLV_DEF=[{n:'А бүс',p:8000},{n:'Б бүс',p:10000},{n:'Алслагдсан бүс',p:12000}];
@@ -713,7 +715,7 @@ function printDocs(docs){printQ.push(...docs);if(!printing)printNext()}
 let lastSale=null;
 function printReceipt(s,copy){
   if(!copy)lastSale=s;
-  const n=Math.max(1,Number(device.copies||2)),docs=[];
+  const n=Math.max(1,Number(device.copies||1)),docs=[];
   for(let k=1;k<=n;k++)docs.push(receiptHtml(s,copy,n>1?k+'-р хувь':''));
   if(device.oneJob)printDocs([docs.join('<div class="pb"></div>')]);else printDocs(docs);
 }
@@ -1308,7 +1310,7 @@ function openSettings(tab){
   openModal('<h2>Тохиргоо</h2><div class="tabs"><button data-t="promo" class="'+(tab==='promo'?'on':'')+'">Урамшуулал (харах)</button><button data-t="users" class="'+(tab==='users'?'on':'')+'">Ажилтнууд (харах)</button><button data-t="ret" class="'+(tab==='ret'?'on':'')+'">Буцаалт (харах)</button><button data-t="dev" class="'+(tab==='dev'?'on':'')+'">Энэ касс</button></div>'+(users.some(u=>u.active&&u.role!=='cashier'&&(u.pin==='9999'||u.pin==='1111'))?'<div class="small" style="color:var(--red);font-weight:650;margin-top:8px">Анхаар: менежер/админы ПИН анхны утгаараа (9999) байна. Хяналтын самбараас солино уу.</div>':'')+'<div class="small" style="margin:8px 0">'+(fb.user?'Тохиргоо үүлэнд хадгалагдаж, холбогдсон бүх кассад зэрэг үйлчилнэ.':'Үүлэнд холбоогүй тул тохиргоо зөвхөн энэ касс дээр хадгалагдана.')+'</div>'+body);
   $('mbox').querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>openSettings(b.dataset.t));
   $('sX').onclick=()=>{closeModal();render()};
-  if(tab==='dev'){$('v_st').value=device.store||'';$('v_st').disabled=!!curAcc();$('v_rg').value=device.reg||'1';$('v_cp').value=String(device.copies||2);$('v_oj').checked=!!device.oneJob;$('v_gap').value=String(device.printGap||2500);$('v_ok').onclick=()=>{const b={...device};device={store:curAcc()||$('v_st').value,reg:$('v_rg').value,copies:Number($('v_cp').value),oneJob:$('v_oj').checked,printGap:Number($('v_gap').value)};store.set('device',device);log('settings_save',{by:settings.by,device_before:b,device:device});$('c_msg').textContent='Хадгаллаа. Дараагийн нэвтрэлтээс үйлчилнэ.'};return}
+  if(tab==='dev'){$('v_st').value=device.store||'';$('v_st').disabled=!!curAcc();$('v_rg').value=device.reg||'1';$('v_cp').value=String(device.copies||1);$('v_oj').checked=!!device.oneJob;$('v_gap').value=String(device.printGap||2500);$('v_ok').onclick=()=>{const b={...device};device={store:curAcc()||$('v_st').value,reg:$('v_rg').value,copies:Number($('v_cp').value),oneJob:$('v_oj').checked,printGap:Number($('v_gap').value),cpv:1};store.set('device',device);log('settings_save',{by:settings.by,device_before:b,device:device});$('c_msg').textContent='Хадгаллаа. Дараагийн нэвтрэлтээс үйлчилнэ.'};return}
   if(tab==='promo'||tab==='users'||tab==='ret')return;
   $('sNew').onclick=()=>editUser(null);
   $('mbox').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)editUser(+tr.dataset.i)};
