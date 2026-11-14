@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.1">
+<meta name="vivi-ver" content="6.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -128,7 +128,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
 <body>
 <div id="top" class="hide">
   <b>VIVI</b><span class="ver">POS <span class="appver"></span></span><span class="tag" id="tStore"></span><span class="tag" id="tCash"></span><span class="tag" id="tShift"></span>
-  <span class="sp"></span><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
+  <span class="sp"></span><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
 </div>
 
 <div id="login">
@@ -328,7 +328,7 @@ async function cloudInit(){
   try{
     if(!window.firebase)for(const m of ['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+FB_VER+'/firebase-'+m+'-compat.js');
     firebase.initializeApp(FB_CONFIG);fb.auth=firebase.auth();fb.db=firebase.firestore();fb.ready=true;
-    fb.auth.onAuthStateChanged(u=>{fb.user=u;movStop();devStop();chatStop();accBind();cloudStatus();if(u){cloudListen();cloudSync()}});
+    fb.auth.onAuthStateChanged(u=>{fb.user=u;movStop();devStop();chatStop();cntStop();accBind();cloudStatus();if(u){cloudListen();cloudSync()}});
   }catch(e){fb.err=String(e&&e.message||e)}
   cloudStatus();
 }
@@ -411,7 +411,7 @@ async function cloudSync(){
 function cloudSoon(){clearTimeout(cloudSoon.h);cloudSoon.h=setTimeout(()=>{fb.err='';cloudSync()},400);cloudStatus()}
 function shiftOut(sh){shiftq=shiftq.filter(q=>q.id!==sh.id);shiftq.push(JSON.parse(JSON.stringify(sh)));store.set('shiftq',shiftq);cloudSoon()}
 function cloudListen(){
-  if(cloudListen.on)return;cloudListen.on=true;movListen();itxListen();devListen();chatListen();
+  if(cloudListen.on)return;cloudListen.on=true;movListen();itxListen();devListen();chatListen();cntListen();
   // Явуулын кассын одоогийн аян (самбараас тохируулна)
   fb.db.collection('pos_config').doc('trip').onSnapshot(d=>{const v=d.exists?String(d.data().name||'').trim():'';if(v!==TRIP){TRIP=v;store.set('trip',v);if(S.user)header()}},()=>{});
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
@@ -502,13 +502,26 @@ function addItem(i){
   if(it.price<=0)flash('Анхаар: «'+it.name+'» үнэ 0 байна');
   render();
   const L=S.cart[S.sel];if(L){const w=promoWhy(L);if(w.length)flash('Урамшуулал хэрэгжсэнгүй — '+w.join('; '))}
+  if(L)stkWarn(L);
 }
+/* Үлдэгдэлгүй бараа уншуулахад анхааруулна (хаахгүй): самбарын агшин зураг − энэ кассын дараах борлуулалт ± шилжүүлэг − сагсанд байгаа тоо.
+   Кассчин өөр хэмжээ/өнгө уншуулсан алдааг борлуулалтын үед нь барина. Агшин зураг 24 цагаас хуучин бол анхааруулахгүй. */
+function ownStock(code){const M=STK.meta;if(!STK.map||!M||!S.user)return null;if(Date.now()-new Date(M.version)>24*3600e3)return null;
+  const own=STOCK_SRC[S.user.store]||S.user.store,k=(M.stores||[]).indexOf(own);if(k<0)return null;let q=((STK.map.get(code)||[])[k])||0;
+  sales.forEach(x=>{if((x.stockFrom||x.store)===own&&(x.iso||'')>M.version)(x.lines||[]).forEach(l=>{if(l.code===code)q-=l.qty})});
+  (typeof MOV!=='undefined'?MOV:[]).forEach(m=>{const ln=a=>JSON.parse(a||'[]').forEach(x=>{if(x[0]===code)q+=(m.to===own?1:-1)*x[1]});
+    if(m.to===own&&m.status==='received'&&(m.recvAt||m.at||'')>M.version)ln(m.recvLines||m.lines);else if(m.from===own&&(m.at||'')>M.version)ln(m.lines)});
+  S.cart.forEach(l=>{if(l.code===code)q-=l.qty});return q}
+function stkWarn(L){if(!STK.map){if(!stkLoad.busy&&fb.ready&&fb.user&&navigator.onLine){stkLoad.busy=true;stkLoad().catch(()=>{}).finally(()=>stkLoad.busy=false)}return}
+  const q=ownStock(L.code);if(q==null||q>=0){if(L.noStk){L.noStk=false;render()}return}
+  L.noStk=true;render();flash('⚠ «'+L.name+'» — системд энэ дэлгүүрт үлдэгдэл хүрэлцэхгүй. Хэмжээ, өнгө, баркодыг дахин шалгана уу!')}
+setInterval(()=>{if(S.user&&fb.ready&&fb.user&&navigator.onLine)stkLoad().catch(()=>{})},30*60e3);
 function render(){
   const t=computePromo(S.cart);
   $('cart').innerHTML=S.cart.map((l,i)=>{
     let b='';if(l.free)b+='<span class="badge">1+1 үнэгүй ×'+l.free+'</span>';
     if(l.gift)b+='<span class="badge gift">Бэлэг · 0 ₮</span>';if(l.same)b+='<span class="badge b30">−'+l.samePct+'% ×'+l.same+'</span>';if(l.pct)b+='<span class="badge b30">'+(l.promoName==='Кассын хөнгөлөлт'?'5% хөнгөлөлт':esc(l.ptxt)+' · '+esc(l.promoName))+'</span>';
-    if(l.disc)b+='<span class="badge man">гараар −'+l.disc+'%</span>';
+    if(l.disc)b+='<span class="badge man">гараар −'+l.disc+'%</span>';if(l.noStk)b+='<span class="badge" style="background:#fde4e6;color:#b00020">⚠ системд үлдэгдэлгүй — хэмжээ/өнгө шалгах</span>';
     if(l.giftAvail&&!l.gift)b+='<button class="gbtn" data-gift="'+i+'">🎁 Бэлэг болгох</button>';
     else if(l.gift&&l.giftOn)b+='<button class="gbtn on" data-gift="'+i+'">↩ Худалдаа болгох</button>';
     return '<tr class="'+(i===S.sel?'sel':'')+'" data-i="'+i+'"><td>'+(i+1)+'</td><td>'+esc(l.name)+'<div class="small">'+esc(l.code)+(l.promoName&&!l.pct?' · '+esc(l.promoName):'')+'</div>'+b+'</td><td class="n">'+l.qty+'</td><td class="n">'+fmt(l.price)+(l.base>l.price?'<div class="small"><s>'+fmt(l.base)+'</s></div>':'')+'</td><td class="n">'+fmt(l.price*l.qty-l.total)+'</td><td class="n"><b>'+fmt(l.total)+'</b></td></tr>'}).join('')
@@ -555,7 +568,11 @@ function openSearch(q){
   if(q)run();
 }
 /* ---------- line actions ---------- */
-function chgQty(d){const l=S.cart[S.sel];if(!l)return;if(l.code==='DELIVERY'&&d>0)return flash('Хүргэлт нэг баримтад нэг удаа');if(l.qty+d<1)return delLine();l.qty+=d;if(d<0)log('qty_minus',{code:l.code,name:l.name,price:l.price,parked:!!S.fromPark});render()}
+function chgQty(d,ok){const l=S.cart[S.sel];if(!l)return;if(l.code==='DELIVERY'&&d>0)return flash('Хүргэлт нэг баримтад нэг удаа');if(l.qty+d<1)return delLine();
+  // гараар тоо нэмэхэд (+): олон ширхэг ижил хэмжээ, өнгө эсэхийг нэг удаа асууна — ялгаатай бол тус бүрийг уншуулна
+  if(d>0&&l.qty===1&&!l.qtyOk&&!ok){openModal('<h2>Тоо ×'+(l.qty+d)+'</h2><div style="font-size:16px;margin:6px 0 10px">«'+esc(l.name)+'»</div><div class="small" style="margin-bottom:10px">Бүх ширхэг <span style="font-weight:700">ИЖИЛ хэмжээ, өнгө (нэг баркод)</span> мөн үү? Ялгаатай бол тоо нэмэхгүй — ширхэг бүрийг тусад нь уншуулна уу.</div><div class="rowbtn"><button id="qN">Үгүй — тусад нь уншуулна</button><button class="ok" id="qY" autofocus>Тийм, бүгд ижил (Enter)</button></div>',true);
+    $('qN').onclick=closeModal;$('qY').onclick=()=>{l.qtyOk=true;log('qty_same_confirm',{code:l.code,name:l.name});closeModal();chgQty(d,true)};return}
+  l.qty+=d;if(d>0)stkWarn(l);if(d<0)log('qty_minus',{code:l.code,name:l.name,price:l.price,parked:!!S.fromPark});render()}
 function delLine(){const l=S.cart[S.sel];if(!l)return;log('line_delete',{code:l.code,name:l.name,qty:l.qty,price:l.price,parked:!!S.fromPark});S.cart.splice(S.sel,1);S.sel=Math.min(S.sel,S.cart.length-1);render()}
 function disc5(){
   if(!S.cart.length)return flash('Эхлээд бараа уншуулна уу');
@@ -1585,6 +1602,42 @@ document.body.appendChild(chatBox);
 #chatPane .cht{flex:1}.chatb{cursor:pointer;border:0;font:inherit}.chn{background:#c8102e;color:#fff;border-radius:999px;padding:0 7px;margin-left:6px;font-size:12px}.chn.hide{display:none}`;document.head.appendChild(st)})();
 const chatComp=CHAT.composer($('chatComp'),async(text,files,prog)=>{const st=curAcc();if(!st)throw 'Үүлэнд холбогдоогүй';
   await CHAT.send(st,{from:'till',author:(S.user?S.user.name:'Касс')+' · '+(STORES[st]||st)+(S.user&&S.user.reg?' · касс '+S.user.reg:''),text},files,prog)});
+
+/* ---------- 📋 Тооллогын даалгавар (pos_counts): оффис хасах үлдэгдэлтэй загварыг тоолуулна ----------
+   Касс тухайн загварын бүх хэмжээг дэлгүүр, агуулахаас олж уншуулна (системийн тоог харуулахгүй — сохор тооллого),
+   «Тоолж дууслаа» дарахад тоо нь оффис руу очно; зөрүүг оффис тооцоолж засна. */
+let CNTT=[];
+function cntStop(){(cntListen.u||(()=>{}))();cntListen.u=null;CNTT=[];cntBadge()}
+function cntListen(){if(cntListen.u||!(fb.ready&&fb.user))return;const st=curAcc();if(!st)return;
+  cntListen.u=fb.db.collection('pos_counts').where('store','==',st).onSnapshot(s=>{const was=CNTT.length;CNTT=s.docs.map(d=>d.data()).filter(x=>x.status==='open').sort((a,b)=>a.created<b.created?-1:1);cntBadge();if(CNTT.length>was&&S.user)flash('📋 Оффисоос тооллогын даалгавар ирлээ')},()=>{cntListen.u=null})}
+function cntBadge(){const b=$('cntBtn');if(!b)return;b.classList.toggle('hide',!CNTT.length);$('cntN').textContent=CNTT.length||''}
+function openCnt(){if(!S.user)return flash('Эхлээд нэвтэрнэ үү');if(!CNTT.length)return flash('Тооллогын даалгавар алга');
+  if(CNTT.length===1)return cntTask(CNTT[0]);
+  openModal('<h2>📋 Тооллогын даалгавар</h2>'+CNTT.map((t,i)=>'<button class="blue" data-ct="'+i+'" style="display:block;width:100%;text-align:left;margin-bottom:8px;padding:12px 14px">'+esc(t.title||'')+'<div class="small" style="color:#fff;opacity:.85">'+JSON.parse(t.codes||'[]').length+' код · '+esc((t.created||'').slice(0,16).replace('T',' '))+(t.note?' · '+esc(t.note):'')+'</div></button>').join('')+'<div class="rowbtn"><button id="ctX">Хаах</button></div>',true);
+  $('ctX').onclick=closeModal;document.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>cntTask(CNTT[+b.dataset.ct]))}
+function cntTask(t){const K='cnt_'+t.uid,codes=JSON.parse(t.codes||'[]'),cm=new Map(codes.map(x=>[x[0],x])),C=new Map(Object.entries(store.get(K,{})));
+  openModal('<h2>📋 Тооллого: '+esc(t.title||'')+'</h2><div class="small" style="margin-bottom:6px">Энэ загварын <span style="font-weight:700">бүх хэмжээ, өнгийг</span> лангуу, өлгүүр, агуулахаас олж нэг бүрчлэн уншуулна уу (Enter = +1, олон бол <span style="font-weight:700">5*баркод</span>). Олдохгүй хэмжээг <span style="font-weight:700">0</span> үлдээнэ. Дуусмагц «Тоолж дууслаа».'+(t.note?'<br>Оффисын тайлбар: '+esc(t.note):'')+'</div>'+
+    (()=>{const hold=new Map();parked.concat([{cart:S.cart}]).forEach(p=>(p.cart||[]).forEach(l=>{if(cm.has(l.code))hold.set(l.code,(hold.get(l.code)||0)+l.qty)}));if(!hold.size)return '';
+      return '<div class="small" style="background:#fff4d6;padding:6px 8px;border-radius:8px;margin-bottom:6px">⚠ Түр хадгалсан / одоогийн баримтад энэ загвараас: '+[...hold].map(([c,q])=>esc((cm.get(c)||[])[2]||c)+' × '+q).join(', ')+' — тэдгээр ширхэгийг ч (лангуун дээр) уншуулна уу.</div>'})()+
+    '<div class="hbar"><input id="ctS" placeholder="Баркод уншуулна уу" style="flex:1" autofocus autocomplete="off"><span id="ctM" class="small"></span></div><div class="list" style="max-height:46vh"><table><thead><tr><th>Хэмжээ / бараа</th><th class="n">Тоолсон</th><th></th></tr></thead><tbody id="ctL"></tbody></table></div><div id="ctT" class="small ib" style="margin-top:6px"></div>'+
+    '<div class="rowbtn"><button id="ctX">Түр хаах (хадгална)</button><button class="ok" id="ctOk">✓ Тоолж дууслаа — илгээх</button></div>',true);
+  const save=()=>store.set(K,Object.fromEntries(C)),draw=()=>{const keys=[...new Set(codes.map(x=>x[0]).concat([...C.keys()]))];
+    $('ctL').innerHTML=keys.map(k=>{const x=cm.get(k),q=C.get(k)||0,i=IDX.get(k),nm=x?x[1]:(i!=null?CAT[i][2]:k),sz=x?x[2]:(i!=null?CAT[i][8]:'');
+      return '<tr'+(x?'':' style="background:#fff4d6"')+'><td><b>'+esc(sz||'')+'</b> '+esc(nm)+'<div class="small">'+esc(k)+(x?'':' · даалгаварт ороогүй бараа')+'</div></td><td class="n"><input data-k="'+esc(k)+'" value="'+q+'" inputmode="numeric" style="width:70px;text-align:right"></td><td>'+(x?'':'<button data-x="'+esc(k)+'">✕</button>')+'</td></tr>'}).join('');
+    $('ctT').innerHTML='Уншуулсан <b>'+[...C.values()].reduce((a,b)=>a+b,0)+'</b> ширхэг';
+    $('ctL').querySelectorAll('input[data-k]').forEach(x=>x.onchange=()=>{const q=Math.max(0,Math.round(num(x.value)));if(q)C.set(x.dataset.k,q);else C.delete(x.dataset.k);save();draw()});
+    $('ctL').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{C.delete(b.dataset.x);save();draw()})};
+  $('ctS').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('ctS').value.trim(),n=1;$('ctS').value='';if(!v)return;const m=/^(\d{1,4})\*(.+)$/.exec(v);if(m){n=+m[1];v=m[2].trim()}
+    const i=IDX.get(v),code=i!=null?CAT[i][0]:v;C.set(code,(C.get(code)||0)+n);save();
+    const x=cm.get(code);$('ctM').textContent=(x?'✓ '+(x[2]||'')+' ':i!=null?'⚠ Энэ загварт хамаарахгүй: ':'⚠ Танигдаагүй код: ')+(i!=null?CAT[i][2]:v)+' +'+n;$('ctM').style.color=x?'':'var(--red)';draw()};
+  $('ctX').onclick=closeModal;
+  $('ctOk').onclick=async()=>{const tot=[...C.values()].reduce((a,b)=>a+b,0);if(!confirm('Тоолсон нийт '+tot+' ширхэг. Олдоогүй хэмжээ 0 гэж илгээгдэнэ. Илгээх үү?'))return;
+    if(!(fb.ready&&fb.user&&navigator.onLine))return flash('Илгээхэд интернэт шаардлагатай');$('ctOk').disabled=true;
+    const out=codes.map(x=>[x[0],C.get(x[0])||0]).concat([...C.entries()].filter(([k])=>!cm.has(k)).map(([k,q])=>[k,q]));
+    try{await fb.db.collection('pos_counts').doc(t.uid).update({status:'counted',counts:JSON.stringify(out),countedBy:S.user.name,countedReg:S.user.reg||'',countedAt:now().toISOString()});
+      store.del?store.del(K):store.set(K,{});log('count_task',{uid:t.uid,title:t.title,total:tot});closeModal();flash('✓ Тооллого илгээгдлээ. Баярлалаа!')}
+    catch(e){$('ctOk').disabled=false;flash('Илгээж чадсангүй: '+(e&&e.code||e))}};
+  draw()}
 function chatStop(){(chatListen.u||(()=>{}))();chatListen.u=null;chatMsgs=[];chatSeen=null;chatBadge()}
 function chatListen(){if(chatListen.u||!(fb.ready&&fb.user))return;const st=curAcc();if(!st)return;CHAT.css();
   chatListen.u=CHAT.col(st).orderBy('t').limitToLast(200).onSnapshot(q=>{const L=q.docs.map(d=>d.data()).sort((a,b)=>a.t<b.t?-1:1);
@@ -1595,7 +1648,7 @@ const chatOpen=()=>!chatBox.classList.contains('hide');
 function chatBadge(){const n=chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).length;$('chatN').textContent=n;$('chatN').classList.toggle('hide',!n)}
 function chatDraw(){CHAT.draw($('chatThread'),curAcc(),chatMsgs,'till')}
 function chatRead(){const st=curAcc();chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).forEach(m=>{m.readTill=true;CHAT.col(st).doc(m.id).update({readTill:true,readTillAt:new Date().toISOString()}).catch(()=>{})});chatBadge()}
-$('chatBtn').onclick=()=>{if(chatOpen()){chatBox.classList.add('hide');$('scan').focus();return}
+$('cntBtn').onclick=openCnt;$('chatBtn').onclick=()=>{if(chatOpen()){chatBox.classList.add('hide');$('scan').focus();return}
   if(!(fb.ready&&fb.user)){flash('Чат ашиглахын тулд касс үүлэнд холбогдсон байх ёстой');return}
   if(!curAcc()){flash('Энэ компьютер «'+fb.user.email+'» бүртгэлээр холбогдсон. Чат зөвхөн дэлгүүрийн kasa-…@ бүртгэлээр ажиллана — «Үүлээс салгах» → kasa-'+String(device.store||'xx').toLowerCase()+'@vivi-pos-test.mn-ээр холбоно уу');return}
   chatListen();chatBox.classList.remove('hide');$('chatSt').textContent=STORES[curAcc()]||'';chatDraw();chatRead();chatComp.focus()};
