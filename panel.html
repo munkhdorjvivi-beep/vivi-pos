@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.9">
+<meta name="vivi-ver" content="9.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -146,6 +146,13 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div class="card"><h2>Кассчнаар</h2><div class="scroll" id="cCash"></div></div>
     <div class="card"><h2>Цагаар</h2><div id="cHour"></div></div>
   </div>
+  <div class="card" style="margin-top:12px"><h2>⏱ Цагаар харьцуулах — ижил цаг хүртэлх борлуулалт</h2>
+    <div class="small" style="margin:-4px 0 8px">Хэдэн өдрийг <b>ижил цаг хүртэл</b> харьцуулна (жишээ нь өнөөдөр 17:30 хүртэл ба өчигдөр 17:30 хүртэл). Дэлгүүрийг дээд талын сонголтоор шүүнэ. Мөр бүр — нэг цаг, баганад тэр цагийн борлуулалт ба тэр цаг хүртэлх нийлбэр.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px">
+      <span>Өдрүүд:</span><input type="date" id="hcD1" class="inp" style="width:auto"><input type="date" id="hcD2" class="inp" style="width:auto"><input type="date" id="hcD3" class="inp" style="width:auto"><input type="date" id="hcD4" class="inp" style="width:auto">
+      <span>хүртэл</span><input type="time" id="hcT" class="inp" style="width:auto"><button id="hcNow" class="btn" title="Өнөөдөр, өчигдөр, 7 хоногийн өмнө, 14 хоногийн өмнө, одоогийн цаг">Өнөөдөр ↺</button><button id="hcGo" class="btn pri">Харьцуулах</button><span id="hcMsg" class="small"></span></div>
+    <div id="hcKpi" class="kpi" style="margin-top:10px"></div><div id="hcChart" style="margin-top:8px"></div><div class="scroll" id="hcTbl" style="margin-top:8px"></div>
+    <div style="margin-top:6px"><button id="hcX" class="btn">⬇ Excel</button></div></div>
   <div class="card"><h2>Явуулын касс — аянаар</h2><div class="small" style="margin:-4px 0 8px">Дээрх огнооны хугацаанд хийгдсэн Явуулын кассын борлуулалт аян бүрээр. Бүх аяныг харьцуулах бол хугацааг уртаар сонгоно.</div><div class="scroll" id="cTrip" style="max-height:360px;overflow:auto"></div></div>
   <div class="card"><h2>Тайлан (Smart-тай ижил нэр, багана)</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:var(--soft);border-radius:10px"><b class="small">Тайлангийн хугацаа:</b><span class="drng"><label class="small">Огноо</label><input type="date" class="dr1" id="rd1"><span>→</span><input type="date" class="dr2" id="rd2"></span><span id="rdInfo" class="small"></span></div>
@@ -1622,6 +1629,30 @@ async function histCov(){if(!$('hsCov'))return;try{const s=await db.collection('
   xtable('hsCov','hscov',['Сар','Өдөр (бараагаар)','Өдөр (төлбөр)','Цэвэр борлуулалт','Тоо ширхэг','Өртөг / борлуулалт',''],R,{cell:(x,c)=>c===6?'<button class="btn" data-hdel="'+esc(x[6])+'" style="min-height:28px;padding:1px 10px">Устгах</button>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}catch(e){}}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-hdel]');if(!b)return;if(!confirm(b.dataset.hdel+' сарын түүхийг устгах уу?'))return;await db.collection('pos_hist').doc(b.dataset.hdel).delete();delete HIST[b.dataset.hdel];auditCfg('hist_delete',{by:auth.currentUser.email,month:b.dataset.hdel});histCov()});
 
+
+/* ==== ⏱ Цагаар харьцуулах: сонгосон өдрүүдийн борлуулалтыг ижил цаг хүртэл, цаг бүрээр ==== */
+const WD=['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба'],hcLbl=d=>d.slice(5).replace('-','/')+' '+WD[new Date(d+'T00:00:00').getDay()];
+function hcPreset(){const t=todayIso(),n=new Date();$('hcD1').value=t;$('hcD2').value=addD(t,-1);$('hcD3').value=addD(t,-7);$('hcD4').value=addD(t,-14);$('hcT').value=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')}
+async function hcRun(){const D=['hcD1','hcD2','hcD3','hcD4'].map(id=>$(id).value).filter(Boolean),T=($('hcT').value||'23:59')+':59',m=$('hcMsg');if(!D.length)return m.textContent='Өдөр сонгоно уу';
+  m.textContent='Ачаалж байна…';$('hcGo').disabled=true;
+  try{const R=[];for(const d of [...new Set(D)]){const dd=d.replace(/-/g,'/'),snap=await db.collection('pos_sales').where('date','==',dd).get(),H=new Array(24).fill(0),N=new Array(24).fill(0);let tot=0,rc=0,full=0;
+      snap.docs.forEach(x=>{const s=x.data();if(s.date!==dd||(gSt&&s.store!==gSt))return;const tm=s.time||'',v=s.total||0;full+=v;if(tm>T)return;const h=+tm.slice(0,2)||0;H[h]+=v;if(s.type==='sale')N[h]++;tot+=v;if(s.type==='sale')rc++});
+      R.push({d,H,N,tot,rc,full})}
+    const base=R[0],hrs=[];for(let h=0;h<24;h++)if(R.some(r=>r.H[h]))hrs.push(h);const hT=+T.slice(0,2);
+    $('hcKpi').innerHTML=R.map((r,i)=>'<div class="k'+(i===0?' main':'')+'"><div class="l">'+esc(hcLbl(r.d))+' · '+T.slice(0,5)+' хүртэл</div><div class="v">'+money(r.tot)+'</div><div class="small">'+r.rc+' баримт'+(i&&r.tot?' · '+(base.tot>=r.tot?'<b style="color:var(--ok)">':'<b class="hot">')+esc(hcLbl(base.d).split(' ')[0])+': '+pctS(base.tot/r.tot-1)+'</b>':'')+(r.full>r.tot?' · өдрийн нийт '+money(r.full):'')+'</div></div>').join('');
+    // хуримтлагдсан шугам (SVG)
+    const W=900,Hh=200,P=40,hs=hrs.length?hrs:[9,10],h0=Math.min(...hs),h1=Math.max(...hs,h0+1),mx=Math.max(1,...R.map(r=>r.tot)),col=['#c8102e','#1f6feb','#7c8a99','#d29922'],X=h=>P+(h+1-h0)/(h1+1-h0)*(W-P-10),Y=v=>Hh-20-v/mx*(Hh-40);
+    $('hcChart').innerHTML='<svg viewBox="0 0 '+W+' '+Hh+'" style="width:100%;max-width:'+W+'px;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px">'+
+      [0,.5,1].map(f=>'<line x1="'+P+'" x2="'+(W-10)+'" y1="'+Y(mx*f)+'" y2="'+Y(mx*f)+'" stroke="#eee"/><text x="4" y="'+(Y(mx*f)+4)+'" font-size="10" fill="#888">'+Math.round(mx*f/1e6*10)/10+'M</text>').join('')+
+      hs.map(h=>'<text x="'+(X(h)-8)+'" y="'+(Hh-4)+'" font-size="10" fill="#888">'+h+'</text>').join('')+
+      R.map((r,i)=>{let c=0;const pts=[[X(h0-1),Y(0)]];for(let h=h0;h<=Math.min(h1,hT);h++){c+=r.H[h];pts.push([X(h),Y(c)])}return '<polyline fill="none" stroke="'+col[i]+'" stroke-width="'+(i?2:3)+'" points="'+pts.map(p=>p.join(',')).join(' ')+'"/><text x="'+(P+6+i*150)+'" y="14" font-size="11" fill="'+col[i]+'">■ '+esc(hcLbl(r.d))+'</text>'}).join('')+'</svg>';
+    const cum=R.map(()=>0);
+    xtable('hcTbl','hcmp',['Цаг'].concat(...R.map(r=>[hcLbl(r.d)+' (борлуулалт)',hcLbl(r.d)+' (энэ цаг хүртэл)'])).concat(R.length>1?['Зөрүү '+hcLbl(base.d).split(' ')[0]+' − '+hcLbl(R[1].d).split(' ')[0]+' (энэ цаг хүртэл)']:[]),
+      hrs.map(h=>{const row=[String(h).padStart(2,'0')+':00–'+String(h).padStart(2,'0')+':59'];R.forEach((r,i)=>{cum[i]+=r.H[h];row.push(Math.round(r.H[h])||null,Math.round(cum[i]))});if(R.length>1)row.push(Math.round(cum[0]-cum[1]));return row}),
+      {cell:(x,c)=>{const v=x[c];if(c===x.length-1&&R.length>1&&typeof v==='number')return '<b class="'+(v<0?'hot':'')+'">'+(v>0?'+':'')+nfx(v)+'</b>';return v==null?'':typeof v==='number'?nfx(v):esc(v)}});
+    m.textContent=(gSt?LOC[gSt]||gSt:'Бүх дэлгүүр')+' · '+T.slice(0,5)+' хүртэл'}
+  catch(e){m.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}finally{$('hcGo').disabled=false}}
+$('hcGo').onclick=hcRun;$('hcNow').onclick=()=>{hcPreset();hcRun()};$('hcX').onclick=()=>xtXlsx('hcmp','tsagaar_haritsuulalt','Цагаар');setTimeout(hcPreset,0);
 /* ==== 📊 Урамшууллын үр дүн / 🤖 зөвлөх / 📅 календарь — POS + Smart түүхийн нэгдсэн өдрийн цуваа ==== */
 const addD=(d,k)=>{const x=new Date(d+'T00:00:00Z');x.setUTCDate(x.getUTCDate()+k);return x.toISOString().slice(0,10)},dDiff=(a,b)=>Math.round((new Date(b+'T00:00:00Z')-new Date(a+'T00:00:00Z'))/864e5)+1;
 const nextM=m=>{const [y,mo]=m.split('-').map(Number);return mo===12?(y+1)+'-01':y+'-'+String(mo+1).padStart(2,'0')},addL=(o,k,x)=>{const a=o[k]||(o[k]=[0,0,0,0]);a[0]+=x[0];a[1]+=x[1];a[2]+=x[2];a[3]=(a[3]||0)+(x[3]!=null?x[3]:(x[2]>0?x[1]:0))};
