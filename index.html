@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.4">
+<meta name="vivi-ver" content="6.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -128,7 +128,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
 <body>
 <div id="top" class="hide">
   <b>VIVI</b><span class="ver">POS <span class="appver"></span></span><span class="tag" id="tStore"></span><span class="tag" id="tCash"></span><span class="tag" id="tShift"></span>
-  <span class="sp"></span><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
+  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
 </div>
 
 <div id="login">
@@ -328,7 +328,7 @@ async function cloudInit(){
   try{
     if(!window.firebase)for(const m of ['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+FB_VER+'/firebase-'+m+'-compat.js');
     firebase.initializeApp(FB_CONFIG);fb.auth=firebase.auth();fb.db=firebase.firestore();fb.ready=true;
-    fb.auth.onAuthStateChanged(u=>{fb.user=u;movStop();devStop();chatStop();cntStop();accBind();cloudStatus();if(u){cloudListen();cloudSync()}});
+    fb.auth.onAuthStateChanged(u=>{fb.user=u;movStop();devStop();chatStop();cntStop();gdStop();accBind();cloudStatus();if(u){cloudListen();cloudSync()}});
   }catch(e){fb.err=String(e&&e.message||e)}
   cloudStatus();
 }
@@ -411,7 +411,7 @@ async function cloudSync(){
 function cloudSoon(){clearTimeout(cloudSoon.h);cloudSoon.h=setTimeout(()=>{fb.err='';cloudSync()},400);cloudStatus()}
 function shiftOut(sh){shiftq=shiftq.filter(q=>q.id!==sh.id);shiftq.push(JSON.parse(JSON.stringify(sh)));store.set('shiftq',shiftq);cloudSoon()}
 function cloudListen(){
-  if(cloudListen.on)return;cloudListen.on=true;movListen();itxListen();devListen();chatListen();cntListen();
+  if(cloudListen.on)return;cloudListen.on=true;movListen();itxListen();devListen();chatListen();cntListen();gdListen();
   // Явуулын кассын одоогийн аян (самбараас тохируулна)
   fb.db.collection('pos_config').doc('trip').onSnapshot(d=>{const v=d.exists?String(d.data().name||'').trim():'';if(v!==TRIP){TRIP=v;store.set('trip',v);if(S.user)header()}},()=>{});
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
@@ -1414,7 +1414,7 @@ $('lGo').onclick=()=>{
   if(!(u.role==='admin'||!u.stores.length||device.store==='YV'||u.stores.includes(device.store)))return $('lMsg').textContent='Та '+STORES[device.store]+' дэлгүүрт ажиллах эрхгүй';
   if($('lPin').value!==u.pin)return $('lMsg').textContent='ПИН буруу';
   S.user={store:device.store,reg:$('lReg').value,name:u.name,uid:u.id,role:u.role};$('lPin').value='';$('lMsg').textContent='';
-  S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',{});header();permButtons();
+  S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',{});header();permButtons();setTimeout(gdAfterLogin,700);
   if(S.shift){show('sale');render();$('scan').focus();if(shiftGuard())shiftHandover()}else{show('shiftopen');$('sFloat').select()}
 };
 $('lPin').onkeydown=e=>{if(e.key==='Enter')$('lGo').click()};
@@ -1603,6 +1603,30 @@ document.body.appendChild(chatBox);
 const chatComp=CHAT.composer($('chatComp'),async(text,files,prog)=>{const st=curAcc();if(!st)throw 'Үүлэнд холбогдоогүй';
   await CHAT.send(st,{from:'till',author:(S.user?S.user.name:'Касс')+' · '+(STORES[st]||st)+(S.user&&S.user.reg?' · касс '+S.user.reg:''),text},files,prog)});
 
+
+/* ---------- 📜 Урамшууллын удирдамж (pos_guides): маркетинг самбарт бичиж нийтэлнэ → энд мэдэгдэл; кассчин уншаад «Танилцсан» ---------- */
+let GDL=[];
+const gdAk=()=>S.user?'c_'+String(S.user.uid||S.user.name||'').replace(/[^A-Za-z0-9_]/g,'_'):'';
+const gdMine=g=>{const A=g.acks||{};return !!(S.user&&(A[gdAk()]||Object.values(A).some(a=>a&&(a.uid&&a.uid===S.user.uid))))};
+function gdStop(){(gdListen.u||(()=>{}))();gdListen.u=null;GDL=[];gdBadge()}
+function gdListen(){if(gdListen.u||!(fb.ready&&fb.user))return;const st=curAcc();if(!st)return;
+  gdListen.u=fb.db.collection('pos_guides').where('status','==','pub').onSnapshot(s=>{const td=isoDay(now()),old=new Set(GDL.map(g=>g.id+'|'+(g.pubAt||'')));
+    GDL=s.docs.map(d=>({...d.data(),id:d.id})).filter(g=>g.status==='pub'&&(!g.stores||!g.stores.length||g.stores.includes(st))&&(!g.b||g.b>=td)).sort((a,b)=>(b.pubAt||'')<(a.pubAt||'')?-1:1);gdBadge();
+    if(S.user&&GDL.some(g=>!old.has(g.id+'|'+(g.pubAt||''))&&!gdMine(g)))flash('📜 Шинэ урамшууллын удирдамж ирлээ — уншаад «Танилцсан» дарна уу')},()=>{gdListen.u=null})}
+function gdBadge(){const b=$('gdBtn');if(!b)return;b.classList.toggle('hide',!GDL.length);const n=S.user?GDL.filter(g=>!gdMine(g)).length:0;$('gdN').textContent=n||'';$('gdN').classList.toggle('hide',!n)}
+function gdAfterLogin(){gdBadge();const u=GDL.filter(g=>!gdMine(g));if(u.length)gdShow(u[0])}
+function openGd(){if(!S.user)return flash('Эхлээд нэвтэрнэ үү');if(!GDL.length)return flash('Идэвхтэй удирдамж алга');if(GDL.length===1)return gdShow(GDL[0]);
+  openModal('<h2>📜 Урамшууллын удирдамж</h2>'+GDL.map((g,i)=>'<button class="'+(gdMine(g)?'':'blue')+'" data-gi="'+i+'" style="display:block;width:100%;text-align:left;margin-bottom:8px;padding:12px 14px">'+esc(g.title||'')+'<div class="small" style="opacity:.85">'+esc((g.a||'')+' – '+(g.b||''))+' · '+(gdMine(g)?'✓ танилцсан':'танилцаагүй')+'</div></button>').join('')+'<div class="rowbtn"><button id="giX">Хаах</button></div>',true);
+  $('giX').onclick=closeModal;document.querySelectorAll('[data-gi]').forEach(b=>b.onclick=()=>gdShow(GDL[+b.dataset.gi]))}
+function gdShow(g){const mine=gdMine(g);
+  openModal('<h2>📜 '+esc(g.title||'')+'</h2><div class="small" style="margin-bottom:6px">Хугацаа: <span style="font-weight:700">'+esc(g.a||'—')+' – '+esc(g.b||'—')+'</span>'+(g.pubBy?' · '+esc(g.pubBy):'')+'</div>'+
+    '<div style="background:#f6f8fb;border-radius:10px;padding:12px 14px;max-height:56vh;overflow:auto;line-height:1.5;font-size:15px">'+esc(g.body||'').replace(/\n/g,'<br>')+'</div>'+
+    '<div class="rowbtn"><button id="gsX">'+(mine?'Хаах':'Дараа унших')+'</button>'+(mine?'<span class="small" style="align-self:center">✓ Та танилцсан</span>':'<button class="ok" id="gsOk">✓ Уншиж танилцсан</button>')+'</div>',true);
+  $('gsX').onclick=closeModal;
+  if($('gsOk'))$('gsOk').onclick=async()=>{if(!(fb.ready&&fb.user&&navigator.onLine))return flash('Интернэт шаардлагатай');$('gsOk').disabled=true;
+    try{await fb.db.collection('pos_guides').doc(g.id).update({['acks.'+gdAk()]:{uid:S.user.uid||'',name:S.user.name,store:S.user.store,reg:S.user.reg||'',at:now().toISOString()}});
+      log('guide_ack',{id:g.id,title:g.title});closeModal();flash('✓ Баярлалаа!');const u=GDL.filter(x=>x.id!==g.id&&!gdMine(x));if(u.length)setTimeout(()=>gdShow(u[0]),400)}
+    catch(e){$('gsOk').disabled=false;flash('Хадгалж чадсангүй: '+(e&&e.code||e))}}}
 /* ---------- 📋 Тооллогын даалгавар (pos_counts): оффис хасах үлдэгдэлтэй загварыг тоолуулна ----------
    Касс тухайн загварын бүх хэмжээг дэлгүүр, агуулахаас олж уншуулна (системийн тоог харуулахгүй — сохор тооллого),
    «Тоолж дууслаа» дарахад тоо нь оффис руу очно; зөрүүг оффис тооцоолж засна. */
@@ -1648,7 +1672,7 @@ const chatOpen=()=>!chatBox.classList.contains('hide');
 function chatBadge(){const n=chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).length;$('chatN').textContent=n;$('chatN').classList.toggle('hide',!n)}
 function chatDraw(){CHAT.draw($('chatThread'),curAcc(),chatMsgs,'till')}
 function chatRead(){const st=curAcc();chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).forEach(m=>{m.readTill=true;CHAT.col(st).doc(m.id).update({readTill:true,readTillAt:new Date().toISOString()}).catch(()=>{})});chatBadge()}
-$('cntBtn').onclick=openCnt;$('chatBtn').onclick=()=>{if(chatOpen()){chatBox.classList.add('hide');$('scan').focus();return}
+$('cntBtn').onclick=openCnt;$('gdBtn').onclick=openGd;$('chatBtn').onclick=()=>{if(chatOpen()){chatBox.classList.add('hide');$('scan').focus();return}
   if(!(fb.ready&&fb.user)){flash('Чат ашиглахын тулд касс үүлэнд холбогдсон байх ёстой');return}
   if(!curAcc()){flash('Энэ компьютер «'+fb.user.email+'» бүртгэлээр холбогдсон. Чат зөвхөн дэлгүүрийн kasa-…@ бүртгэлээр ажиллана — «Үүлээс салгах» → kasa-'+String(device.store||'xx').toLowerCase()+'@vivi-pos-test.mn-ээр холбоно уу');return}
   chatListen();chatBox.classList.remove('hide');$('chatSt').textContent=STORES[curAcc()]||'';chatDraw();chatRead();chatComp.focus()};
