@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.4">
+<meta name="vivi-ver" content="9.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -165,9 +165,10 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>Санхүүгийн програм руу (SaleMany загвар):</b>
         <select id="smMode" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px"><option value="day">Өдөр бүр нэг гүйлгээ (бараагаар нэгтгэнэ)</option><option value="rec">Баримт бүр тусдаа гүйлгээ</option></select>
-        <button id="smGo" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--red);color:#fff;padding:6px 14px;cursor:pointer">SaleMany .xlsx татах</button><span id="smMsg" class="small"></span></div>
+        <button id="smGo" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--red);color:#fff;padding:6px 14px;cursor:pointer">Борлуулалт — SaleMany .xlsx</button><span id="smMsg" class="small"></span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><b>Борлуулалтын буцаалт:</b><button id="smRGo" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:#8a1c1c;color:#fff;padding:6px 14px;cursor:pointer">Буцаалт — SaleRefundMany .xlsx</button><span id="smRMsg" class="small"></span></div>
       <details style="margin-top:8px"><summary class="small">Код, данс тохируулах (нягтлан)</summary><div id="smCfg" style="margin-top:8px"></div></details>
-      <div class="small" style="margin-top:6px">Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Байршил = борлуулсан дэлгүүрийн тасгийн код. Харьцсан данс: зээлээр бол зээлийн данс, бусад үед дэлгүүрийн данс.</div>
+      <div class="small" style="margin-top:6px">Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Буцаалт SaleMany-д орохгүй — тусдаа «Борлуулалтын буцаалт» файлаар. Байршил = бараа Smart-д аль тасагт байсан тэр тасгийн код (тохиргоонд). Нэгж үнэ = төлсөн үнэ; хөнгөлөлт, НӨАТ 0, НӨАТ-гүй дүн = нийт дүн, цаг минут хоосон. Харилцагч: зээл бол тэр харилцагч, бусад үед 5915198. Харьцсан данс: зээлээр бол зээлийн данс, бусад үед дэлгүүрийн данс.</div>
     </div>
     <div class="scroll" id="cRep" style="max-height:420px;overflow:auto"></div></div>
   <div class="card" style="margin-top:12px"><h2>📥 Smart-ын борлуулалтын түүх (суурь өгөгдөл)</h2>
@@ -2382,50 +2383,106 @@ async function smartXlsx(kind){
     XLSX.writeFile(wb,nm);$('xMsg').innerHTML=esc(nm)+' · '+(aoa.length-4)+' мөр'+(kind==='b'&&!costMap.size?' · <span class="hot">Өртөг хоосон: үүлэнд өртөг алга. «Барааны жагсаалт» хэсгээс файлаа дахин илгээнэ үү.</span>':'');
   }catch(e){$('xMsg').textContent='Алдаа: '+(e.message||e)}
 }
-/* ---- SaleMany: санхүүгийн програмд оруулах загвар (SaleMany_v3_1.xlsx) ---- */
-const SMDEF={dept:{FC:'220-2',DR:'222-2',NS:'226-2',ON:'070',YV:''},acc:{FC:'121229',DR:'121229',NS:'121229',ON:'121227',YV:'121229'},credit:'120102',customer:'',config:'Байршил'};
-let smCfg=JSON.parse(JSON.stringify(SMDEF));
-function watchSm(){db.collection('pos_config').doc('acc').onSnapshot(d=>{const v=d.exists?d.data():{};smCfg={...SMDEF,...v,dept:{...SMDEF.dept,...(v.dept||{})},acc:{...SMDEF.acc,...(v.acc||{})}};drawSmCfg()},()=>drawSmCfg())}
-function drawSmCfg(){const inp=(id,v,w)=>'<input id="'+id+'" value="'+esc(v||'')+'" style="font:inherit;min-height:36px;width:'+(w||110)+'px;border:1px solid var(--line);border-radius:8px;padding:4px 8px">';
-  $('smCfg').innerHTML='<table class="small"><tr><th style="text-align:left">Дэлгүүр</th><th style="text-align:left">Тасгийн код (Байршил)</th><th style="text-align:left">Дэлгүүрийн данс</th></tr>'+
+/* ---- SaleMany: санхүүгийн програмд оруулах загвар (SaleMany_v3_1.xlsx) + буцаалт тусдаа (SaleRefundMany) ----
+   Нягтлангийн шаардлага: хөнгөлөлт 0, НӨАТ 0, НӨАТ-гүй дүн = нийт дүн (НӨАТ салгахгүй), цаг минут хоосон,
+   харилцагч: зээл (StorePay, Pocket, ажилтан) биш бол 5915198. Байршил = тухайн бараа Smart-д аль тасагт байсан (үлдэгдлийн файлаас),
+   олдохгүй бол дүрмээр (нийлүүлэгч, бүлэг, нэр), эс бөгөөс дэлгүүрийн үндсэн код. */
+const SMDEF={dept:{FC:'220-2',DR:'222-2',NS:'226-2',ON:'070',YV:''},acc:{FC:'121229',DR:'121229',NS:'121229',ON:'121227',YV:'121229'},credit:'120102',customer:'5915198',config:'Байршил',deptCodes:{},deptRules:[]};
+let smCfg=JSON.parse(JSON.stringify(SMDEF)),SMDP=null,SMDM=null;
+const smKind=n=>{const x=String(n||'').trim(),i=x.indexOf('-');return i<0?'':x.slice(i+1).trim()},smKN=k=>String(k||'').trim().toLowerCase();
+function watchSm(){db.collection('pos_config').doc('acc').onSnapshot(d=>{const v=d.exists?d.data():{};smCfg={...SMDEF,...v,dept:{...SMDEF.dept,...(v.dept||{})},acc:{...SMDEF.acc,...(v.acc||{})},deptCodes:v.deptCodes||{},deptRules:Array.isArray(v.deptRules)?v.deptRules:[]};if(!smCfg.customer)smCfg.customer=SMDEF.customer;drawSmCfg()},()=>drawSmCfg())}
+async function loadDept(force){if(SMDP&&!force)return SMDP;const m=await db.collection('pos_dept').doc('meta').get();SMDP=new Map();SMDM=m.exists?m.data():null;
+  if(SMDM)for(const id of SMDM.chunks||[]){const c=await db.collection('pos_dept').doc(id).get();if(c.exists){const x=c.data(),K=x.k||[];JSON.parse(x.d||'[]').forEach(([code,i])=>SMDP.set(String(code),K[i]||''))}}
+  return SMDP}
+// Smart-ын байршлын нэрс: тохиргоонд байгаа + файлаас олдсон + дэлгүүрийн үндсэн нэр
+function smLocNames(){const s=new Set(Object.keys(smCfg.deptCodes||{}));((SMDM&&SMDM.locs)||[]).forEach(n=>s.add(n));return [...s].filter(n=>STN[smartLoc(n)]&&smKind(n)).sort((a,b)=>(smartLoc(a)+a).localeCompare(smartLoc(b)+b))}
+function smKinds(){const s=new Set();smLocNames().forEach(n=>{const k=smKind(n);if(k)s.add(k)});return [...s].sort((a,b)=>a.localeCompare(b))}
+function drawSmCfg(){const inp=(id,v,w,ph)=>'<input id="'+id+'" value="'+esc(v||'')+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+' style="font:inherit;min-height:36px;width:'+(w||110)+'px;border:1px solid var(--line);border-radius:8px;padding:4px 8px">';
+  const LN=smLocNames(),K=smKinds();
+  $('smCfg').innerHTML='<table class="small"><tr><th style="text-align:left">Дэлгүүр</th><th style="text-align:left">Үндсэн байршил (тасаг олдохгүй үед)</th><th style="text-align:left">Дэлгүүрийн данс</th></tr>'+
   Object.keys(SMDEF.dept).map(k=>'<tr><td>'+esc(STN[k]||k)+'</td><td>'+inp('smD_'+k,smCfg.dept[k])+'</td><td>'+inp('smA_'+k,smCfg.acc[k])+'</td></tr>').join('')+'</table>'+
-  '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;align-items:center"><label class="small">Зээлийн данс '+inp('smCr',smCfg.credit)+'</label><label class="small">Энгийн харилцагчийн код (зээлээр биш үед) '+inp('smCu',smCfg.customer)+'</label><label class="small">Дансны тохиргоо '+inp('smCo',smCfg.config,120)+'</label>'+
-  '<button id="smSave" class="btn pri">Хадгалах</button><span id="smCm" class="small"></span></div>';
-  $('smSave').onclick=async()=>{const n={dept:{},acc:{},credit:$('smCr').value.trim(),customer:$('smCu').value.trim(),config:$('smCo').value.trim(),updated:new Date().toISOString(),by:auth.currentUser.email||''};
+  '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;align-items:center"><label class="small">Зээлийн данс '+inp('smCr',smCfg.credit)+'</label><label class="small">Энгийн харилцагчийн код (зээлээр биш үед) '+inp('smCu',smCfg.customer,110,'5915198')+'</label><label class="small">Дансны тохиргоо '+inp('smCo',smCfg.config,120)+'</label></div>'+
+  '<h4 style="margin:12px 0 4px">Тасаг бүрийн байршлын код</h4><div class="small" style="margin-bottom:6px">Бараа бүр Smart-д аль тасагт (Food city -Гутал, Нийслэл -Хувцас …) байсныг доорх үлдэгдлийн файлаас таньж, тэр тасгийн кодоор гаргана. Кодыг нягтлан энд бичнэ.</div>'+
+  (LN.length?'<div class="scroll" style="max-height:300px;overflow:auto"><table class="small"><tr><th style="text-align:left">Smart-ын байршил (тасаг)</th><th style="text-align:left">Байршлын код</th></tr>'+LN.map((n,i)=>'<tr><td>'+esc(n)+'</td><td><input class="smDC" data-n="'+esc(n)+'" value="'+esc((smCfg.deptCodes||{})[n]||'')+'" placeholder="ж: 226-4" style="font:inherit;min-height:32px;width:110px;border:1px solid var(--line);border-radius:8px;padding:3px 8px"></td></tr>').join('')+'</table></div>':'<div class="small hot">Тасгийн жагсаалт алга — доор Smart-ын үлдэгдлийн файлыг оруулна уу.</div>')+
+  '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:8px 10px;background:var(--soft);border-radius:10px"><b class="small">Smart-ын үлдэгдлийн файл (Retil / Үлдэгдэл — байршил бүр тусдаа баганатай):</b><input type="file" id="smDF" accept=".xlsx,.xls"><span id="smDM" class="small">'+(SMDM?'Одоогийн: '+esc(SMDM.file||'')+' · '+(SMDM.count||0).toLocaleString('en-US')+' бараа · '+esc(lt(SMDM.asOf||''))+'':'Оруулаагүй')+'</span></div>'+
+  '<h4 style="margin:12px 0 4px">Файлд байхгүй (шинэ) барааны дүрэм</h4><div class="small" style="margin-bottom:6px">Нийлүүлэгч, барааны бүлэг эсвэл нэрэнд тухайн үг байвал тэр тасаг. Дээрээс доош эхний таарсан нь.</div><div id="smRules"></div><button id="smRAdd" class="btn" style="margin-top:6px">+ Дүрэм нэмэх</button>'+
+  '<div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button id="smSave" class="btn pri">Хадгалах</button><span id="smCm" class="small">'+(Date.now()-(drawSmCfg.ok||0)<8000?'<span class="chip">Хадгаллаа</span>':'')+'</span></div>';
+  const drawR=R=>{$('smRules').innerHTML=R.length?'<table class="small"><tr><th>Талбар</th><th>Агуулах үг</th><th>Тасаг</th><th></th></tr>'+R.map((r,i)=>'<tr data-ri="'+i+'"><td><select class="rf" style="font:inherit;min-height:32px"><option value="sup"'+(r.f==='sup'?' selected':'')+'>Нийлүүлэгч</option><option value="grp"'+(r.f==='grp'?' selected':'')+'>Барааны бүлэг</option><option value="name"'+(r.f==='name'?' selected':'')+'>Барааны нэр</option></select></td><td><input class="rt" value="'+esc(r.t||'')+'" style="font:inherit;min-height:32px;width:160px;border:1px solid var(--line);border-radius:8px;padding:3px 8px"></td><td><select class="rk" style="font:inherit;min-height:32px">'+K.concat(r.k&&!K.includes(r.k)?[r.k]:[]).map(k=>'<option'+(k===r.k?' selected':'')+'>'+esc(k)+'</option>').join('')+'</select></td><td><button class="btn warn rx" style="min-height:28px;padding:1px 8px">✕</button></td></tr>').join('')+'</table>':'<div class="small">Дүрэм алга.</div>';
+    $('smRules').querySelectorAll('.rx').forEach(b=>b.onclick=()=>{const L=readR();L.splice(+b.closest('tr').dataset.ri,1);drawR(L)})};
+  const readR=()=>[...$('smRules').querySelectorAll('tr[data-ri]')].map(tr=>({f:tr.querySelector('.rf').value,t:tr.querySelector('.rt').value.trim(),k:tr.querySelector('.rk').value}));
+  drawR(smCfg.deptRules||[]);$('smRAdd').onclick=()=>{if(!K.length)return $('smCm').textContent='Эхлээд үлдэгдлийн файл оруулж тасгуудыг танина уу';const L=readR();L.push({f:'sup',t:'',k:K[0]});drawR(L)};
+  $('smDF').onchange=()=>smDeptFile($('smDF').files[0]);
+  $('smSave').onclick=async()=>{const n={dept:{},acc:{},credit:$('smCr').value.trim(),customer:$('smCu').value.trim()||SMDEF.customer,config:$('smCo').value.trim(),deptCodes:{},deptRules:readR().filter(r=>r.t&&r.k),updated:new Date().toISOString(),by:auth.currentUser.email||''};
     Object.keys(SMDEF.dept).forEach(k=>{n.dept[k]=$('smD_'+k).value.trim();n.acc[k]=$('smA_'+k).value.trim()});
-    try{await db.collection('pos_config').doc('acc').set(n);await auditCfg('acc_save',{by:auth.currentUser.email,cfg:n});$('smCm').innerHTML='<span class="chip">Хадгаллаа</span>'}catch(e){$('smCm').innerHTML='<span class="hot">'+esc(e.code||e)+'</span>'}}}
-async function saleMany(){
-  const m=$('smMsg');
-  try{m.textContent='Бэлтгэж байна…';await xlsx();
-    const st=$('xSt').value,mode=$('smMode').value,C=smCfg,L=sales.filter(s=>!st||s.store===st).sort((a,b)=>a.iso<b.iso?-1:1);
-    if(!L.length)return m.textContent='Энэ хугацаанд борлуулалт алга';
-    const warn=[],docs=new Map(),r2=x=>Math.round(x*100)/100;
-    L.forEach(s=>{
-      const tot=s.total,cr=(s.payments||[]).filter(p=>p.form==='Зээлээр'),crAmt=cr.reduce((a,p)=>a+p.amount,0),isCr=cr.length&&Math.abs(crAmt-tot)<1;
-      const vp=(s.payments||[]).filter(p=>p.form==='Ваучер');if(vp.length)warn.push([s.id,s.date,s.storeName,'Ваучераар '+vp.reduce((a,p)=>a+p.amount,0)+' ₮ ('+vp.map(p=>p.voucher).join(', ')+') — дэлгүүрийн дансаар орсон, ваучерын хэсгийг ваучерын дансаар гараар засна']);
-      if(cr.length&&!isCr)warn.push([s.id,s.date,s.storeName,'Холимог төлбөр: зээл '+crAmt+' ₮ / нийт '+tot+' ₮ ('+cr.map(p=>p.partner).join(', ')+') — дэлгүүрийн дансаар орсон, зээлийн хэсгийг гараар засна']);
-      const ret=s.type==='return',dept=C.dept[s.store]||'',acc=isCr?C.credit:(C.acc[s.store]||''),cust=isCr?(cr[0].partnerCode||''):C.customer;
-      if(!dept)warn.push([s.id,s.date,s.storeName,'Тасгийн код тохируулаагүй']);
-      const sn=s.storeName||STN[s.store]||s.store,b=s.time?s.time.split(':'):['',''];
-      const key=(mode==='rec'||isCr)?'R|'+s.uid:'D|'+s.date+'|'+s.store+'|'+(ret?'r':'s');
-      let d=docs.get(key);if(!d){d={no:(mode==='rec'||isCr)?s.id:s.store+'-'+s.date.replace(/\//g,'')+(ret?'-Б':''),date:s.date,desc:(ret?'Борлуулалтын буцаалт':'Борлуулалт')+' /'+sn+' салбар/'+(isCr?' зээл: '+cr[0].partner:''),cust,dept,acc,h:(mode==='rec'||isCr)?b[0]:'',mi:(mode==='rec'||isCr)?b[1]:'',rows:new Map()};docs.set(key,d)}
-      (s.lines||[]).forEach(l=>{const unit=Math.max(l.base||0,l.unit||0),k=l.code+'|'+unit;let r=d.rows.get(k);if(!r){r={code:l.code,name:l.name,unit,qty:0,sum:0};d.rows.set(k,r)}r.qty+=l.qty;r.sum+=l.sum});
-    });
+    document.querySelectorAll('.smDC').forEach(i=>{if(i.value.trim())n.deptCodes[i.dataset.n]=i.value.trim()});
+    try{drawSmCfg.ok=Date.now();await db.collection('pos_config').doc('acc').set(n);await auditCfg('acc_save',{by:auth.currentUser.email,cfg:n});$('smCm').innerHTML='<span class="chip">Хадгаллаа</span>'}catch(e){$('smCm').innerHTML='<span class="hot">'+esc(e.code||e)+'</span>'}}}
+// Smart-ын үлдэгдлийн файл → бараа бүр аль тасагт (хамгийн их үлдэгдэлтэй тасаг) байгааг хадгална
+async function smDeptFile(f){if(!f)return;const m=$('smDM');m.textContent='Уншиж байна… (том файл 30–60 сек)';
+  try{await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array',dense:true,cellFormula:false,cellStyles:false});let best=null;
+    for(const sn of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
+      for(let h=0;h<Math.min(20,a.length);h++){const row=(a[h]||[]).map(HN),ki=row.findIndex(x=>CODE_H.includes(x));if(ki<0)continue;
+        const cols=[];(a[h]||[]).forEach((x,i)=>{const n=String(x==null?'':x).trim(),loc=smartLoc(n);if(n&&(STN[loc]||loc==='AG'))cols.push([i,n,smKind(n)])});
+        if(cols.length>=2){best={a,h,ki,cols,sn};break}}if(best)break}
+    if(!best)return m.innerHTML='<span class="hot">«Код» ба байршлын (Food city, Драгон, Нийслэл …) багана олдсонгүй</span>';
+    const out=new Map();let nr=0;
+    best.a.slice(best.h+1).forEach(r=>{if(!r)return;const c=r[best.ki]==null?'':(typeof r[best.ki]==='number'?String(Math.round(r[best.ki])):String(r[best.ki]).trim());if(!c)return;nr++;
+      const by={};best.cols.forEach(([i,n,k])=>{const q=Number(r[i]);if(k&&isFinite(q)&&q>0)by[k]=(by[k]||0)+q});const ks=Object.entries(by).sort((x,y)=>y[1]-x[1]);if(ks.length)out.set(c,ks[0][0])});
+    const kinds=[...new Set(out.values())],KI=new Map(kinds.map((k,i)=>[k,i])),arr=[...out].map(([c,k])=>[c,KI.get(k)]),CH=15000,chunks=[];
+    for(let i=0;i<arr.length;i+=CH)chunks.push(arr.slice(i,i+CH));
+    m.textContent='Хадгалж байна… '+out.size.toLocaleString('en-US')+' бараа';
+    const ids=chunks.map((_,i)=>'c'+i);for(let i=0;i<chunks.length;i++)await db.collection('pos_dept').doc(ids[i]).set({k:kinds,d:JSON.stringify(chunks[i])});
+    const meta={chunks:ids,count:out.size,rows:nr,kinds,locs:best.cols.map(x=>x[1]),file:f.name,asOf:new Date().toISOString(),by:auth.currentUser.email||''};
+    await db.collection('pos_dept').doc('meta').set(meta);await auditCfg('dept_file',{by:meta.by,file:f.name,count:out.size});
+    await loadDept(true);drawSmCfg();$('smDM').innerHTML='<span class="chip">Хадгаллаа</span> '+esc(f.name)+': '+out.size.toLocaleString('en-US')+' бараа · '+kinds.length+' тасаг ('+kinds.map(esc).join(', ')+'). Одоо тасаг бүрийн кодыг бичээд «Хадгалах».'}
+  catch(e){m.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}}
+// бараа → тасаг → байршлын код
+function smDeptOf(l,store){const C=smCfg;let k=SMDP&&SMDP.get(String(l.code)),src='file';
+  if(k==null){src='rule';const r=(C.deptRules||[]).find(r=>{const v=smKN(r.f==='sup'?l.sup:r.f==='grp'?l.grp:l.name);return r.t&&v.includes(smKN(r.t))});k=r?r.k:null}
+  if(k){const nm=Object.keys(C.deptCodes||{}).find(n=>smartLoc(n)===store&&smKN(smKind(n))===smKN(k)&&C.deptCodes[n]);if(nm)return {code:C.deptCodes[nm],src}}
+  return {code:C.dept[store]||'',src:'def',kind:k}}
+async function smBuild(kind){const st=$('xSt').value,mode=$('smMode').value,C=smCfg,ret=kind==='ret';
+  await loadDept().catch(()=>null);
+  const L=sales.filter(s=>(!st||s.store===st)&&(ret?s.type==='return':s.type!=='return')).sort((a,b)=>a.iso<b.iso?-1:1);
+  const warn=[],docs=new Map(),r2=x=>Math.round(x*100)/100,dflt=new Map();
+  L.forEach(s=>{
+    const tot=s.total,cr=(s.payments||[]).filter(p=>p.form==='Зээлээр'),crAmt=cr.reduce((a,p)=>a+p.amount,0),isCr=cr.length&&Math.abs(crAmt-tot)<1;
+    const vp=(s.payments||[]).filter(p=>p.form==='Ваучер');if(vp.length)warn.push([s.id,s.date,s.storeName,'Ваучераар '+vp.reduce((a,p)=>a+p.amount,0)+' ₮ ('+vp.map(p=>p.voucher).join(', ')+') — дэлгүүрийн дансаар орсон, ваучерын хэсгийг ваучерын дансаар гараар засна']);
+    if(cr.length&&!isCr)warn.push([s.id,s.date,s.storeName,'Холимог төлбөр: зээл '+crAmt+' ₮ / нийт '+tot+' ₮ ('+cr.map(p=>p.partner).join(', ')+') — дэлгүүрийн дансаар орсон, зээлийн хэсгийг гараар засна']);
+    const acc=isCr?C.credit:(C.acc[s.store]||''),cust=isCr?(cr[0].partnerCode||''):(C.customer||SMDEF.customer);
+    if(isCr&&!cr[0].partnerCode)warn.push([s.id,s.date,s.storeName,'Зээлийн харилцагчийн код алга ('+cr[0].partner+')']);
+    const sn=s.storeName||STN[s.store]||s.store;
+    const key=(mode==='rec'||isCr)?'R|'+s.uid:'D|'+s.date+'|'+s.store;
+    let d=docs.get(key);if(!d){d={no:(mode==='rec'||isCr)?s.id:s.store+'-'+s.date.replace(/\//g,'')+(ret?'-Б':''),date:s.date,desc:(ret?'Борлуулалтын буцаалт':'Борлуулалт')+' /'+sn+' салбар/'+(isCr?' зээл: '+cr[0].partner:''),cust,acc,rows:new Map()};docs.set(key,d)}
+    (s.lines||[]).forEach(l=>{const q=ret?-l.qty:l.qty,sum=ret?-l.sum:l.sum,unit=q?r2(sum/q):0,dp=smDeptOf(l,s.store);
+      if(dp.src==='def'){const o=dflt.get(l.code)||{n:l.name,st:new Set(),k:dp.kind};o.st.add(s.store);dflt.set(l.code,o)}
+      if(!dp.code)warn.push([s.id,s.date,s.storeName,'Байршлын код алга: '+l.code+' '+l.name]);
+      const k=l.code+'|'+unit+'|'+dp.code;let r=d.rows.get(k);if(!r){r={code:l.code,name:l.name,unit,dept:dp.code,qty:0,sum:0};d.rows.set(k,r)}r.qty+=q;r.sum+=sum});
+  });
+  if(dflt.size)[...dflt].slice(0,500).forEach(([c,o])=>warn.push(['',c,[...o.st].map(x=>STN[x]||x).join(', '),'Тасаг тодорхойгүй ('+(o.k?'«'+o.k+'» тасгийн код алга':'үлдэгдлийн файлд/дүрэмд алга')+') → дэлгүүрийн үндсэн код: '+o.n]));
+  return {L,docs,warn,st,ndef:dflt.size}}
+async function saleMany(kind){const m=$(kind==='ret'?'smRMsg':'smMsg'),ret=kind==='ret';
+  try{m.textContent='Бэлтгэж байна…';await xlsx();const B=await smBuild(kind),C=smCfg;
+    if(!B.L.length)return m.textContent=ret?'Энэ хугацаанд буцаалт алга':'Энэ хугацаанд борлуулалт алга';
     const T=v=>({t:'s',v:String(v==null?'':v),z:'@'}),N=v=>({t:'n',v,z:'0.00'});
-    const H1=['DocumentId','DocumentNumber','DocumentDate','DocumentDesc','CustomerId','SellerId','WarehouseId','AccountId','ItemId','ItemName','MeasureId','EquWeight','Qty','UnitPrice','Amount','AmountNonVat','DiscountAmount','VatAmount','CityTaxAmount','PayAmount','DueDate','AccountConfig','FreeVatPropertyId','Hour','Minute'];
-    const H2=['Гүйлгээ','Баримтын №','Огноо','Гүйлгээний утга','Харилцагч','Борлуулагч','Байршил','Харьцсан данс','Барааны код','Барааны нэр','Хэмжих нэгж','Экв жин','Тоо хэмжээ','Нэгж үнэ (НӨАТ-тай)','Нийт дүн','НӨАТ-гүй дүн','Хөнгөлөлтийн дүн','НӨАТ','НХАТ','Дүн','Төлж дуусах огноо','Дансны тохиргоо','Чөлөөлөгдөх НӨАТ','Цаг','Минут'];
-    const aoa=[H1.map(T),H2.map(T)];let id=0,sumT=0,rows=0;
-    [...docs.values()].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.no<b.no?-1:1).forEach(d=>{id++;
-      [...d.rows.values()].filter(r=>r.qty!==0||r.sum!==0).forEach(r=>{const O=r2(r.unit*r.qty),Tt=r2(r.sum),P=r2(Tt/1.1),R=r2(Tt-P);sumT+=Tt;rows++;
-        aoa.push([T(id),T(d.no),T(d.date),T(d.desc),T(d.cust),T(''),T(d.dept),T(d.acc),T(r.code),T(r.name),T(''),T(''),N(r.qty),N(r.unit),N(O),N(P),N(r2(O-Tt)),N(R),N(0),N(Tt),T(''),T(C.config),T(''),T(d.h),T(d.mi)])})});
-    const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[8,18,11,34,10,8,10,10,15,44,8,6,9,12,12,12,12,11,6,12,10,12,8,5,5].map(w=>({wch:w}));
-    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'SaleMany');
-    if(warn.length){const w2=XLSX.utils.aoa_to_sheet([['Баримт','Огноо','Дэлгүүр','Шалгах зүйл']].concat(warn));w2['!cols']=[18,11,14,90].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,w2,'Шалгах')}
-    const nm='SaleMany_'+(st||'buh')+'_'+$('d1').value+(($('d2').value!==$('d1').value)?'_'+$('d2').value:'')+'.xlsx';
-    XLSX.writeFile(wb,nm);m.innerHTML=esc(nm)+' · '+id+' гүйлгээ, '+rows+' мөр, '+money(sumT)+(warn.length?' · <span class="hot">'+warn.length+' зүйл шалгах («Шалгах» хуудас)</span>':'');
+    let H1,H2;
+    if(ret){H1=['DocumentId','DocumentNumber','DocumentDate','DocumentDesc','CustomerId','WarehouseId','AccountId','ItemId','ItemName','Qty','UnitPrice','Amount','DiscountAmount','VatAmount','CityTaxAmount','PayAmount'];
+      H2=['Гүйлгээ','Баримтын №','Огноо','Гүйлгээний утга','Харилцагч','Байршил','Харьцсан данс','Барааны код','Барааны нэр','Тоо хэмжээ','Нэгж үнэ (НӨАТ-тай)','Нийт дүн','Хөнгөлөлт','НӨАТ','НХАТ','Дүн']}
+    else{H1=['DocumentId','DocumentNumber','DocumentDate','DocumentDesc','CustomerId','SellerId','WarehouseId','AccountId','ItemId','ItemName','MeasureId','EquWeight','Qty','UnitPrice','Amount','AmountNonVat','DiscountAmount','VatAmount','CityTaxAmount','PayAmount','DueDate','AccountConfig','FreeVatPropertyId','Hour','Minute'];
+      H2=['Гүйлгээ','Баримтын №','Огноо','Гүйлгээний утга','Харилцагч','Борлуулагч','Байршил','Харьцсан данс','Барааны код','Барааны нэр','Хэмжих нэгж','Экв жин','Тоо хэмжээ','Нэгж үнэ (НӨАТ-тай)','Нийт дүн','НӨАТ-гүй дүн','Хөнгөлөлтийн дүн','НӨАТ','НХАТ','Дүн','Төлж дуусах огноо','Дансны тохиргоо','Чөлөөлөгдөх НӨАТ','Цаг','Минут']}
+    const aoa=[H1.map(T),H2.map(T)],r2=x=>Math.round(x*100)/100;let id=0,sumT=0,rows=0;
+    [...B.docs.values()].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.no<b.no?-1:1).forEach(d=>{id++;
+      [...d.rows.values()].filter(r=>r.qty!==0||r.sum!==0).sort((a,b)=>a.dept<b.dept?-1:a.dept>b.dept?1:0).forEach(r=>{const Tt=r2(r.sum);sumT+=Tt;rows++;
+        // хөнгөлөлт 0, НӨАТ 0, НӨАТ-гүй дүн = нийт дүн, цаг минут хоосон
+        aoa.push(ret?[T(id),T(d.no),T(d.date),T(d.desc),T(d.cust),T(r.dept),T(d.acc),T(r.code),T(r.name),N(r.qty),N(r.unit),N(Tt),N(0),N(0),N(0),N(Tt)]
+          :[T(id),T(d.no),T(d.date),T(d.desc),T(d.cust),T(''),T(r.dept),T(d.acc),T(r.code),T(r.name),T(''),T(''),N(r.qty),N(r.unit),N(Tt),N(Tt),N(0),N(0),N(0),N(Tt),T(''),T(C.config),T(''),T(''),T('')])})});
+    const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=(ret?[8,18,11,34,10,10,10,15,44,9,12,12,10,9,6,12]:[8,18,11,34,10,8,10,10,15,44,8,6,9,12,12,12,12,11,6,12,10,12,8,5,5]).map(w=>({wch:w}));
+    const wb=XLSX.utils.book_new(),sh=ret?'SaleRefundMany':'SaleMany';XLSX.utils.book_append_sheet(wb,ws,sh);
+    if(B.warn.length){const w2=XLSX.utils.aoa_to_sheet([['Баримт','Огноо / код','Дэлгүүр','Шалгах зүйл']].concat(B.warn));w2['!cols']=[18,14,14,100].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,w2,'Шалгах')}
+    const nm=sh+'_'+(B.st||'buh')+'_'+$('d1').value+(($('d2').value!==$('d1').value)?'_'+$('d2').value:'')+'.xlsx';
+    XLSX.writeFile(wb,nm);m.innerHTML=esc(nm)+' · '+id+' гүйлгээ, '+rows+' мөр, '+money(sumT)+(B.ndef?' · <span class="hot">'+B.ndef+' барааны тасаг тодорхойгүй (үндсэн код)</span>':'')+(B.warn.length?' · <span class="hot">'+B.warn.length+' зүйл шалгах («Шалгах» хуудас)</span>':'');
   }catch(e){m.textContent='Алдаа: '+(e.message||e)}
 }
-$('smGo').onclick=saleMany;$('rhK').onchange=drawReqHist;
+$('smGo').onclick=()=>saleMany('sale');$('smRGo').onclick=()=>saleMany('ret');$('rhK').onchange=drawReqHist;
 document.querySelectorAll('.qr').forEach(b=>b.onclick=()=>quickRange(b.dataset.q));
 $('xB').onclick=()=>smartXlsx('b');$('xP').onclick=()=>smartXlsx('p');
 function watchCat(){db.collection('pos_catalog').doc('meta').onSnapshot(d=>{if(d.exists){const m=d.data();catLists={sups:m.sups||[],grps:m.grps||[]};$('itSL').innerHTML=catLists.sups.map(x=>'<option value="'+esc(x)+'">').join('');$('itGL').innerHTML=catLists.grps.map(x=>'<option value="'+esc(x)+'">').join('')}if(!d.exists)return $('catNow').textContent='Үүлэнд барааны жагсаалт алга. Smart-ын файлаас оруулна уу.';const m=d.data();$('catNow').innerHTML='Үүлэн дэх жагсаалт: <b>'+Number(m.count).toLocaleString('en-US')+'</b> бараа · '+esc(new Date(m.version).toLocaleString('sv-SE').slice(0,16))+' · '+esc(m.by||'')},()=>{})}
