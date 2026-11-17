@@ -6819,8 +6819,12 @@ async function posLppIn(sid){
     if (localDay(s.recvAt) < from) return;
     const R = decMap(s.r), I = decMap(s.i), lines = Object.entries(R).filter(([, q]) => +q > 0).map(([e, q]) => [e, +q, (I[e] || {}).n || '']).sort((a, b) => a[0] < b[0] ? -1 : 1);
     if (!lines.length) return; const id = 'lpp_' + sid;
-    await R0.doc('pos_stock_docs/' + id).set({uid: id, no: s.no || id, type: 'in', from: '', to, at: s.recvAt, recvAt: s.recvAt, note: 'LPP · ' + (s.dname || ''), supplier: 'LPP', invoice: s.no || '', reason: '', file: '', prices: '{}',
-      lines: JSON.stringify(lines), count: lines.length, qty: lines.reduce((a, x) => a + x[1], 0), costSum: 0, by: s.recvBy || me, saved: new Date().toISOString(), src: 'lpp', ship: sid});
+    const nm = async u => { if (!u) return ''; if (u === me){ const e = (firebase.auth().currentUser || {}).email || ''; const n = (user.posPerms() || {}).name || ''; return n ? n + ' (' + e + ')' : e; }
+      try{ const d = await R0.doc('wh_users/' + u).get(); if (d.exists){ const x = d.data(); return x.name ? x.name + (x.email ? ' (' + x.email + ')' : '') : (x.email || u); } }catch(e){} return u; };
+    const sent = Object.values(decMap(s.l)).reduce((a, q) => a + Math.max(0, +q || 0), 0), C = s.cmp || {};
+    await R0.doc('pos_stock_docs/' + id).set({uid: id, no: s.no || id, type: 'in', from: '', to, at: s.recvAt, recvAt: s.recvAt, recvBy: await nm(s.recvBy), sentAt: s.sentAt || '', by: await nm(s.sentBy || s.by),
+      note: 'LPP · ' + (s.dname || '') + (C.miss || C.extra ? ' · зөрүү: дутуу ' + (C.miss || 0) + ', илүү ' + (C.extra || 0) : ''), supplier: 'LPP', invoice: s.no || '', reason: '', file: '', prices: '{}', deliv: s.deliv || '', dname: s.dname || '',
+      lines: JSON.stringify(lines), count: lines.length, qty: lines.reduce((a, x) => a + x[1], 0), sentQty: sent, costSum: 0, saved: new Date().toISOString(), src: 'lpp', ship: sid});
   }catch(err){ console.warn('POS LPP орлого', err); }
 }
 async function posLppDel(sid){ try{ await db.raw.doc('pos_stock_docs/lpp_' + sid).delete(); }catch(err){ console.warn('POS LPP устгах', err); } }

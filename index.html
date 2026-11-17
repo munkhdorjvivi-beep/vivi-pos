@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.6">
+<meta name="vivi-ver" content="6.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -1328,7 +1328,7 @@ function stkDraw(){
       r.v.map((x,k)=>'<td class="n'+(SS[k]===own?' own':'')+'">'+(x>0?'<b>'+x+'</b>':x<0?'<span style="color:var(--red)">'+x+'</span>':'<span class="small">—</span>')+'</td>').join('')+'<td class="n"><b>'+r.t+'</b></td></tr>'}).join('')+'</tbody></table>'
     :'<div class="empty" style="padding:30px">Бараа олдсонгүй</div>';
 }
-const STK_NAMES={AG:'Агуулах',DF:'Гэмтэлтэй (агуулах)'};
+const STK_NAMES={FW:'Food city агуулах',AG:'Агуулах',DF:'Гэмтэлтэй (агуулах)'};
 /* ---------- settings (админ) ---------- */
 const PST={on:['Идэвхтэй',''],future:['Эхлээгүй','b30'],ended:['Дууссан','man'],off:['Зогсоосон','man']};
 let SUPS,GRPS;function sortLists(){SUPS=SUP.filter(Boolean).sort((a,b)=>a.localeCompare(b));GRPS=GRP.filter(Boolean).sort((a,b)=>a.localeCompare(b))}sortLists();
