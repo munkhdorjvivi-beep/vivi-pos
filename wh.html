@@ -9346,7 +9346,7 @@ else VIVIFB.start(async () => {
   $('#tab-set').hidden = !isOwner; document.body.classList.add('whmode'); if (WHMODE.embed) document.body.classList.add('whembed');
   const onErr = e => console.warn('db', e);
   let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, whedit:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true, inv:true, invadm:true, reqsub:false, contr:true, hr:true};
-  if (!isOwner){ const P = (user.posPerms() || {}).perms || []; ALLOW = {...DEFAULT_PERMS}; for (const k of ['wh', 'whedit', 'rcv_fc', 'rcv_dr', 'rcv_ns', 'rcv_ht', 'inv', 'invadm']) ALLOW[k] = P.includes(k); }
+  if (!isOwner){ const P = (user.posPerms() || {}).perms || []; ALLOW = {...DEFAULT_PERMS}; for (const k of ['wh', 'whedit', 'rcv_fc', 'rcv_dr', 'rcv_ns', 'rcv_ht', 'inv', 'invadm']) ALLOW[k] = P.includes(k) || P.includes('stock'); }   // «Агуулах, хөдөлгөөн» бүхэлдээ = бүх дэд цэс
   ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; ALLOW.flow = !!(isOwner || (ALLOW.bank && ALLOW.bal)); ALLOW.anal = !!ALLOW.daily; ALLOW.rot = !!ALLOW.daily; ALLOW.data = !!(ALLOW.daily || ALLOW.rev || ALLOW.cash || isOwner); if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
   // агуулахын горим: санхүү, HR, чат, тайлан энд байхгүй (VIVI Хяналтад үлдэнэ)
   for (const k of ['daily', 'req', 'bank', 'rev', 'cash', 'bal', 'pay', 'pl', 'reqsub', 'contr', 'hr', 'chat', 'flow', 'anal', 'rot', 'data']) ALLOW[k] = false;
