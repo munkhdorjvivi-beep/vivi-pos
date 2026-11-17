@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.5">
+<meta name="vivi-ver" content="9.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -132,7 +132,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <div class="card hide" id="rqCard" style="border-color:var(--red)"><h2>Хүсэлтүүд — шийдвэр хүлээж байна <span id="rqCnt"></span></h2><div class="small" style="margin:-4px 0 6px">Буцаалт (зөвшөөрөл) · Солилт (касс дээр хийгдсэн, баталгаажуулна) · Төлбөрийн хэлбэр засах (батлахад баримт өөрчлөгдөнө)</div><div id="cReq"></div></div>
   <div id="rqDone"></div>
   <div class="card" id="rqNone"><h2>Хүсэлтүүд — шийдвэр хүлээж байна</h2><div class="small">Шийдвэр хүлээж буй хүсэлт алга.</div></div>
-  <div class="card" style="margin-top:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Хүсэлтийн түүх (сонгосон хугацаанд)</h2><select id="rhK" class="inp" style="width:auto"><option value="">Бүх төрөл</option><option value="return">Буцаалт</option><option value="exchange">Солилт</option><option value="paychange">Төлбөр засах</option></select></div><div class="scroll" id="cRqH" style="max-height:360px;overflow:auto;margin-top:8px"></div></div>
+  <div class="card" style="margin-top:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Хүсэлтийн түүх</h2><input type="date" id="rqA" class="inp" style="width:auto"><span>→</span><input type="date" id="rqB" class="inp" style="width:auto"><button id="rqX" class="btn">⬇ Excel</button><select id="rhK" class="inp" style="width:auto"><option value="">Бүх төрөл</option><option value="return">Буцаалт</option><option value="exchange">Солилт</option><option value="paychange">Төлбөр засах</option></select></div><div class="scroll" id="cRqH" style="max-height:360px;overflow:auto;margin-top:8px"></div></div>
   <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Буцаалтын маягт — нягтлан шалгах <span id="rfCnt" class="small"></span></h2><select id="rfFlt" class="inp" style="width:auto"><option value="">Бүгд</option><option value="no">Шалгаагүй</option><option value="yes">Шалгасан</option></select></div>
   <div class="small" style="margin:4px 0 8px">Касс дээр бөглөсөн буцаалт, солилтын маягт (цаасны оронд). Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Шалгасны дараа «Шалгах» дарна.</div><div class="scroll" id="cRetF" style="max-height:520px;overflow:auto"></div></div>
 </section>
@@ -228,7 +228,11 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       <h2 style="margin:16px 0 4px">👤 Тооллогын тайлан — кассчин, дутагдал (дээрх огнооны хүрээнд)</h2>
       <div class="small" style="margin-bottom:6px">«Зөрүүг засах» хийсэн тооллого бүрийн дүгнэлт: хэмжээ андуурсан баримтын кассчин, дутагдал/илүүдлийн тоо, өртөг ба кассын үнээр дүн. Дутагдлын акт хэвлэж гарын үсэг зуруулна.</div>
       <div style="display:flex;gap:8px;margin-bottom:6px"><button id="acX1" class="btn">⬇ Кассчнаар Excel</button><button id="acX2" class="btn">⬇ Тооллого бүрээр Excel</button></div>
-      <div class="scroll" id="acCash"></div><div class="scroll" id="acTask" style="margin-top:10px"></div></div>
+      <div class="scroll" id="acCash"></div><div class="scroll" id="acTask" style="margin-top:10px"></div>
+      <h2 style="margin:16px 0 4px">📜 Тооллогын түүх — хэн, хэзээ тоолсон, үлдэгдэл зассан эсэх</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px"><span>Илгээсэн огноо</span><input type="date" id="chA" class="inp" style="width:auto"><span>→</span><input type="date" id="chB" class="inp" style="width:auto">
+        <select id="chSt" class="inp" style="width:auto"><option value="">Бүх дэлгүүр</option></select><button id="chGo" class="btn pri">Харах</button><button id="chX" class="btn">⬇ Excel (тооллого бүрээр)</button><button id="chX2" class="btn">⬇ Excel (код бүрээр)</button><span id="chM" class="small"></span></div>
+      <div class="scroll" id="chTbl" style="max-height:480px;overflow:auto;margin-top:8px"></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>Кассууд:</b><button id="sPub" class="btn">Кассууд руу илгээх</button><span id="sPubM" class="small" style="flex:1"></span><span class="small">Кассчин «Үлдэгдэл (F2)» цонхонд бүх дэлгүүрийн үлдэгдлийг харна. 1 цагаас хуучин бол автоматаар шинэчилнэ.</span></div>
   </div>
 
@@ -519,6 +523,12 @@ function rqDoneMsg(r,a,note){const k=r.kind||'return',ok=a==='approved';let t;
   const el=document.createElement('div');el.className='card';el.style.cssText='margin-bottom:12px;border-color:'+(ok?'var(--ok)':'var(--red)')+';background:'+(ok?'#effaf3':'#fff3f3');
   el.innerHTML='<div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1">'+t+'<div class="small" style="opacity:.7;margin-top:4px">'+new Date().toLocaleTimeString().slice(0,5)+' · доорх «Хүсэлтийн түүх»-д хадгалагдсан</div></div><button class="btn" style="min-height:30px;padding:2px 10px">✕</button></div>';
   el.querySelector('button').onclick=()=>el.remove();$('rqDone').prepend(el)}
+
+// Хүсэлтийн түүх — дээд талын огнооноос хамаарахгүй, өөрийн хугацаатай (анх: сүүлийн 30 хоног)
+function rqhListen(){if(!db)return;if(rqhListen.u){rqhListen.u();rqhListen.u=null}let a=$('rqA').value,b=$('rqB').value;if(!a||!b)return;if(a>b)[a,b]=[b,a];
+  rqhListen.u=db.collection('pos_requests').where('created','>=',new Date(a+'T00:00:00').toISOString()).where('created','<=',new Date(b+'T23:59:59.999').toISOString()).onSnapshot(s=>{allReqs=s.docs.map(d=>d.data());drawReqHist()},e=>{$('cRqH').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'})}
+{const t=new Date(),p=n=>String(n).padStart(2,'0'),f=d=>d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());$('rqB').value=f(t);$('rqA').value=f(new Date(t.getTime()-30*864e5))}
+$('rqA').onchange=rqhListen;$('rqB').onchange=rqhListen;$('rqX').onclick=()=>xtXlsx('reqhist','husleltiin_tuuh_'+$('rqA').value+'_'+$('rqB').value,'Хүсэлт');
 function drawReqHist(){const k=$('rhK').value,L=allReqs.filter(r=>(!gSt||r.store===gSt)&&(!k||(r.kind||'return')===k)).sort((a,b)=>a.created<b.created?1:-1);
   const SN={pending:['хүлээгдэж байна','b'],approved:['баталсан',''],rejected:['татгалзсан / тодруулах','r'],done:['гүйцээсэн','']};
   const stOf=r=>{const kk=r.kind||'return';if(kk==='paychange')return r.status==='approved'?['✓ баталсан — төлбөр өөрчлөгдсөн','']:r.status==='rejected'?['✗ татгалзсан — өөрчлөгдөөгүй','r']:['хүлээгдэж байна — өөрчлөгдөөгүй','b'];
@@ -526,10 +536,13 @@ function drawReqHist(){const k=$('rhK').value,L=allReqs.filter(r=>(!gSt||r.store
     return SN[r.status]||[r.status,'']};
   const chg=r=>{const kk=r.kind||'return',pt=L=>(L||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))+' '+money(p.amount)).join(', ');
     if(kk==='paychange')return pt(r.before)+' <b>→</b> '+pt(r.after);if(kk==='exchange')return 'буцаасан '+money(r.credit)+' · шинэ '+money(r.newTotal);return esc(r.form||'')};
-  $('cRqH').innerHTML=tbl(['Огноо','Төрөл','Дэлгүүр · кассчин','Баримт','Дүн','Юу өөрчлөгдөх / өөрчлөгдсөн','Төлөв','Шийдвэрлэсэн'],L.map(r=>{const st=stOf(r),kk=r.kind||'return';
-    return '<tr><td class="small">'+lt(r.created)+'</td><td>'+RQK[kk]+(r.diffType?' <span class="small">'+esc(r.diffType)+'</span>':'')+'</td><td class="n small">'+esc(r.storeName)+' · '+esc(r.cashier)+'</td><td class="n small">'+esc(r.ref)+'</td><td class="n">'+(kk==='exchange'?'зөрүү '+money(r.diff):kk==='paychange'?money(r.total):money(-r.total))+'</td><td class="small" style="text-align:left;max-width:340px">'+chg(r)+'</td><td class="n"><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="n small">'+esc((r.decidedBy||'').split('@')[0])+(r.decidedAt?'<br>'+lt(r.decidedAt):'')+(r.note?'<br>'+esc(r.note):'')+'</td></tr>'}));}
+  const ptx=L=>(L||[]).map(p=>p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:'')+' '+nfx(p.amount)).join(', ');
+  const chgT=r=>{const kk=r.kind||'return';if(kk==='paychange')return ptx(r.before)+' → '+ptx(r.after);if(kk==='exchange')return 'буцаасан '+nfx(r.credit||0)+' · шинэ '+nfx(r.newTotal||0);return r.form||''};
+  xtable('cRqH','reqhist',['Огноо','Төрөл','Дэлгүүр','Кассчин','Баримт','Дүн','Юу өөрчлөгдөх / өөрчлөгдсөн','Төлөв','Шийдвэрлэсэн','Шийдсэн огноо','Тайлбар'],
+    L.map(r=>{const kk=r.kind||'return',st=stOf(r);return [lt(r.created),RQK[kk]+(r.diffType?' ('+r.diffType+')':''),r.storeName||'',r.cashier||'',r.ref||'',kk==='exchange'?(r.diff||0):kk==='paychange'?(r.total||0):-(r.total||0),chgT(r),st[0],(r.decidedBy||'').split('@')[0],r.decidedAt?lt(r.decidedAt):'',r.note||r.reason||'']}),
+    {cell:(x,c)=>c===7?'<span class="chip '+(/татгалз|✗/.test(x[7])?'r':/хүлээгд/.test(x[7])?'b':'')+'">'+esc(x[7])+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}
 function listen(){
-  if(!reqOn){reqOn=true;watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(can('stock')){watchNchk();watchCnts();watchNegMeta()}if(can('rep'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
+  if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(can('stock')){watchNchk();watchCnts();watchNegMeta()}if(can('rep'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
@@ -538,7 +551,7 @@ function listen(){
   unsub.push(db.collection('pos_sales').where('date','>=',A).where('date','<=',B).onSnapshot(s=>{allSales=s.docs.map(d=>d.data());ok();drawSoon()},err));
   unsub.push(db.collection('pos_audit').where('t','>=',t1).where('t','<=',t2).onSnapshot(s=>{allAudit=s.docs.map(d=>d.data());drawSoon()},err));
   unsub.push(db.collection('pos_shifts').where('opened','>=',t1).where('opened','<=',t2).onSnapshot(s=>{allShifts=s.docs.map(d=>d.data());drawSoon()},err));
-  unsub.push(db.collection('pos_requests').where('created','>=',t1).where('created','<=',t2).onSnapshot(s=>{allReqs=s.docs.map(d=>d.data());drawReqHist()},err));
+
 }
 function group(list,key,val){const o={};list.forEach(x=>{const k=key(x);o[k]=o[k]||{k,n:0,v:0};o[k].n++;o[k].v+=val(x)});return Object.values(o).sort((a,b)=>b.v-a.v)}
 function tbl(head,rows){return rows.length?'<table><thead><tr>'+head.map((h,i)=>'<th'+(i?' class="n"':'')+'>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table>':'<div class="small">Өгөгдөл алга</div>'}
@@ -1013,7 +1026,9 @@ function editPromo(i){
 /* ---- ажилтнууд: pos_config/users {list}; буцаалт: pos_config/settings {list:[cfg]} ---- */
 let users=[],rcfg={returnDays:14,returnLimit:100000,returnPin:false};
 const ROLEN={cashier:'Кассчин',manager:'Менежер',admin:'Админ'};
-async function auditCfg(type,info){const uid=Date.now().toString(36)+Math.random().toString(36).slice(2,8);await db.collection('pos_audit').doc(uid).set({uid,t:new Date().toISOString(),type,approver:auth.currentUser.email||'',cashier:'',store:'',reg:'',info})}
+// Firestore undefined утга, массив доторх массивыг хүлээж авахгүй (invalid-argument) → цэвэрлэнэ
+const fsClean=o=>JSON.parse(JSON.stringify(o===undefined?null:o,(k,v)=>Array.isArray(v)&&v.some(Array.isArray)?JSON.stringify(v):v));
+async function auditCfg(type,info){const uid=Date.now().toString(36)+Math.random().toString(36).slice(2,8);await db.collection('pos_audit').doc(uid).set({uid,t:new Date().toISOString(),type,approver:auth.currentUser.email||'',cashier:'',store:'',reg:'',info:fsClean(info||{})})}
 function watchUsers(){db.collection('pos_config').doc('users').onSnapshot(d=>{users=d.exists&&Array.isArray(d.data().list)?d.data().list:[];drawUsers()},e=>{$('cUsers').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'})}
 function drawUsers(){if($('bnNm'))$('bnNm').innerHTML=bnNames().map(n=>'<option value="'+esc(n)+'">').join('');
   if(!users.length)return $('cUsers').innerHTML='<div class="small">Ажилтны жагсаалт үүлэнд алга. Аль нэг кассыг үүлэнд холбоход анхны жагсаалт үүснэ.</div>';
@@ -1479,7 +1494,7 @@ $('cnRGo').onclick=async()=>{const loc=$('cnRSt').value,n=Math.max(1,Math.min(30
     for(const c of M){const d=cntTaskDoc(loc,c,groupOf(c),'Санамсаргүй тооллого','cycle');await db.collection('pos_counts').doc(d.uid).set(d)}
     await auditCfg('count_task_cycle',{by:auth.currentUser.email,store:loc,n:M.length});m.innerHTML='<span class="chip">'+M.length+' даалгавар илгээлээ</span>'}
   catch(er){m.innerHTML='<span class="hot">Алдаа: '+esc(er.code||er.message||er)+'</span>'}};
-function drawCnts(){if(!$('cntTasks'))return;cnFill();drawAcct();stkBan();const SN={open:['илгээсэн — касс тоолж байна','b'],counted:['✓ тоолсон — үр дүн харах',''],applied:['зөрүү засагдсан',''],cancelled:['цуцалсан','r']};
+function drawCnts(){if(!$('cntTasks'))return;cnFill();drawAcct();stkBan();if(CHL.length)CHL=CHL.map(t=>CNTS.find(x=>x.uid===t.uid)||t),chDraw();const SN={open:['илгээсэн — касс тоолж байна','b'],counted:['✓ тоолсон — үр дүн харах',''],applied:['зөрүү засагдсан',''],cancelled:['цуцалсан','r']};
   if(!CNTS.length){$('cntTasks').innerHTML='<div class="small">Даалгавар алга</div>';return}
   const nm1=t=>{const c=JSON.parse(t.codes||'[]');const x=c.find(y=>y[0]===t.negCode)||c[0]||[];return ((x[1]||'').replace(/\s+size\b.*$/i,'').replace(/\bsize[-\s]*\S+.*$/i,'').trim())};
   $('cntTasks').innerHTML='<table class="xt" data-xe="1" style="border-spacing:0"><thead><tr><th style="padding:6px 8px">Илгээсэн</th><th style="padding:6px 8px">Дэлгүүр</th><th style="padding:6px 8px">Модель / оруулсан код</th><th style="padding:6px 8px">Барааны нэр</th><th class="n" style="padding:6px 8px">Кодын тоо</th><th style="padding:6px 8px">Төрөл</th><th style="padding:6px 8px">Төлөв</th><th style="padding:6px 8px">Тоолсон</th><th></th></tr></thead><tbody>'+CNTS.map(t=>{const st=SN[t.status]||[t.status,''];
@@ -1517,12 +1532,34 @@ async function cntResult(t){await loadPCat().catch(()=>{});const loc=t.store,od=
   if($('cr_ok'))$('cr_ok').onclick=async()=>{$('cr_ok').disabled=true;const by=auth.currentUser.email||'',at=new Date().toISOString(),lines=R.filter(r=>r.d).map(r=>[r.c,r.d,r.nm]),plain=dx.replace(/<[^>]+>/g,'');
     try{let docUid='';if(lines.length){docUid='adj_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
         await db.collection('pos_stock_docs').doc(docUid).set({uid:docUid,type:'adj',from:'',to:loc,at:t.countedAt,note:'Тооллого (даалгавар) · '+(t.title||'')+' · '+(t.countedBy||''),file:'',lines:JSON.stringify(lines),count:lines.length,qty:lines.reduce((a,x)=>a+x[1],0),costSum:Math.round(lines.reduce((a,x)=>a+(costMap.get(x[0])||0)*x[1],0)),by,saved:at,task:t.uid})}
-      await db.collection('pos_counts').doc(t.uid).update({status:'applied',appliedBy:by,appliedAt:at,adjDoc:docUid,result:plain,res});
+      // Firestore-д массив дотор массив хадгалж болохгүй (invalid-argument) → мөрүүдийг JSON текстээр; undefined утгыг хасна
+      const resDb=JSON.parse(JSON.stringify({...res,rows:JSON.stringify(res.rows||[])}));
+      await db.collection('pos_counts').doc(t.uid).update({status:'applied',appliedBy:by,appliedAt:at,adjDoc:docUid,result:plain,res:resDb});
       for(const r of R)if(r.sys<0)await db.collection('pos_stock_chk').doc(loc+'_'+r.c).set({loc,code:r.c,now:r.sys,note:'📋 Тоолуулсан ('+(t.countedBy||'')+'): '+plain,by,at}).catch(()=>{});
       await auditCfg('count_task_apply',{by,uid:t.uid,store:loc,lines:lines.length});pClose();if(stockRows.length)setTimeout(calcStock,1500)}
     catch(er){$('cr_ok').disabled=false;$('cr_m').textContent='Алдаа: '+(er.code||er.message||er)}}}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-cres]');if(!b)return;const t=CNTS.find(x=>x.uid===b.dataset.cres);if(t)cntResult(t).catch(er=>alert('Алдаа: '+(er.message||er)))});
 
+
+/* ---- 📜 Тооллогын түүх: огнооны хүрээгээр бүх даалгавар — тоолсон хүн, огноо, дүгнэлт, үлдэгдэл зассан эсэх ---- */
+let CHL=[];
+const chFix=t=>t.status==='applied'?(t.adjDoc?'✓ Үлдэгдэл зассан':'✓ Зөрүүгүй — хаасан'):t.status==='counted'?'⏳ Тоолсон — шийдээгүй':t.status==='cancelled'?'✗ Цуцалсан':'… Касс тоолоогүй';
+async function chLoad(){let A=$('chA').value,B=$('chB').value;if(!A||!B)return;if(A>B)[A,B]=[B,A];const m=$('chM');m.textContent='Уншиж байна…';
+  try{const s=await db.collection('pos_counts').where('created','>=',new Date(A+'T00:00:00').toISOString()).where('created','<=',new Date(B+'T23:59:59.999').toISOString()).get();
+    CHL=s.docs.map(d=>d.data()).filter(t=>!$('chSt').value||t.store===$('chSt').value).sort((a,b)=>(b.created||'')<(a.created||'')?-1:1);chDraw();m.textContent=CHL.length+' даалгавар'}
+  catch(e){m.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}}
+function chDraw(){const K={cycle:'санамсаргүй',manual:'гараар',neg:'хасах үлдэгдэл'};
+  xtable('chTbl','cnthist',['Илгээсэн','Илгээсэн хүн','Дэлгүүр','Загвар','Төрөл','Кодын тоо','Тоолсон кассчин','Касс','Тоолсон огноо','Дүгнэлт','Дутуу ш','Илүү ш','Андуурсан ш','Зөрүү (кассын үнэ)','Үлдэгдэл','Зассан / хаасан','Огноо','Тооллогын баримт',''],
+    CHL.map(t=>{const r=t.res||{};return [lt(t.created),(t.createdBy||'').split('@')[0],LOC[t.store]||t.store,t.model||t.title||'',K[t.kind]||t.kind||'',JSON.parse(t.codes||'[]').length,t.countedBy||'',t.countedReg?'Касс '+t.countedReg:'',t.countedAt?lt(t.countedAt):'',r.type?(RTY[r.type]||r.type):'',r.short||null,r.over||null,r.mix||null,r.vCash||null,chFix(t),(t.appliedBy||'').split('@')[0],t.appliedAt?lt(t.appliedAt):'',t.adjDoc||'',t.uid]}),
+    {cell:(x,c)=>c===18?(x[14]!=='… Касс тоолоогүй'&&x[14]!=='✗ Цуцалсан'?'<button class="btn" data-cres="'+esc(x[18])+'" style="min-height:28px;padding:1px 10px">Үр дүн</button>':''):c===14?'<span class="chip'+(/Зассан|Зөрүүгүй/.test(x[14])?'':/шийдээгүй/.test(x[14])?' b':' r')+'">'+esc(x[14])+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}
+$('chGo').onclick=chLoad;$('chX').onclick=()=>xtXlsx('cnthist','toollogyn_tuuh','Тооллого');
+$('chX2').onclick=async()=>{if(!CHL.length)return $('chM').textContent='Эхлээд «Харах» дарна уу';await xlsx();
+  const H=['Илгээсэн','Дэлгүүр','Загвар','Тоолсон кассчин','Тоолсон огноо','Үлдэгдэл','Код','Хэмжээ','Барааны нэр','Систем','Тоолсон','Зөрүү','Кассын үнэ','Зөрүү ₮'],A=[H];
+  CHL.forEach(t=>{const rows=cntRows(t.res),NM=Object.fromEntries(JSON.parse(t.codes||'[]').map(c=>[c[0],c[1]]));if(rows.length)rows.forEach(x=>A.push([lt(t.created),LOC[t.store]||t.store,t.model||t.title||'',t.countedBy||'',t.countedAt?lt(t.countedAt):'',chFix(t),x[0],x[1]||'',(x[7]&&x[7]!==x[0]?x[7]:NM[x[0]])||'',x[2],x[3],x[4],x[6]||0,(x[4]||0)*(x[6]||0)]));
+    else{let cnt={};try{const z=t.counts?JSON.parse(t.counts):{};cnt=Array.isArray(z)?Object.fromEntries(z.map(y=>[y[0],y[1]])):z}catch(e){}JSON.parse(t.codes||'[]').forEach(c=>A.push([lt(t.created),LOC[t.store]||t.store,t.model||t.title||'',t.countedBy||'',t.countedAt?lt(t.countedAt):'',chFix(t),c[0],c[2]||'',c[1]||'','',cnt[c[0]]!=null?cnt[c[0]]:'','','','']))}});
+  const ws=XLSX.utils.aoa_to_sheet(A),wb=XLSX.utils.book_new();ws['!cols']=[16,12,22,16,16,22,16,8,40,8,8,8,10,12].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,'Код бүрээр');XLSX.writeFile(wb,'toollogyn_tuuh_kodoor_'+$('chA').value+'_'+$('chB').value+'.xlsx')};
+setTimeout(()=>{const t=new Date(),p=n=>String(n).padStart(2,'0'),f=d=>d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());$('chB').value=f(t);$('chA').value=f(new Date(t.getTime()-30*864e5));
+  $('chSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+TILL_LOC.map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('')},0);
 /* ---- Тооллогын тайлан: кассчнаар, тооллого бүрээр (огнооны хүрээ, дэлгүүрийн шүүлтүүр) + дутагдлын акт ---- */
 const RTY={ok:'зөрүүгүй',mixup:'хэмжээ андуурсан',short:'дутагдал',over:'илүүдэл'};
 function drawAcct(){if(!$('acTask'))return;const a=$('d1').value,b=$('d2').value||a,inR=x=>{const d=(x||'').slice(0,10);return (!a||d>=a)&&(!b||d<=b)};
@@ -1534,7 +1571,8 @@ function drawAcct(){if(!$('acTask'))return;const a=$('d1').value,b=$('d2').value
   xtable('acCash','accash',['Кассчин','Хэмжээ андуурсан тооллого','Андуурсан ширхэг','Холбогдох дутагдал ш','Холбогдох дутагдал (кассын үнэ)'],Object.entries(C).sort((x,y)=>y[1].n-x[1].n).map(([k,r])=>[k,r.n,r.q,r.sh||null,r.v||null]))}
 $('acX1').onclick=()=>xtXlsx('accash','toollogo_kasschin','Кассчин');$('acX2').onclick=()=>xtXlsx('actask','toollogo_dugnelt','Тооллого');
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const t=CNTS.find(x=>x.uid===b.dataset.act);if(t)cntAct(t)});
-function cntAct(t){const r=t.res||{},rows=r.rows||[],f=v=>v==null||v===''?'':Number(v).toLocaleString('en-US',{maximumFractionDigits:0}).replace(/,/g,' ');
+const cntRows=r=>{const x=r&&r.rows;if(typeof x==='string'){try{return JSON.parse(x)}catch(e){return []}}return x||[]};
+function cntAct(t){const r=t.res||{},rows=cntRows(r),f=v=>v==null||v===''?'':Number(v).toLocaleString('en-US',{maximumFractionDigits:0}).replace(/,/g,' ');
   const body=rows.map((x,i)=>'<tr'+(x[4]?' style="background:'+(x[4]<0?'#fde4e6':'#fff4d6')+'"':'')+'><td>'+(i+1)+'</td><td>'+esc(x[1]||'')+'</td><td>'+esc(x[0])+'</td><td>'+esc(x[7]||'')+'</td><td class="n">'+x[2]+'</td><td class="n">'+x[3]+'</td><td class="n"><b>'+(x[4]>0?'+':'')+x[4]+'</b></td><td class="n">'+f(x[6])+'</td><td class="n">'+f(x[4]*x[6])+'</td></tr>').join('');
   const cs=Object.entries(r.cashiers||{});
   const html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:12mm}body{font-family:Arial,sans-serif;font-size:11px;color:#000}h1{font-size:17px;margin:0}table{border-collapse:collapse;width:100%}th,td{border:1px solid #444;padding:3px 5px;vertical-align:top}th{background:#eee}.n{text-align:right;white-space:nowrap}.sg{margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:28px 40px}.sg div{border-top:1px solid #000;padding-top:4px}</style></head><body>'+
