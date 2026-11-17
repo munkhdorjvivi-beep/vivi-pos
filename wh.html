@@ -6563,7 +6563,7 @@ async function shipCancel(sid){
   const got = Object.values(decMap(s.r)).reduce((a, q) => a + Math.max(0, q), 0);
   if (!confirm(`${s.no} · ${storeName(s.store)} — ${tot} ширхэгтэй илгээмжийг цуцлах уу?\n\nБараа хүргэлтийн тооллогоос хасагдаж, дахин скан хийх боломжтой болно.${got ? `\nДэлгүүр ${got} ширхэг хүлээн авсан бүртгэл ч устна.` : ''}`)) return;
   try{ for (const [e, q] of Object.entries(L)){ const i = I[e] || {}; if (q > 0 && i.k) addPend(s.deliv, (i.x ? 'x|' : 'c|') + i.k, s.store, -q); }
-    await flush(); await db.doc('ship/' + sid).delete(); whLog('cancel', {ship: sid, no: s.no, store: s.store, deliv: s.deliv, n: tot, recv: got}); delete WS.open[s.deliv + '|' + s.store]; WS.ships = WS.ships.filter(x => x.id !== sid); if (WS.detail === sid) WS.detail = ''; renderWh(); }
+    await flush(); await db.doc('ship/' + sid).delete(); await posLppDel(sid); whLog('cancel', {ship: sid, no: s.no, store: s.store, deliv: s.deliv, n: tot, recv: got}); delete WS.open[s.deliv + '|' + s.store]; WS.ships = WS.ships.filter(x => x.id !== sid); if (WS.detail === sid) WS.detail = ''; renderWh(); }
   catch(err){ whErr(err); }
 }
 async function shipReopen(sid){
@@ -6810,12 +6810,26 @@ function rcScan(raw){
   WS.rc.last.unshift({e, n: i.n || '—', t: new Date().toTimeString().slice(0, 8)}); WS.rc.last = WS.rc.last.slice(0, 20);
   $('#rc-lastname').textContent = i.n ? i.n : 'Энэ илгээмжийн жагсаалтад байхгүй баркод (илүү гэж тооцогдоно)'; beep(i.n ? 'ok' : 'extra'); renderRcvCount();
 }
+// POS: хүлээн авсан тоо дэлгүүрийн үлдэгдэлд (самбар бүгдийг дахин шалгаж, кодыг каталогоор тааруулна)
+const POS_LOC = {fc: 'FC', dr: 'DR', ns: 'NS'}, POS_LPP_FROM0 = '2026-11-18';
+async function posLppIn(sid){
+  try{ const R0 = db.raw, f = await R0.doc('wh_ship/' + sid).get(); if (!f.exists) return; const s = f.data(), to = POS_LOC[s.store];
+    if (!to || !['recv', 'diff', 'closed'].includes(s.status) || !s.recvAt) return;
+    let from = POS_LPP_FROM0; try{ const c = await R0.doc('pos_config/lpp').get(); if (c.exists && c.data().from) from = c.data().from; }catch(e){}
+    if (localDay(s.recvAt) < from) return;
+    const R = decMap(s.r), I = decMap(s.i), lines = Object.entries(R).filter(([, q]) => +q > 0).map(([e, q]) => [e, +q, (I[e] || {}).n || '']).sort((a, b) => a[0] < b[0] ? -1 : 1);
+    if (!lines.length) return; const id = 'lpp_' + sid;
+    await R0.doc('pos_stock_docs/' + id).set({uid: id, no: s.no || id, type: 'in', from: '', to, at: s.recvAt, recvAt: s.recvAt, note: 'LPP · ' + (s.dname || ''), supplier: 'LPP', invoice: s.no || '', reason: '', file: '', prices: '{}',
+      lines: JSON.stringify(lines), count: lines.length, qty: lines.reduce((a, x) => a + x[1], 0), costSum: 0, by: s.recvBy || me, saved: new Date().toISOString(), src: 'lpp', ship: sid});
+  }catch(err){ console.warn('POS LPP орлого', err); }
+}
+async function posLppDel(sid){ try{ await db.raw.doc('pos_stock_docs/lpp_' + sid).delete(); }catch(err){ console.warn('POS LPP устгах', err); } }
 async function rcFinish(){
   await rcFlush(); const s = WS.ships.find(x => x.id === WS.rc.ship); if (!s) return;
   if (!confirm(`${fmt(rcTotal(s))} ширхэг тоолсон. Тулгалтыг дуусгах уу? Дараа нь нэмж тоолох боломжгүй.`)) return;
   const fresh = await db.doc('ship/' + s.id).get(), x = fresh.exists ? fresh.data() : s, cmp = WH.compare(decMap(x.l), decMap(x.r));
   try{ await db.doc('ship/' + s.id).update({status: cmp.ok ? 'recv' : 'diff', recvAt: new Date().toISOString(), recvBy: me, cmp: {ok: cmp.ok, sent: cmp.sent, recv: cmp.recv, miss: cmp.miss, extra: cmp.extra}, notifyWh: false});
-    $('#rc-msg').textContent = cmp.ok ? 'Зөрүүгүй — баярлалаа.' : 'Зөрүүтэй — агуулахад мэдэгдлээ.'; }
+    $('#rc-msg').textContent = cmp.ok ? 'Зөрүүгүй — баярлалаа.' : 'Зөрүүтэй — агуулахад мэдэгдлээ.'; await posLppIn(s.id); }
   catch(err){ whErr(err); }
 }
 

@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.9">
+<meta name="vivi-ver" content="10.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -302,6 +302,10 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       <label class="f">Тоо хэмжээний багана (хэд хэдийг сонговол нийлбэрийг авна)</label><div id="oCol" class="chk" style="max-height:130px"></div><button id="oUp" class="btn" disabled style="margin-top:8px">Эхний үлдэгдэл хадгалах</button><div id="oMsg" class="small" style="margin-top:6px"></div>
     </details>
   </div>
+  <div class="card" data-sub="open" id="lppCard" style="margin-top:12px"><h2>🚚 LPP хүлээн авалт → POS-ын үлдэгдэл</h2>
+    <div class="small" style="margin:-4px 0 8px">Дэлгүүр «📥 Хүлээн авалт»-аар LPP илгээмжийг тоолж дуусгахад <b>тоолсон тоо</b> тэр дэлгүүрийн үлдэгдэлд автоматаар орлого болж нэмэгдэнэ (Хөдөлгөөн: «LPP», баримт <code>lpp_…</code>). Илгээмжийг цуцалбал орлого нь устна. Бөөн, агуулахын илүүдэл POS-д орохгүй.<br>Доорх огнооноос <b>өмнө</b> хүлээн авсан илгээмжүүд орохгүй (тэд эхний үлдэгдэлд аль хэдийн орсон).</div>
+    <div class="frm"><div><label class="f">Хүлээн авсан огноо эхлэх</label><input type="date" id="lppFrom" class="inp"></div></div>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="lppSave" class="btn">Хадгалах</button><button id="lppGo" class="btn pri">⟳ Шалгаж тааруулах</button><span id="lppMsg" class="small"></span></div></div>
   <div class="card" data-sub="open" style="margin-top:12px"><h2>🔒 Сарын үлдэгдэл хаах (шинэ эхний үлдэгдэл)</h2>
     <div class="small" style="margin:-4px 0 8px">Үлдэгдлийн тооцоо эхний үлдэгдлээс хойших <b>бүх</b> баримтыг уншдаг тул сар бүр «хаана»: сонгосон мөчийн бодит үлдэгдэл шинэ эхний үлдэгдэл болж, хуучин нь архивт хадгалагдана. Тайлан хурдан болно. <b>Сар дууссанаас 2–3 хоногийн дараа</b> хаана уу — оффлайн кассын хоцорсон баримт ирж амжина. Хаасан огнооноос өмнөх баримт дараа нь орж ирвэл үлдэгдэлд тооцогдохгүй.</div>
     <div class="frm"><div><label class="f">Хаах огноо (тэр өдрийн 23:59:59 хүртэл)</label><input type="date" id="clD" class="inp"></div><div><label class="f">Байршил</label><select id="clSt" class="inp"></select></div></div>
@@ -511,7 +515,7 @@ let ME=null;
 const can=p=>!!ME&&(ME.admin||ME.perms.includes(p)||(!!PERM_PARENT[p]&&ME.perms.includes(PERM_PARENT[p])));
 const canSome=m=>can(m)||(PERM_SUB[m]||[]).some(x=>can(x[0]));
 const canTab=t=>t==='users'?!!(ME&&ME.admin):t==='guide'?!!ME:canSome(t);
-function applyPerms(){if($('tillMain'))$('tillMain').style.display=can('till.cfg')?'contents':'none';if($('bnWrap'))$('bnWrap').hidden=!can('bonus');document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.hidden=!canTab(b.dataset.tab));document.body.classList.toggle('nocost',!can('cost'));showTab(location.hash.slice(1)||'home')}
+function applyPerms(){if($('lppCard'))$('lppCard').style.display=can('stock')?'':'none';if($('tillMain'))$('tillMain').style.display=can('till.cfg')?'contents':'none';if($('bnWrap'))$('bnWrap').hidden=!can('bonus');document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.hidden=!canTab(b.dataset.tab));document.body.classList.toggle('nocost',!can('cost'));showTab(location.hash.slice(1)||'home')}
 /* ---- Хүсэлтүүд: буцаалт (зөвшөөрөл), солилт (хийгдсэн — нягтлан баталгаажуулна), төлбөрийн хэлбэр засах (батлахад баримт өөрчлөгдөнө) ---- */
 const RQK={return:'Буцаалт',exchange:'Солилт',paychange:'Төлбөр засах'};
 const payTxt=L=>(L||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))+' <b>'+money(p.amount)+'</b>').join('<br>');
@@ -1451,9 +1455,31 @@ $('cUp').onclick=async()=>{if(!cntAdj)return;$('cUp').disabled=true;const uid=Da
       costSum:Math.round(cntAdj.lines.reduce((a,x)=>a+(costMap.get(x[0])||0)*x[1],0)),by:auth.currentUser.email||'',saved:new Date().toISOString()});
     await auditCfg('stock_count',{uid,store:cntAdj.st,lines:cntAdj.lines.length});$('cMsg').innerHTML=' <span class="chip">Хадгаллаа</span> '+LOC[cntAdj.st]+': '+cntAdj.lines.length+' барааны зөрүү засагдлаа';cntAdj=null;$('cFile').value='';$('cPrev').textContent=''}
   catch(e){$('cUp').disabled=false;$('cMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'}};
-async function autoStock(){try{const m=await db.collection('pos_stock_view').doc('meta').get();const v=m.exists?m.data().version:'';
+/* ==== LPP хүлээн авалт → POS орлого. Хүлээн авагч (wh.html) шууд бичнэ; энд бүх илгээмжийг шалгаж дутууг нэмж, илүүг устгаж, кодыг каталогоор тааруулна ==== */
+const LPP_LOC={fc:'FC',dr:'DR',ns:'NS'},LPP_FROM0='2026-11-18';
+const lppDec=m=>{const o={};Object.entries(m||{}).forEach(([k,v])=>o[String(k).slice(1).replace(/_([0-9a-f]+)_/g,(x,h)=>String.fromCharCode(parseInt(h,16)))]=v);return o};
+async function lppFrom(){try{const d=await db.collection('pos_config').doc('lpp').get();return d.exists&&d.data().from||LPP_FROM0}catch(e){return LPP_FROM0}}
+let lppBusy=false;
+async function lppSync(show){if(lppBusy)return;lppBusy=true;const out=t=>{if(show)$('lppMsg').innerHTML=t};
+  try{out('Шалгаж байна…');for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
+    const from=await lppFrom();try{await loadPCat()}catch(x){}
+    const ships=(await db.collection('wh_ship').get()).docs.map(d=>({id:d.id,...d.data()}));
+    const want=new Map();ships.forEach(sh=>{const to=LPP_LOC[sh.store];if(!to||!['recv','diff','closed'].includes(sh.status)||!sh.recvAt||iso(new Date(sh.recvAt))<from)return;
+      const I=lppDec(sh.i),M=new Map();Object.entries(lppDec(sh.r)).forEach(([e,q])=>{q=+q||0;if(q<=0)return;const r=itRow(e),c=r&&r.code||e,o=M.get(c)||[c,0,(r&&r.name)||(I[e]||{}).n||''];o[1]+=q;M.set(c,o)});
+      const lines=[...M.values()].sort((a,b)=>a[0]<b[0]?-1:1);if(lines.length)want.set('lpp_'+sh.id,{sh,to,lines})});
+    const have=new Map(movDocs.filter(m=>m.src==='lpp'||String(m.uid||'').startsWith('lpp_')).map(m=>[m.uid,m]));let add=0,upd=0,del=0;
+    for(const [id,w] of want){const h=have.get(id),L=JSON.stringify(w.lines);if(h&&h.lines===L&&h.to===w.to&&h.at===w.sh.recvAt)continue;
+      await db.collection('pos_stock_docs').doc(id).set({uid:id,no:w.sh.no||id,type:'in',from:'',to:w.to,at:w.sh.recvAt,recvAt:w.sh.recvAt,note:'LPP · '+(w.sh.dname||''),supplier:'LPP',invoice:w.sh.no||'',reason:'',file:'',prices:'{}',
+        lines:L,count:w.lines.length,qty:w.lines.reduce((a,x)=>a+x[1],0),costSum:0,by:w.sh.recvBy||'',saved:new Date().toISOString(),src:'lpp',ship:w.sh.id});h?upd++:add++}
+    for(const id of have.keys())if(!want.has(id)){await db.collection('pos_stock_docs').doc(id).delete();del++}
+    out('<span class="chip">Тааруулсан '+new Date().toTimeString().slice(0,5)+'</span> '+want.size+' илгээмж POS-д ('+from+'-аас хойш хүлээн авсан) · шинээр '+add+', зассан '+upd+', устгасан '+del);
+    return add+upd+del}
+  catch(e){out('<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>');return 0}finally{lppBusy=false}}
+$('lppSave').onclick=async()=>{const v=$('lppFrom').value;if(!v)return;try{await db.collection('pos_config').doc('lpp').set({from:v,by:auth.currentUser.email||'',at:new Date().toISOString()});await auditCfg('lpp_from',{from:v});await lppSync(true)}catch(e){$('lppMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'}};
+$('lppGo').onclick=()=>lppSync(true);
+async function autoStock(){let ch=0;try{if(can('stock')){$('lppFrom').value=await lppFrom();ch=await lppSync(false)}}catch(e){}try{const m=await db.collection('pos_stock_view').doc('meta').get();const v=m.exists?m.data().version:'';
   $('sPubM').textContent=v?'Кассууд дахь үлдэгдэл: '+lt(v)+'-ийн байдлаар':'Кассууд руу үлдэгдэл хараахан илгээгээгүй';
-  if(!v||Date.now()-new Date(v)>60*60e3)publishStock(true)}catch(e){}}
+  if(!v||ch||Date.now()-new Date(v)>60*60e3)publishStock(true)}catch(e){}}
 function drawStock(){const q=$('sQ').value.trim().toLowerCase(),L=stockRows.filter(r=>!q||r.code.toLowerCase().includes(q)||(r.name||'').toLowerCase().includes(q));
   if(!stockRows.length){$('sTbl').innerHTML='';return}const n=v=>v==null?null:Math.round(v),val=r=>[r.cost==null?null:r.cost,r.cost==null?null:n(r.cost*r.now),r.cash||null,r.cash?n(r.cash*r.now):null];
   const rows=stockAllMode?L.map(r=>[r.code,r.name,...r.loc.map(x=>x||null),r.now,...val(r)]):L.map(r=>[r.code,r.name,r.open,r.inn||null,r.out||null,r.sold||null,r.ret||null,r.adj||null,r.now,...val(r)]);
