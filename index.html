@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.5">
+<meta name="vivi-ver" content="6.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -139,6 +139,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
   <label>ПИН код</label><input id="lPin" type="password" inputmode="numeric">
   <div id="lMsg" class="small" style="color:var(--red);min-height:18px"></div>
   <button class="pri" style="width:100%;margin-top:8px" id="lGo">Нэвтрэх</button>
+  <button class="ghost" style="width:100%;margin-top:8px" id="lZ">🖨 Ээлж хаалтын баримт (Z тайлан) дахин хэвлэх</button>
   <div style="display:flex;gap:10px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><span id="lCloud" class="small" style="flex:1"></span><button class="ghost hide" id="lBind" style="min-height:40px">Дэлгүүрт бэхлэх</button><button class="ghost hide" id="lCon" style="min-height:40px">Үүлэнд холбох</button></div>
 </div>
 
@@ -992,11 +993,29 @@ function closeShift(){
     const hist=store.get('shifts',[]);hist.push(sh);store.set('shifts',hist);shiftOut(sh);store.set('shift_'+S.user.store+'-'+S.user.reg,null);
     log('shift_close',{id:sh.id,counted,expected:exp,diff});
     const body=shiftBody(list,pm,'<tr><td>Тоолсон</td><td class="n">'+fmt(counted)+'</td></tr><tr><td><b>Зөрүү</b></td><td class="n"><b style="color:'+(diff?'var(--red)':'var(--ok)')+'">'+fmt(diff)+'</b></td></tr>');
+    {const H=store.get('shifts',[]);const i=H.findIndex(x=>x.id===sh.id&&x.closed===sh.closed);if(i>=0){H[i].zbody=body;H[i].storeName=STORES[S.user.store];store.set('shifts',H.slice(-200))}}
     openModal('<h2>Z тайлан — ээлж хаагдлаа</h2>'+body+'<div class="rowbtn"><button id="zp">Хэвлэх</button><button class="pri" id="zo">Дуусгах</button></div>',true);
     $('zp').onclick=()=>{printDocs(['<div class="c big">Z ТАЙЛАН</div><div class="c">'+esc(STORES[S.user.store])+' · Касс '+S.user.reg+' · '+esc(S.user.name)+'</div><div class="c">'+dstr(now())+' '+tstr(now())+'</div><div class="hr"></div>'+body])};
     $('zo').onclick=()=>{S.shift=null;closeModal();logout();devApply();devBeat()};
   };
 }
+
+/* ---------- 🖨 Ээлж хаалтын баримт (Z тайлан) дахин хэвлэх: энэ компьютер дээр хаасан ээлжүүд ---------- */
+function zBodyOf(sh){if(sh.zbody)return sh.zbody;const tr=(a,b,st)=>'<tr><td>'+a+'</td><td class="n"'+(st?' style="'+st+'"':'')+'>'+b+'</td></tr>',byK={};
+  (sh.ops||[]).forEach(o=>{byK[o.kind]=(byK[o.kind]||0)+(o.type==='out'?-o.amount:o.amount)});
+  return '<table>'+tr('Ээлж',esc(sh.id))+tr('Баримтын тоо',sh.receipts||0)+tr('Нийт борлуулалт',fmt(sh.total||0))+Object.entries(sh.pays||{}).map(([k,v])=>tr(esc(k),fmt(v))).join('')+
+    '<tr><td colspan="2"><b>Бэлэн мөнгө</b></td></tr>'+tr('Эхний бэлэн мөнгө',fmt(sh.float||0))+tr('Бэлэн борлуулалт (буцаалт хассан)',fmt(sh.cashSales||0))+Object.entries(byK).map(([k,v])=>tr(esc(CASH_KIND[k]||k),(v>0?'+':'')+fmt(v))).join('')+
+    tr('<b>Кассанд байх ёстой</b>','<b>'+fmt(sh.expected||0)+'</b>')+tr('Тоолсон',fmt(sh.counted||0))+tr('<b>Зөрүү</b>','<b>'+fmt(sh.diff||0)+'</b>')+'</table>'}
+function zPrint(sh){const c=new Date(sh.closed),o=sh.opened?new Date(sh.opened):null;
+  printDocs(['<div class="c big">Z ТАЙЛАН</div><div class="c">(ДАХИН ХЭВЛЭСЭН)</div><div class="c">'+esc(sh.storeName||STORES[sh.store]||sh.store||'')+' · Касс '+esc(sh.reg||'')+' · '+esc(sh.closedBy||'')+'</div>'+
+    (o?'<div class="c">Нээсэн: '+dstr(o)+' '+tstr(o)+'</div>':'')+'<div class="c">Хаасан: '+dstr(c)+' '+tstr(c)+'</div><div class="c small">Хэвлэсэн: '+dstr(now())+' '+tstr(now())+'</div><div class="hr"></div>'+zBodyOf(sh)]);
+  try{log('z_reprint',{id:sh.id,closed:sh.closed})}catch(e){}}
+function zList(){const H=store.get('shifts',[]).filter(x=>x&&x.closed&&(!device.store||!x.store||x.store===device.store)).sort((a,b)=>a.closed<b.closed?1:-1).slice(0,20);
+  if(!H.length)return flash('Энэ компьютер дээр хаасан ээлж алга');
+  openModal('<h2>🖨 Ээлж хаалтын баримт дахин хэвлэх</h2><div class="small" style="margin-bottom:6px">Энэ компьютер дээр хаасан сүүлийн ээлжүүд. Хэвлэхийг сонгоно уу.</div><div class="list" style="max-height:56vh"><table><thead><tr><th>Хаасан</th><th>Касс · кассчин</th><th class="n">Борлуулалт</th><th class="n">Зөрүү</th><th></th></tr></thead><tbody>'+
+    H.map((x,i)=>{const c=new Date(x.closed);return '<tr><td>'+dstr(c)+' '+tstr(c).slice(0,5)+'<div class="small">'+esc(x.id||'')+'</div></td><td>'+esc(STORES[x.store]||x.store||'')+' · Касс '+esc(x.reg||'')+'<div class="small">'+esc(x.closedBy||'')+'</div></td><td class="n">'+fmt(x.total||0)+'</td><td class="n"'+(x.diff?' style="color:var(--red)"':'')+'>'+fmt(x.diff||0)+'</td><td><button data-zi="'+i+'">🖨 Хэвлэх</button></td></tr>'}).join('')+
+    '</tbody></table></div><div class="rowbtn"><button id="zlX">Хаах</button></div>',true);
+  $('zlX').onclick=closeModal;document.querySelectorAll('[data-zi]').forEach(b=>b.onclick=()=>{zPrint(H[+b.dataset.zi]);flash('🖨 Хэвлэж байна')})}
 function csv(rows){return '﻿'+rows.map(r=>r.map(c=>{c=c==null?'':String(c);return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c}).join(',')).join('\r\n')}
 function download(name,text){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){flash('Татаж чадсангүй')}}
 async function report(){
@@ -1417,7 +1436,7 @@ $('lGo').onclick=()=>{
   S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',{});header();permButtons();setTimeout(gdAfterLogin,700);
   if(S.shift){show('sale');render();$('scan').focus();if(shiftGuard())shiftHandover()}else{show('shiftopen');$('sFloat').select()}
 };
-$('lPin').onkeydown=e=>{if(e.key==='Enter')$('lGo').click()};
+$('lPin').onkeydown=e=>{if(e.key==='Enter')$('lGo').click()};$('lZ').onclick=zList;
 // Нэг дэлгүүрт нэг касс № зөвхөн нэг компьютер дээр — давхар бол баримтын дугаар давхардана
 const DEVID=store.get('devid',null)||(()=>{const v=uuid();store.set('devid',v);return v})();
 async function regBusy(){if(!(fb.ready&&fb.user&&navigator.onLine))return null;
