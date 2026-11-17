@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="10.5">
+<meta name="vivi-ver" content="10.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1951,16 +1951,24 @@ async function fcLoadHist(){const t=todayIso();if(FC.loaded===t)return;const A=a
   if(miss.length){const snap=await db.collection('pos_sales').where('date','>=',miss[0].replace(/-/g,'/')).where('date','<',t.replace(/-/g,'/')).get(),by={};
     snap.docs.forEach(x=>{const s=x.data(),d=dIso(s.date);if(miss.includes(d))(by[d]=by[d]||[]).push(s)});
     for(const d of miss){const pr=fcProfile(by[d]||[]);P[d]=pr;if(Object.keys(pr).length)db.collection('pos_fc_day').doc(d).set({d,st:JSON.stringify(pr),at:new Date().toISOString()}).catch(()=>{})}}
-  FC.prof=P;FC.loaded=t}
+  // өдрийн нийт дүн: POS-ын профиль + Smart-ын түүх (POS-оос өмнөх өдрүүд; шилжилтийн өдөр хоёулаа нэмэгдэнэ)
+  const TT={};for(let m=A.slice(0,7);m<=t.slice(0,7);m=nextM(m)){try{await histMonth(m)}catch(e){}}
+  for(let d=A;d<t;d=addD(d,1)){const o=TT[d]={},H=(HIST[d.slice(0,7)]||{})[d]||{};Object.entries(H.st||{}).forEach(([nm,x])=>{const l=smartLoc(nm);if(l)o[l]=(o[l]||0)+(x[1]||0)});Object.entries(P[d]||{}).forEach(([st,x])=>o[st]=(o[st]||0)+x.tot)}
+  FC.prof=P;FC.tot=TT;FC.loaded=t}
 function fcListenToday(){const t=todayIso();if(FC.day===t&&FC.unsub)return;if(FC.unsub)FC.unsub();FC.day=t;FC.sales=[];FC.ready=false;const dd=t.replace(/-/g,'/');
   FC.unsub=db.collection('pos_sales').where('date','==',dd).onSnapshot(s=>{FC.sales=s.docs.map(d=>d.data()).filter(x=>x.date===dd);FC.ready=true;fcDraw()},e=>$('fcMsg').textContent='Алдаа: '+(e.code||e))}
 // нэг дэлгүүрийн загвар (хуучин өдрүүдээр): муруй, хүлээлт, хүрээ
 function fcModel(st,t){const days=Object.keys(FC.prof).filter(d=>d<t).sort(),wd=new Date(t+'T12:00:00').getDay(),has=days.filter(d=>(FC.prof[d][st]||{}).tot>0);
   if(!has.length)return null;const first=has[0],ok=has.filter(d=>d!==first||first===days[0]);// анхны (хагас) өдрийг хасна
-  const T=d=>FC.prof[d][st].tot,same=d=>new Date(d+'T12:00:00').getDay()===wd;
-  const curve=new Array(FC_N).fill(0);let W=0;ok.forEach(d=>{const w=same(d)?2:1,x=FC.prof[d][st];W+=w;for(let i=0;i<FC_N;i++)curve[i]+=w*x.c[i]/x.tot});if(W)for(let i=0;i<FC_N;i++)curve[i]/=W;
-  const prior=(before)=>{const L=ok.filter(d=>d<before),sm=L.filter(same).slice(-4),last7=L.filter(d=>d>=addD(before,-7)),mean=a=>a.length?a.reduce((x,d)=>x+T(d),0)/a.length:null;
-    const w1=mean(sm),l7=mean(last7),all=mean(L),sameAll=mean(L.filter(same)),f=all&&sameAll?sameAll/all:1;const a=[w1,l7!=null?l7*f:null].filter(v=>v!=null);return a.length?a.reduce((x,y)=>x+y,0)/a.length:null};
+  const dw=d=>new Date(d+'T12:00:00').getDay(),same=d=>dw(d)===wd,wk=x=>x===0||x===6,stype=d=>wk(dw(d))===wk(wd);
+  const curve=new Array(FC_N).fill(0);let W=0;ok.forEach(d=>{const w=same(d)?3:stype(d)?2:1,x=FC.prof[d][st];W+=w;for(let i=0;i<FC_N;i++)curve[i]+=w*x.c[i]/x.tot});if(W)for(let i=0;i<FC_N;i++)curve[i]/=W;
+  // хүлээлт: өдрийн нийт (POS + Smart-ын түүх). Ижил гараг байхгүй бол ижил төрөл (ажлын өдөр / амралтын өдөр)
+  const TD=Object.keys(FC.tot||{}).filter(d=>(FC.tot[d][st]||0)>0).sort(),T=d=>FC.tot[d][st];
+  const prior=(before)=>{const L=TD.filter(d=>d<before&&d>=addD(before,-56)),mean=a=>a.length?a.reduce((x,d)=>x+T(d),0)/a.length:null;
+    let grp=L.filter(same);if(!grp.length)grp=L.filter(stype);const w1=mean(grp.slice(-4)),last7=L.filter(d=>d>=addD(before,-7)),l7=mean(last7);
+    const all=mean(L),gAll=mean(grp),f=all&&gAll?gAll/all:1;
+    // 7 хоногийн түвшинг гарагийн бүтцээр засна: сүүлийн 7 хоногийн дундаж × (энэ төрлийн өдрийн дундаж / бүх өдрийн дундаж)
+    const lv=l7!=null?l7*(gAll&&all?gAll/all:1):null,a=[w1,lv].filter(v=>v!=null);return a.length?a.reduce((x,y)=>x+y,0)/a.length:null};
   const est=(S,p,P)=>{if(P==null)return p>.02?S/p:null;const r=p>0?S/(P*p):1,rs=(p*r+FC_L)/(p+FC_L);return S+(1-p)*P*rs};
   // буцаан шалгалт: өдөр бүрийн өмнөх өдрүүдээс хүлээлт, цаг бүрт алдаа
   const E=Array.from({length:FC_N},()=>[]);ok.forEach(d=>{const P=prior(d);if(P==null)return;const x=FC.prof[d][st];for(let i=0;i<FC_N;i++){const F=est(x.c[i],curve[i],P);if(F)E[i].push(Math.abs(F/x.tot-1))}});
