@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.6">
+<meta name="vivi-ver" content="9.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -21,6 +21,14 @@ header nav.tabs{flex-basis:100%;display:flex;gap:2px;overflow-x:auto;margin:0 -6
 header nav.tabs button{font:inherit;font-size:14px;font-weight:600;background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px;color:#aab1bd;cursor:pointer;white-space:nowrap}
 header nav.tabs button:hover{color:#fff}
 header nav.tabs button.on{color:#fff;border-bottom-color:var(--red)}
+/* дэд цэс (VIVI Хяналт шиг): үндсэн цэсний доор цагаан мөр, идэвхтэйг доогуур зураасаар */
+#subtabs{flex:0 0 calc(100% + 32px);box-sizing:border-box;margin:0 -16px -10px;background:#fff;border-bottom:1px solid #e3e6eb;display:flex;gap:2px;padding:0 16px;overflow-x:auto;scrollbar-width:thin}
+#subtabs.hide{display:none}
+[data-rsub][hidden],.card[data-sub][hidden]{display:none!important}
+#subtabs button{font:inherit;font-size:14px;font-weight:600;background:none;border:0;border-bottom:2px solid transparent;padding:11px 14px 9px;color:#6b7280;cursor:pointer;white-space:nowrap}
+#subtabs button:hover{color:#1d2330}
+#subtabs button.on{color:#1d2330;border-bottom-color:#1d2330}
+#subtabs button .sn{display:inline-block;margin-left:6px;min-width:18px;padding:0 6px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:18px;text-align:center}
 header .tn{background:var(--red);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;margin-left:6px}
 header select#gStSel{font:inherit;font-size:14px;border-radius:6px;border:1px solid #4a5160;background:#2c323d;color:#fff;padding:3px 8px}
 .subnav{display:flex;gap:6px;flex-wrap:wrap}.subnav button{font:inherit;font-weight:650;border:1px solid var(--line);background:var(--soft,#f4f5f7);border-radius:10px;padding:9px 14px;cursor:pointer}
@@ -100,6 +108,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <input type="date" id="d1"><span>→</span><input type="date" id="d2"><select id="gStSel" title="Дэлгүүр"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="ON">Онлайн дэлгүүр</option><option value="YV">Явуулын касс</option></select>
   <span id="who" class="small" style="opacity:.75"></span><button id="logout" class="btn" style="min-height:30px;padding:2px 10px">Гарах</button><span id="live">холбогдож байна…</span>
   <nav class="tabs" id="tabs"><button data-tab="home">Нүүр</button><button data-tab="req">Хүсэлт<span class="tn hide" id="tnReq"></span></button><button data-tab="chat">💬 Чат<span class="tn hide" id="tnChat"></span></button><button data-tab="rep">Борлуулалтын тайлан</button><button data-tab="rcpt">Баримтууд</button><button data-tab="cash">Ээлж, бэлэн мөнгө</button><button data-tab="stock">Агуулах, хөдөлгөөн<span class="tn hide" id="tnStk"></span></button><button data-tab="items">Бараа, үнэ, шошго</button><button data-tab="promo">Урамшуулал</button><button data-tab="guide">📜 Удирдамж<span class="tn hide" id="tnGd"></span></button><button data-tab="vch">🎫 Ваучер</button><button data-tab="till">Касс, ажилтан</button><button data-tab="set">Тохиргоо</button><button data-tab="users" hidden>👤 Хэрэглэгч</button></nav>
+  <nav id="subtabs" class="hide"></nav>
 </header>
 <main>
 <section class="pnl" data-panel="home" hidden>
@@ -144,21 +153,21 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   </div></div>
 </section>
 <section class="pnl" data-panel="rep" hidden>
-  <div class="grid">
+  <div data-rsub="sum" class="grid">
     <div class="card"><h2>Дэлгүүрээр</h2><div class="scroll" id="cStore"></div></div>
     <div class="card"><h2>Төлбөрийн хэлбэрээр</h2><div class="scroll" id="cPay"></div></div>
     <div class="card"><h2>Кассчнаар</h2><div class="scroll" id="cCash"></div></div>
     <div class="card"><h2>Цагаар</h2><div id="cHour"></div></div>
   </div>
-  <div class="card" style="margin-top:12px"><h2>⏱ Цагаар харьцуулах — ижил цаг хүртэлх борлуулалт</h2>
+  <div data-rsub="hour" class="card" style="margin-top:12px"><h2>⏱ Цагаар харьцуулах — ижил цаг хүртэлх борлуулалт</h2>
     <div class="small" style="margin:-4px 0 8px">Хэдэн өдрийг <b>ижил цаг хүртэл</b> харьцуулна (жишээ нь өнөөдөр 17:30 хүртэл ба өчигдөр 17:30 хүртэл). Дэлгүүрийг дээд талын сонголтоор шүүнэ. Мөр бүр — нэг цаг, баганад тэр цагийн борлуулалт ба тэр цаг хүртэлх нийлбэр.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px">
       <span>Өдрүүд:</span><input type="date" id="hcD1" class="inp" style="width:auto"><input type="date" id="hcD2" class="inp" style="width:auto"><input type="date" id="hcD3" class="inp" style="width:auto"><input type="date" id="hcD4" class="inp" style="width:auto">
       <span>хүртэл</span><input type="time" id="hcT" class="inp" style="width:auto"><button id="hcNow" class="btn" title="Өнөөдөр, өчигдөр, 7 хоногийн өмнө, 14 хоногийн өмнө, одоогийн цаг">Өнөөдөр ↺</button><button id="hcGo" class="btn pri">Харьцуулах</button><span id="hcMsg" class="small"></span></div>
     <div id="hcKpi" class="kpi" style="margin-top:10px"></div><div id="hcChart" style="margin-top:8px"></div><div class="scroll" id="hcTbl" style="margin-top:8px"></div>
     <div style="margin-top:6px"><button id="hcX" class="btn">⬇ Excel</button></div></div>
-  <div class="card"><h2>Явуулын касс — аянаар</h2><div class="small" style="margin:-4px 0 8px">Дээрх огнооны хугацаанд хийгдсэн Явуулын кассын борлуулалт аян бүрээр. Бүх аяныг харьцуулах бол хугацааг уртаар сонгоно.</div><div class="scroll" id="cTrip" style="max-height:360px;overflow:auto"></div></div>
-  <div class="card"><h2>Тайлан (Smart-тай ижил нэр, багана)</h2>
+  <div data-rsub="trip" class="card"><h2>Явуулын касс — аянаар</h2><div class="small" style="margin:-4px 0 8px">Дээрх огнооны хугацаанд хийгдсэн Явуулын кассын борлуулалт аян бүрээр. Бүх аяныг харьцуулах бол хугацааг уртаар сонгоно.</div><div class="scroll" id="cTrip" style="max-height:360px;overflow:auto"></div></div>
+  <div data-rsub="acc" class="card"><h2>Тайлан (Smart-тай ижил нэр, багана)</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:var(--soft);border-radius:10px"><b class="small">Тайлангийн хугацаа:</b><span class="drng"><label class="small">Огноо</label><input type="date" class="dr1" id="rd1"><span>→</span><input type="date" class="dr2" id="rd2"></span><span id="rdInfo" class="small"></span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select id="rSel" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px;flex:1;min-width:220px"></select><button id="rDl" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--soft);padding:6px 14px;cursor:pointer">CSV татах</button><button id="rXl" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">Excel татах</button></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><span class="small">Smart-ын Excel хэлбэрээр (нягтлангийн системд оруулах):</span><select id="xSt" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="YV">Явуулын касс</option></select><button id="xB" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">/бараагаар/ .xlsx</button><button id="xP" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">/төлбөрийн хэлбэрээр/ .xlsx</button><span id="xMsg" class="small"></span></div>
@@ -171,13 +180,13 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       <div class="small" style="margin-top:6px">Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Буцаалт SaleMany-д орохгүй — тусдаа «Борлуулалтын буцаалт» файлаар. Байршил = бараа Smart-д аль тасагт байсан тэр тасгийн код (тохиргоонд). Нэгж үнэ = төлсөн үнэ; хөнгөлөлт, НӨАТ 0, НӨАТ-гүй дүн = нийт дүн, цаг минут хоосон. Харилцагч: зээл бол тэр харилцагч, бусад үед 5915198. Харьцсан данс: зээлээр бол зээлийн данс, бусад үед дэлгүүрийн данс.</div>
     </div>
     <div class="scroll" id="cRep" style="max-height:420px;overflow:auto"></div></div>
-  <div class="card" style="margin-top:12px"><h2>📥 Smart-ын борлуулалтын түүх (суурь өгөгдөл)</h2>
+  <div data-rsub="hist" class="card" style="margin-top:12px"><h2>📥 Smart-ын борлуулалтын түүх (суурь өгөгдөл)</h2>
     <div class="small" style="margin:-4px 0 8px">POS-оос өмнөх борлуулалтыг Smart-ын тайлангаас нэг удаа оруулна — урамшууллын үр дүн, өнгөрсөн жилтэй харьцуулалт, баярын календарь үүнийг ашиглана. Өдөр, сар, жилийн файл аль нь ч болно, олон файл зэрэг сонгож болно. Ижил өдрийг дахин оруулбал шинэ нь солино. Баганыг нэрээр нь танина (байрлал хамаагүй).</div>
     <div class="frm"><div><label class="f">1. Борлуулалт бараагаар (Огноо, Байршил, Бэлтгэн нийлүүлэгчийн нэр, Барааны бүлэг, Тоо хэмжээ, Цэвэр борлуулалт, Өртөг)</label><input type="file" id="hsFile" accept=".xlsx,.xls" multiple></div>
       <div><label class="f">2. Борлуулалт төлбөрийн хэлбэрээр (Огноо, Дэлгүүр, Төлбөрийн хэлбэр, Банкны нэр, Дүн) — заавал биш</label><input type="file" id="hpFile" accept=".xlsx,.xls" multiple></div></div>
     <div id="hsMsg" class="small" style="margin-top:8px;min-height:18px"></div>
     <h3 style="margin:10px 0 4px;font-size:14px">Оруулсан түүх (сараар)</h3><div class="scroll" id="hsCov"></div></div>
-  <div class="card" style="margin-top:12px"><h2>🔍 Хөнгөлөлтийн хяналт — кассын үнээс зөв хөнгөлсөн үү</h2>
+  <div data-rsub="disc" class="card" style="margin-top:12px"><h2>🔍 Хөнгөлөлтийн хяналт — кассын үнээс зөв хөнгөлсөн үү</h2>
     <div class="small" style="margin:-4px 0 8px">Сонгосон огноо, дэлгүүрийн борлуулсан мөр бүрийг шалгана: урамшуулалд хамаарах бараа яг <b>хувиар</b> (жишээ нь −50%) хөнгөлөгдсөн эсэх, үл хамаарах бараа өөрийн үнээрээ зарагдсан эсэх, мөн <b>гараар хөнгөлөлт</b>, <b>кассын 5%</b>, <b>бэлэг</b>, урамшууллыг алгассан (бүтэн үнээр зарсан) мөрүүд. Буцаалт тооцохгүй.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><span>Шалгах урамшуулал:</span><select id="pcP" class="inp" style="width:auto"></select>
       <label class="inl"><input type="checkbox" id="pcAll"> Зөв мөрүүдийг ч харуулах</label><span style="flex:1"></span><button id="pcX" class="btn">⬇ Excel</button></div>
@@ -197,7 +206,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div class="card"><h2>Хяналт: кассчны үйлдэл</h2><div class="scroll" id="cAud"></div></div>
 </section>
 <section class="pnl" data-panel="stock" hidden>
-  <div class="card" style="padding:10px 12px"><div class="subnav" id="stNav">
+  <div class="card" style="padding:10px 12px;display:none"><div class="subnav" id="stNav">
     <button data-sub="bal" class="on">📦 Үлдэгдэл</button>
     <button data-sub="in">⬇ Орлого <span class="small">нийлүүлэгчээс</span></button>
     <button data-sub="move">⇄ Шилжүүлэг <span class="small">байршил хооронд</span></button>
@@ -219,20 +228,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       <div class="small" style="margin-bottom:8px">Үлдэгдэл хасах болсон бараа бүрийг <b>аль баримтаар, хэзээ, аль кассчин</b> зарсныг доор харуулна. Ихэвчлэн кассчин өөр хэмжээ/өнгийг уншуулснаас болдог — «Ижил загварын бусад хэмжээ» баганаас илүү гарсан байж магадгүй барааг харна. Шалгаад «Шалгасан» дарж тайлбар бичнэ (ж: «L-ийн оронд XL уншуулсан, тооллогоор засна»). Бодит үлдэгдлийг «Тооллого» алхмаар засна.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><select id="negF" class="inp" style="width:auto"><option value="">Бүгд</option><option value="open">Шалгаагүй</option><option value="done">Шалгасан</option></select><span id="negSum" class="small" style="flex:1"></span><button id="negXl" class="btn">⬇ Excel</button></div>
       <div class="scroll" id="negTbl" style="max-height:520px;overflow:auto"></div></div>
-    <div id="cntCard" style="margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px">
-      <h2 style="margin:0 0 4px">📋 Тооллогын даалгавар (касс сканнераар тоолно)</h2>
-      <div class="small" style="margin-bottom:8px">Хасах мөрийн «📋 Тоолуулах», эсвэл доорх хэсгээс дурын загварыг тоолуулна. Касс системийн тоог харахгүй (сохор тооллого). Касс «Тоолж дууслаа» дармагц «✓ тоолсон» болж, систем зөрүү, шалтгааныг (хэмжээ андуурсан / дутагдал / илүүдэл) гаргана. «Үр дүн» → «Зөрүүг засах».</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px;margin-bottom:6px"><b>Загвар тоолуулах:</b><select id="cnSt" class="inp" style="width:auto"></select><input id="cnQ" class="inp" placeholder="Код, баркод эсвэл модель" style="width:220px"><button id="cnGo" class="btn pri">📋 Тоолуулах</button></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px;margin-bottom:10px"><b>Санамсаргүй (давтамжит) тооллого:</b><select id="cnRSt" class="inp" style="width:auto"></select><input id="cnRN" class="inp" value="5" inputmode="numeric" style="width:70px"><span class="small">загвар (үлдэгдэлтэй загваруудаас санамсаргүй)</span><button id="cnRGo" class="btn">🎲 Илгээх</button><span id="cnMsg" class="small"></span></div>
-      <div class="scroll" id="cntTasks"></div>
-      <h2 style="margin:16px 0 4px">👤 Тооллогын тайлан — кассчин, дутагдал (дээрх огнооны хүрээнд)</h2>
-      <div class="small" style="margin-bottom:6px">«Зөрүүг засах» хийсэн тооллого бүрийн дүгнэлт: хэмжээ андуурсан баримтын кассчин, дутагдал/илүүдлийн тоо, өртөг ба кассын үнээр дүн. Дутагдлын акт хэвлэж гарын үсэг зуруулна.</div>
-      <div style="display:flex;gap:8px;margin-bottom:6px"><button id="acX1" class="btn">⬇ Кассчнаар Excel</button><button id="acX2" class="btn">⬇ Тооллого бүрээр Excel</button></div>
-      <div class="scroll" id="acCash"></div><div class="scroll" id="acTask" style="margin-top:10px"></div>
-      <h2 style="margin:16px 0 4px">📜 Тооллогын түүх — хэн, хэзээ тоолсон, үлдэгдэл зассан эсэх</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px"><span>Илгээсэн огноо</span><input type="date" id="chA" class="inp" style="width:auto"><span>→</span><input type="date" id="chB" class="inp" style="width:auto">
-        <select id="chSt" class="inp" style="width:auto"><option value="">Бүх дэлгүүр</option></select><button id="chGo" class="btn pri">Харах</button><button id="chX" class="btn">⬇ Excel (тооллого бүрээр)</button><button id="chX2" class="btn">⬇ Excel (код бүрээр)</button><span id="chM" class="small"></span></div>
-      <div class="scroll" id="chTbl" style="max-height:480px;overflow:auto;margin-top:8px"></div></div>
+    
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>Кассууд:</b><button id="sPub" class="btn">Кассууд руу илгээх</button><span id="sPubM" class="small" style="flex:1"></span><span class="small">Кассчин «Үлдэгдэл (F2)» цонхонд бүх дэлгүүрийн үлдэгдлийг харна. 1 цагаас хуучин бол автоматаар шинэчилнэ.</span></div>
   </div>
 
@@ -260,7 +256,21 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   </div>
 
   <!-- 5. Тооллого -->
-  <div class="card" data-sub="cnt"><h2>Тооллогын зөрүү</h2>
+  <div class="card" data-sub="cnt" id="cntCard">
+      <h2 style="margin:0 0 4px">📋 Тооллогын даалгавар (касс сканнераар тоолно)</h2>
+      <div class="small" style="margin-bottom:8px">Хасах мөрийн «📋 Тоолуулах», эсвэл доорх хэсгээс дурын загварыг тоолуулна. Касс системийн тоог харахгүй (сохор тооллого). Касс «Тоолж дууслаа» дармагц «✓ тоолсон» болж, систем зөрүү, шалтгааныг (хэмжээ андуурсан / дутагдал / илүүдэл) гаргана. «Үр дүн» → «Зөрүүг засах».</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px;margin-bottom:6px"><b>Загвар тоолуулах:</b><select id="cnSt" class="inp" style="width:auto"></select><input id="cnQ" class="inp" placeholder="Код, баркод эсвэл модель" style="width:220px"><button id="cnGo" class="btn pri">📋 Тоолуулах</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px;margin-bottom:10px"><b>Санамсаргүй (давтамжит) тооллого:</b><select id="cnRSt" class="inp" style="width:auto"></select><input id="cnRN" class="inp" value="5" inputmode="numeric" style="width:70px"><span class="small">загвар (үлдэгдэлтэй загваруудаас санамсаргүй)</span><button id="cnRGo" class="btn">🎲 Илгээх</button><span id="cnMsg" class="small"></span></div>
+      <div class="scroll" id="cntTasks"></div>
+      <h2 style="margin:16px 0 4px">👤 Тооллогын тайлан — кассчин, дутагдал (дээрх огнооны хүрээнд)</h2>
+      <div class="small" style="margin-bottom:6px">«Зөрүүг засах» хийсэн тооллого бүрийн дүгнэлт: хэмжээ андуурсан баримтын кассчин, дутагдал/илүүдлийн тоо, өртөг ба кассын үнээр дүн. Дутагдлын акт хэвлэж гарын үсэг зуруулна.</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px"><button id="acX1" class="btn">⬇ Кассчнаар Excel</button><button id="acX2" class="btn">⬇ Тооллого бүрээр Excel</button></div>
+      <div class="scroll" id="acCash"></div><div class="scroll" id="acTask" style="margin-top:10px"></div>
+      <h2 style="margin:16px 0 4px">📜 Тооллогын түүх — хэн, хэзээ тоолсон, үлдэгдэл зассан эсэх</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px"><span>Илгээсэн огноо</span><input type="date" id="chA" class="inp" style="width:auto"><span>→</span><input type="date" id="chB" class="inp" style="width:auto">
+        <select id="chSt" class="inp" style="width:auto"><option value="">Бүх дэлгүүр</option></select><button id="chGo" class="btn pri">Харах</button><button id="chX" class="btn">⬇ Excel (тооллого бүрээр)</button><button id="chX2" class="btn">⬇ Excel (код бүрээр)</button><span id="chM" class="small"></span></div>
+      <div class="scroll" id="chTbl" style="max-height:480px;overflow:auto;margin-top:8px"></div></div>
+  <div class="card" data-sub="cnt" style="margin-top:12px"><h2>Тооллогын зөрүү — VIVI Хяналтаас (Smart-ын тооллого)</h2>
     <div class="small">VIVI Kontrola-ийн тооллогын файлыг («Код» + «Тоо»/«Тоолсон») системийн одоогийн үлдэгдэлтэй харьцуулж зөрүүг засна. Хадгалсны дараа үлдэгдэл тоолсон тоотой тэнцэнэ.</div>
     <div class="step"><div class="sn">1</div><div style="flex:1"><div class="frm"><div><label class="f">Байршил</label><select id="cSt" class="inp"></select></div><div><label class="f">Тооллогын файл</label><input type="file" id="cFile" accept=".xlsx,.xls"></div></div>
       <label class="inl" style="margin-top:6px"><input type="checkbox" id="cFull"> Бүрэн тооллого — файлд байхгүй бараа = 0 (тэмдэглээгүй бол зөвхөн файлд байгаа барааг засна)</label></div></div>
@@ -889,9 +899,21 @@ function drawTrips(){const L=allSales.filter(s=>s.store==='YV'),m=new Map();
 
 /* ==== Цэс: таб бүр тусдаа хуудас. Хаяг (#rep гэх мэт) хадгалагдаж, хөтчийн «буцах» товч ажиллана ==== */
 const TABK=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab);
+/* ==== Дэд цэс: үндсэн цэс бүрийн доорх хуудсууд ==== */
+const SUBS={stock:[['bal','📦 Үлдэгдэл'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
+  rep:[['sum','📊 Тойм'],['hour','⏱ Цагаар харьцуулах'],['acc','🧾 Smart тайлан, SaleMany'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
+let CURTAB='';
+const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'vivipanel_sub_'+t)}catch(e){return ''}};
+function subMark(t,k){if(CURTAB!==t)return;document.querySelectorAll('#subtabs [data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===k||(t==='stock'&&k==='mov'&&false)))}
+function drawSubtabs(t){const L=SUBS[t],el=$('subtabs');el.classList.toggle('hide',!L);if(!L){el.innerHTML='';return}
+  let cur=subGet(t);if(!L.some(x=>x[0]===cur))cur=L[0][0];el.innerHTML=L.map(([k,l])=>'<button data-st="'+k+'"'+(k===cur?' class="on"':'')+'>'+l+'<span class="sn hide" id="sn_'+t+'_'+k+'"></span></button>').join('');
+  if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0)}
+function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
+$('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);window.scrollTo(0,0)};
 function showTab(t,push){if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
   document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   document.querySelectorAll('section[data-panel]').forEach(x=>x.hidden=x.dataset.panel!==t);
+  CURTAB=t;drawSubtabs(t);
   try{localStorage.setItem('vivipanel_tab',t)}catch(e){}
   if(push&&location.hash!=='#'+t)history.pushState(null,'','#'+t);window.scrollTo(0,0)}
 $('tabs').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab,true)};
@@ -1289,7 +1311,7 @@ const MOVT={in:['⬇ Орлого — нийлүүлэгчээс ирсэн ба
   move:['⇄ Шилжүүлэг — байршлаас байршил руу','Илгээх барааг уншуулна. Хадгалахад баримт хэвлэгдэж, бараа «замд» болно. Хүлээн авагч дэлгүүр касс дээрээ уншуулж хүлээн авна.','Тайлбар','Шилжүүлэг илгээх'],
   out:['⬆ Зарлага — гэмтэл, алдагдал, нийлүүлэгчид буцаалт','Байршлаас гарсан (зарагдаагүй) барааг шалтгаантай нь бүртгэнэ. Гэмтэлтэй барааг «Шилжүүлэг»-ээр «Гэмтэлтэй бараа» агуулах руу шилжүүлж болно.','Тайлбар','Зарлага хадгалах']};
 function stSub(k){const mv=['in','move','out'].includes(k);if(k==='open')setTimeout(clDraw,0);
-  document.querySelectorAll('#stNav [data-sub]').forEach(b=>b.classList.toggle('on',b.dataset.sub===k));
+  document.querySelectorAll('#stNav [data-sub]').forEach(b=>b.classList.toggle('on',b.dataset.sub===k));subMark('stock',k);
   document.querySelectorAll('section[data-panel="stock"] .card[data-sub]').forEach(c=>c.hidden=c.dataset.sub!==(mv?'mov':k));
   if(mv){if($('mTy').value!==k&&movLines&&movLines.length&&!confirm('Уншуулсан жагсаалтыг цэвэрлээд «'+MOVT[k][0]+'» руу шилжих үү?')){stSub($('mTy').value);return}
     if($('mTy').value!==k){movLines=null;mDraw()}$('mTy').value=k;$('mTitle').textContent=MOVT[k][0];$('mHint').textContent=MOVT[k][1];$('mNoteL').textContent=MOVT[k][2];$('mUp').textContent=MOVT[k][3];syncMov();setTimeout(()=>$('mScan').focus(),50)}
