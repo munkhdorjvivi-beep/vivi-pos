@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="10.3">
+<meta name="vivi-ver" content="10.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1454,7 +1454,9 @@ $('aAt').onchange=$('aPos').onchange=()=>{if($('aFile').files[0])$('aFile').onch
 $('aUp').onclick=async()=>{if(!openAll)return;const btn=$('aUp');btn.disabled=true;const out=$('aoMsg');
   const SEL=[...document.querySelectorAll('input[data-aloc]:checked')].map(x=>x.dataset.aloc);if(!SEL.length){btn.disabled=false;return out.innerHTML='<span class="hot">Байршил сонгоно уу</span>'}
   if(!confirm(SEL.map(lc=>LOC[lc]).join(', ')+' — эхний үлдэгдлийг солих уу?')){btn.disabled=false;return}
-  try{for(const lc of SEL){const items=[...openAll.L[lc].entries()].filter(x=>x[1]).map(x=>openAll.names&&openAll.names[x[0]]?[x[0],x[1],openAll.names[x[0]]]:x),d=JSON.stringify(items);
+  try{for(const lc of SEL){let items=[...openAll.L[lc].entries()].filter(x=>x[1]).map(x=>openAll.names&&openAll.names[x[0]]?[x[0],x[1],openAll.names[x[0]]]:x),d=JSON.stringify(items);
+      // нэртэй нь 1 MB-аас их бол нэргүй хадгална (нэр барааны жагсаалтаас гарна)
+      if(new TextEncoder().encode(d).length>950000){items=items.map(x=>[x[0],x[1]]);d=JSON.stringify(items)}
       if(new TextEncoder().encode(d).length>1000000)throw new Error(LOC[lc]+': хэт том');out.textContent=LOC[lc]+' хадгалж байна…';
       const old=await db.collection('pos_stock_open').doc(lc).get(),lp=openAll.lots&&openAll.lots[lc]?await lotsSave(lc,openAll.lots[lc],old.exists?old.data().lotParts||0:0):0;
       if(!lp&&old.exists&&old.data().lotParts)await lotsSave(lc,new Map(),old.data().lotParts);
