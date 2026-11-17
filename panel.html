@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="10.4">
+<meta name="vivi-ver" content="10.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -159,6 +159,14 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div class="card"><h2>Кассчнаар</h2><div class="scroll" id="cCash"></div></div>
     <div class="card"><h2>Цагаар</h2><div id="cHour"></div></div>
   </div>
+  <div data-rsub="fc" class="card" style="margin-top:12px" hidden><h2>📈 Өнөөдрийн таамаг — өнөөдөр нийт хэд зарагдах вэ</h2>
+    <div class="small" style="margin:-4px 0 8px">Сүүлийн 8 долоо хоногийн ижил төрлийн өдрүүдэд дэлгүүр <b>энэ цаг хүртэл өдрийн хэдэн хувийг</b> зардгийг тооцоод, өнөөдрийн хурдыг өглөөний хүлээлттэй (өмнөх ижил гарагууд, сүүлийн 7 хоногийн түвшин) нэгтгэнэ. Өглөө хүлээлт голлоно, цаг өнгөрөх тусам өнөөдрийн хурд голлоно. Хүрээ = өмнөх өдрүүдэд энэ аргын алдаа (80% магадлалтай). 1 минут тутам автоматаар шинэчлэгдэнэ.</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="fcGo" class="btn pri">⟳ Шинэчлэх</button><span id="fcMsg" class="small"></span></div>
+    <div class="kpi" id="fcKpi" style="margin-top:8px"></div><div id="fcChart" style="margin-top:8px"></div>
+    <h3 style="margin:12px 0 4px;font-size:14px">Дэлгүүрээр</h3><div id="fcTbl" class="scroll"></div>
+    <h3 style="margin:14px 0 4px;font-size:14px">Таамгийн нарийвчлал (өмнөх өдрүүд: тухайн цагт хэлсэн таамаг ба бодит дүн)</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="fcA" class="inp" style="width:auto"><span>—</span><input type="date" id="fcB" class="inp" style="width:auto"><button id="fcAccGo" class="btn">Харах</button><button id="fcAccX" class="btn">Excel</button><span id="fcAccMsg" class="small"></span></div>
+    <div id="fcAcc" class="scroll" style="margin-top:6px"></div></div>
   <div data-rsub="hour" class="card" style="margin-top:12px"><h2>⏱ Цагаар харьцуулах — ижил цаг хүртэлх борлуулалт</h2>
     <div class="small" style="margin:-4px 0 8px">Хэдэн өдрийг <b>ижил цаг хүртэл</b> харьцуулна (жишээ нь өнөөдөр 17:30 хүртэл ба өчигдөр 17:30 хүртэл). Дэлгүүрийг дээд талын сонголтоор шүүнэ. Мөр бүр — нэг цаг, баганад тэр цагийн борлуулалт ба тэр цаг хүртэлх нийлбэр.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px">
@@ -514,7 +522,7 @@ $('lgG').onclick=()=>{$('lm').textContent='Google-ээр нэвтэрч байн
 const PERM_TABS=[['home','Нүүр','дэлгүүрийн борлуулалт, нийлүүлэгч'],['req','Хүсэлт','буцаалт, солилт, төлбөр засах зөвшөөрөх; буцаалтын маягт шалгах'],['chat','Чат','кассуудтай чатлах'],['rep','Борлуулалтын тайлан','тайлан, Excel, SaleMany'],['rcpt','Баримтууд','баримт харах, устгах, сэргээх'],['cash','Ээлж, бэлэн мөнгө','ээлж, кассчны үйлдэл'],['stock','Агуулах, хөдөлгөөн','үлдэгдэл, орлого, шилжүүлэг, зарлага'],['items','Бараа, үнэ, шошго','бараа бүртгэх, үнэ, каталог оруулах'],['promo','Урамшуулал','урамшуулал үүсгэх, засах'],['vch','Ваучер','ваучер бүртгэх, үлдэгдэл засах'],['till','Касс, ажилтан','кассчин, ПИН, касс, аян, буцаалтын тохиргоо'],['bonus','💰 Кассын урамшуулал','«Касс, ажилтан» цэс дотор: кассчны баримтын урамшуулал тооцох, дүн тохируулах'],['guide','📜 Удирдамж (бичих)','урамшууллын удирдамж бичих, нийтлэх — унших, танилцахыг бүх хэрэглэгч хийнэ'],['set','Тохиргоо','харилцагч, нөөц хуулбар']];
 /* Дэд цэсийн эрх: үндсэн цэсийг сонговол бүх дэд цэс; эсвэл зөвхөн сонгосон дэд цэс */
 const PERM_SUB={
-  rep:[['rep.sum','📊 Тойм'],['rep.hour','⏱ Цагаар харьцуулах'],['rep.acc','🧾 Smart тайлан, SaleMany, нягтлангийн тохиргоо'],['rep.disc','🔍 Хөнгөлөлтийн хяналт'],['rep.hist','📥 Smart-ын түүх'],['rep.trip','🚐 Явуулын касс']],
+  rep:[['rep.sum','📊 Тойм'],['rep.fc','📈 Өнөөдрийн таамаг (борлуулалтын урьдчилсан тооцоо)'],['rep.hour','⏱ Цагаар харьцуулах'],['rep.acc','🧾 Smart тайлан, SaleMany, нягтлангийн тохиргоо'],['rep.disc','🔍 Хөнгөлөлтийн хяналт'],['rep.hist','📥 Smart-ын түүх'],['rep.trip','🚐 Явуулын касс']],
   stock:[['stock.bal','📦 Үлдэгдэл, хасах үлдэгдэл, ⏳ насжилт'],['stock.in','⬇ Орлого'],['stock.move','⇄ Шилжүүлэг'],['stock.out','⬆ Зарлага'],['stock.cnt','✓ Тооллого (кассаар)'],
     ['wh','🚚 Агуулах (LPP) — скан, илгээмж, хүргэлт, шошго, бүтээмж'],['whedit','🚚 Агуулах (LPP) — илгээмж засах, цуцлах, хүргэлт устгах'],
     ['rcv_fc','📥 Хүлээн авалт — Food city'],['rcv_dr','📥 Хүлээн авалт — Драгон'],['rcv_ns','📥 Хүлээн авалт — Нийслэл'],['rcv_ht','📥 Хүлээн авалт — Бөөн'],
@@ -934,16 +942,16 @@ function drawTrips(){const L=allSales.filter(s=>s.store==='YV'),m=new Map();
 const TABK=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab);
 /* ==== Дэд цэс: үндсэн цэс бүрийн доорх хуудсууд ==== */
 const SUBS={stock:[['bal','📦 Үлдэгдэл'],['age','⏳ Насжилт'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['lpp','🚚 Агуулах (LPP)',()=>can('wh')||can('whedit')],['rcv','📥 Хүлээн авалт',()=>can('wh')||can('whedit')||rcvAnyP()],['zinv','🗂 Тооллого (бүсээр)',()=>can('inv')||can('invadm')],['whset','⚙ LPP тохиргоо',()=>!!(ME&&ME.admin)],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
-  rep:[['sum','📊 Тойм'],['hour','⏱ Цагаар харьцуулах'],['acc','🧾 Smart тайлан, SaleMany'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
+  rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','🧾 Smart тайлан, SaleMany'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
 let CURTAB='';
 const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'vivipanel_sub_'+t)}catch(e){return ''}};
 function subMark(t,k){if(CURTAB!==t)return;document.querySelectorAll('#subtabs [data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===k||(t==='stock'&&k==='mov'&&false)))}
-const SUBK={stock:{bal:'stock.bal',age:'stock.bal',in:'stock.in',move:'stock.move',out:'stock.out',cnt:'stock.cnt',arc:'stock.arc',open:'stock.open'},rep:{sum:'rep.sum',hour:'rep.hour',acc:'rep.acc',disc:'rep.disc',hist:'rep.hist',trip:'rep.trip'}};
+const SUBK={stock:{bal:'stock.bal',age:'stock.bal',in:'stock.in',move:'stock.move',out:'stock.out',cnt:'stock.cnt',arc:'stock.arc',open:'stock.open'},rep:{sum:'rep.sum',fc:'rep.fc',hour:'rep.hour',acc:'rep.acc',disc:'rep.disc',hist:'rep.hist',trip:'rep.trip'}};
 const subOk=(t,x)=>x[2]?x[2]():(SUBK[t]&&SUBK[t][x[0]]?can(SUBK[t][x[0]]):true);
 function drawSubtabs(t){const L=(SUBS[t]||[]).filter(x=>subOk(t,x)),el=$('subtabs');el.classList.toggle('hide',!L.length);if(!L.length){el.innerHTML='';return}
   let cur=subGet(t);if(!L.some(x=>x[0]===cur))cur=L[0][0];el.innerHTML=L.map(([k,l])=>'<button data-st="'+k+'"'+(k===cur?' class="on"':'')+'>'+l+'<span class="sn hide" id="sn_'+t+'_'+k+'"></span></button>').join('');
   if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0)}
-function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
+function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='fc')setTimeout(fcShow,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
 $('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);window.scrollTo(0,0)};
 function showTab(t,push){if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
   document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
@@ -1928,6 +1936,79 @@ async function hcRun(){const D=['hcD1','hcD2','hcD3','hcD4'].map(id=>$(id).value
     m.textContent=(gSt?LOC[gSt]||gSt:'Бүх дэлгүүр')+' · '+T.slice(0,5)+' хүртэл'}
   catch(e){m.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}finally{$('hcGo').disabled=false}}
 $('hcGo').onclick=hcRun;$('hcNow').onclick=()=>{hcPreset();hcRun()};$('hcX').onclick=()=>xtXlsx('hcmp','tsagaar_haritsuulalt','Цагаар');setTimeout(hcPreset,0);
+/* ==== 📈 Өнөөдрийн таамаг ====
+   өдрийн профиль (10 минут тутмын хуримтлал) pos_fc_day/<огноо> — өнгөрсөн өдөр бүрт нэг удаа баримтаас тооцоод хадгална
+   p(t) = ижил төрлийн өдрүүдэд t хүртэл өдрийн хэдэн хувь (ижил гараг ×2 жин); P = хүлээлт (ижил гарагийн дундаж ба 7 хоногийн түвшин × гарагийн коэф.)
+   r = S/(P·p), r* = (p·r + λ)/(p + λ)  →  таамаг F = S + (1−p)·P·r*;  хүрээ = өмнөх өдрүүдэд энэ аргаар гарсан алдааны 80%-ийн хувь */
+const FC_N=144,FC_L=.15,fcSlot=tm=>{const h=+String(tm).slice(0,2)||0,m=+String(tm).slice(3,5)||0;return Math.min(FC_N-1,Math.floor((h*60+m)/10))};
+let FC={day:'',sales:[],unsub:null,prof:{},loaded:'',timer:null,last:null,snap:{}};
+function fcProfile(list){const o={};list.forEach(s=>{if(s.type!=='sale'&&s.type!=='return')return;const st=s.store||'?',x=o[st]||(o[st]={tot:0,c:new Array(FC_N).fill(0)});x.c[fcSlot(s.time)]+=s.total||0;x.tot+=s.total||0});
+  Object.values(o).forEach(x=>{for(let i=1;i<FC_N;i++)x.c[i]+=x.c[i-1];x.c=x.c.map(Math.round);x.tot=Math.round(x.tot)});return o}
+async function fcLoadHist(){const t=todayIso();if(FC.loaded===t)return;const A=addD(t,-56);
+  const q=await db.collection('pos_fc_day').where('d','>=',A).get();const P={};q.docs.forEach(d=>{const x=d.data();if(x.d<t)P[x.d]=JSON.parse(x.st||'{}')});
+  // профильгүй өнгөрсөн өдрүүд: POS баримтаас нэг удаа тооцож хадгална
+  const miss=[];for(let d=A;d<t;d=addD(d,1))if(!P[d])miss.push(d);
+  if(miss.length){const snap=await db.collection('pos_sales').where('date','>=',miss[0].replace(/-/g,'/')).where('date','<',t.replace(/-/g,'/')).get(),by={};
+    snap.docs.forEach(x=>{const s=x.data(),d=dIso(s.date);if(miss.includes(d))(by[d]=by[d]||[]).push(s)});
+    for(const d of miss){const pr=fcProfile(by[d]||[]);P[d]=pr;if(Object.keys(pr).length)db.collection('pos_fc_day').doc(d).set({d,st:JSON.stringify(pr),at:new Date().toISOString()}).catch(()=>{})}}
+  FC.prof=P;FC.loaded=t}
+function fcListenToday(){const t=todayIso();if(FC.day===t&&FC.unsub)return;if(FC.unsub)FC.unsub();FC.day=t;FC.sales=[];FC.ready=false;const dd=t.replace(/-/g,'/');
+  FC.unsub=db.collection('pos_sales').where('date','==',dd).onSnapshot(s=>{FC.sales=s.docs.map(d=>d.data()).filter(x=>x.date===dd);FC.ready=true;fcDraw()},e=>$('fcMsg').textContent='Алдаа: '+(e.code||e))}
+// нэг дэлгүүрийн загвар (хуучин өдрүүдээр): муруй, хүлээлт, хүрээ
+function fcModel(st,t){const days=Object.keys(FC.prof).filter(d=>d<t).sort(),wd=new Date(t+'T12:00:00').getDay(),has=days.filter(d=>(FC.prof[d][st]||{}).tot>0);
+  if(!has.length)return null;const first=has[0],ok=has.filter(d=>d!==first||first===days[0]);// анхны (хагас) өдрийг хасна
+  const T=d=>FC.prof[d][st].tot,same=d=>new Date(d+'T12:00:00').getDay()===wd;
+  const curve=new Array(FC_N).fill(0);let W=0;ok.forEach(d=>{const w=same(d)?2:1,x=FC.prof[d][st];W+=w;for(let i=0;i<FC_N;i++)curve[i]+=w*x.c[i]/x.tot});if(W)for(let i=0;i<FC_N;i++)curve[i]/=W;
+  const prior=(before)=>{const L=ok.filter(d=>d<before),sm=L.filter(same).slice(-4),last7=L.filter(d=>d>=addD(before,-7)),mean=a=>a.length?a.reduce((x,d)=>x+T(d),0)/a.length:null;
+    const w1=mean(sm),l7=mean(last7),all=mean(L),sameAll=mean(L.filter(same)),f=all&&sameAll?sameAll/all:1;const a=[w1,l7!=null?l7*f:null].filter(v=>v!=null);return a.length?a.reduce((x,y)=>x+y,0)/a.length:null};
+  const est=(S,p,P)=>{if(P==null)return p>.02?S/p:null;const r=p>0?S/(P*p):1,rs=(p*r+FC_L)/(p+FC_L);return S+(1-p)*P*rs};
+  // буцаан шалгалт: өдөр бүрийн өмнөх өдрүүдээс хүлээлт, цаг бүрт алдаа
+  const E=Array.from({length:FC_N},()=>[]);ok.forEach(d=>{const P=prior(d);if(P==null)return;const x=FC.prof[d][st];for(let i=0;i<FC_N;i++){const F=est(x.c[i],curve[i],P);if(F)E[i].push(Math.abs(F/x.tot-1))}});
+  const hw=E.map((e,i)=>{if(e.length>=5){const a=e.slice().sort((x,y)=>x-y);return a[Math.min(a.length-1,Math.floor(a.length*.8))]}return .35*(1-curve[i])+.04});
+  return {curve,P:prior(t),hw,est,n:ok.length,nSame:ok.filter(same).length}}
+function fcDraw(){const box=$('fcKpi');if(!box||!FC.loaded||!FC.ready)return;const t=todayIso(),now=new Date(),slot=fcSlot(String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'));
+  const today=fcProfile(FC.sales),stores=[...new Set([...Object.keys(today),...Object.values(FC.prof).flatMap(o=>Object.keys(o))])].filter(st=>!gSt||st===gSt).filter(st=>LOC[st]||st==='ON').sort();
+  const rows=[];let SS=0,FF=0,PP=0,var2=0,Y=0,L=0;const yd=addD(t,-1),lw=addD(t,-7);
+  stores.forEach(st=>{const M=fcModel(st,t),x=today[st],S=x?x.c[slot]:0;if(!M&&!S)return;const p=M?M.curve[slot]:0,F=M?(M.est(S,p,M.P)||S):S,hw=M?M.hw[slot]:.5,y=(FC.prof[yd]||{})[st],w=(FC.prof[lw]||{})[st];
+    rows.push({st,S,p,F,lo:F*(1-hw),hi:F*(1+hw),hw,P:M&&M.P,y:y?y.tot:null,yNow:y?y.c[slot]:null,w:w?w.tot:null,n:M?M.n:0});SS+=S;FF+=F;PP+=(M&&M.P)||0;var2+=Math.pow(F*hw,2);Y+=y?y.tot:0;L+=w?w.tot:0});
+  if(!rows.length){box.innerHTML='';$('fcMsg').textContent='Өгөгдөл алга';return}
+  const hwT=FF?Math.sqrt(var2)/FF:0,nm=st=>st==='ON'?'Онлайн дэлгүүр':LOC[st]||st,pT=FF?SS/FF:0;FC.last={t,slot,F:Math.round(FF),lo:Math.round(FF*(1-hwT)),hi:Math.round(FF*(1+hwT)),S:Math.round(SS),st:Object.fromEntries(rows.map(r=>[r.st,Math.round(r.F)]))};
+  box.innerHTML=[['Өнөөдрийн таамаг · '+(gSt?nm(gSt):'бүх дэлгүүр'),money(FF)+'<div class="small">'+money(FF*(1-hwT))+' – '+money(FF*(1+hwT))+' (±'+Math.round(hwT*100)+'%)</div>',1],
+    ['Одоо хүртэл ('+now.toTimeString().slice(0,5)+')',money(SS)+'<div class="small">өдрийн ~'+Math.round(pT*100)+'% нь өнгөрсөн</div>'],
+    ['Өглөөний хүлээлт',PP?money(PP)+'<div class="small">хурд: '+pctS(PP&&pT?SS/(PP*pT)-1:null)+'</div>':'—'],
+    ['Өчигдөр ('+WD[new Date(yd+'T12:00:00').getDay()]+')',Y?money(Y)+'<div class="small">таамаг: '+pctS(FF/Y-1)+'</div>':'—'],
+    ['Өнгөрсөн '+WD[new Date(lw+'T12:00:00').getDay()]+' ('+lw.slice(5)+')',L?money(L)+'<div class="small">таамаг: '+pctS(FF/L-1)+'</div>':'—']]
+    .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
+  xtable('fcTbl','fct',['Дэлгүүр','Одоо хүртэл','Өдрийн хэдэн % өнгөрсөн (хэвийн)','Таамаг','Доод','Дээд','±%','Өглөөний хүлээлт','Өчигдөр (нийт)','Өчигдөр энэ цаг хүртэл','Өнгөрсөн 7 хоногийн мөн гараг','Түүхийн өдөр'],
+    rows.map(r=>[nm(r.st),Math.round(r.S),Math.round(r.p*100),Math.round(r.F),Math.round(r.lo),Math.round(r.hi),Math.round(r.hw*100),r.P?Math.round(r.P):null,r.y,r.yNow,r.w,r.n]),{});
+  // график: өнөөдөр (бодит + таамгийн үргэлжлэл), өчигдөр, өнгөрсөн 7 хоног
+  const cum=new Array(FC_N).fill(0),cy=new Array(FC_N).fill(0),cw=new Array(FC_N).fill(0),pc=new Array(FC_N).fill(0);
+  rows.forEach(r=>{const x=today[r.st],y=(FC.prof[yd]||{})[r.st],w=(FC.prof[lw]||{})[r.st],M=fcModel(r.st,t);for(let i=0;i<FC_N;i++){if(x)cum[i]+=x.c[i];if(y)cy[i]+=y.c[i];if(w)cw[i]+=w.c[i];
+    pc[i]+=i<=slot?(x?x.c[i]:0):r.S+(r.F-r.S)*(M&&M.curve[slot]<1?(M.curve[i]-M.curve[slot])/(1-M.curve[slot]):1)}});
+  const s0=48,s1=138,Wd=900,Hh=230,Pd=44,mx=Math.max(1,FF*(1+hwT),cy[FC_N-1],cw[FC_N-1]),X=i=>Pd+(i-s0)/(s1-s0)*(Wd-Pd-10),Yv=v=>Hh-22-v/mx*(Hh-44);
+  const line=(a,i0,i1,col,w,dash)=>'<polyline fill="none" stroke="'+col+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="6 5"':'')+' points="'+Array.from({length:i1-i0+1},(_,k)=>X(i0+k).toFixed(1)+','+Yv(a[i0+k]).toFixed(1)).join(' ')+'"/>';
+  $('fcChart').innerHTML='<svg viewBox="0 0 '+Wd+' '+Hh+'" style="width:100%;max-width:'+Wd+'px;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px">'+
+    [0,.5,1].map(f=>'<line x1="'+Pd+'" x2="'+(Wd-10)+'" y1="'+Yv(mx*f)+'" y2="'+Yv(mx*f)+'" stroke="#eee"/><text x="4" y="'+(Yv(mx*f)+4)+'" font-size="10" fill="#888">'+Math.round(mx*f/1e5)/10+'M</text>').join('')+
+    Array.from({length:16},(_,k)=>8+k).map(h=>'<text x="'+(X(h*6)-6)+'" y="'+(Hh-6)+'" font-size="10" fill="#888">'+h+'</text>').join('')+
+    '<rect x="'+X(s1)+'" y="'+Yv(FF*(1+hwT))+'" width="8" height="'+Math.max(2,Yv(FF*(1-hwT))-Yv(FF*(1+hwT)))+'" fill="#c8102e33"/>'+
+    line(cw,s0,s1,'#b0b8c1',1.5)+line(cy,s0,s1,'#1f6feb',2)+line(pc,Math.min(slot,s1),s1,'#c8102e',2,1)+line(cum,s0,Math.max(s0,Math.min(slot,s1)),'#c8102e',3)+
+    '<text x="'+(Pd+6)+'" y="14" font-size="11" fill="#c8102e">■ өнөөдөр (тасархай = таамаг)</text><text x="'+(Pd+230)+'" y="14" font-size="11" fill="#1f6feb">■ өчигдөр</text><text x="'+(Pd+340)+'" y="14" font-size="11" fill="#8a96a3">■ өнгөрсөн 7 хоногийн мөн гараг</text></svg>';
+  $('fcMsg').textContent='Шинэчилсэн '+now.toTimeString().slice(0,5)+(gSt?' · '+nm(gSt):'');fcSnap()}
+// цаг бүрийн таамгийг хадгална (нарийвчлалыг дараа нь шалгах)
+async function fcSnap(){const L=FC.last;if(!L||gSt)return;const h=String(Math.floor(L.slot/6)).padStart(2,'0'),k=L.t+'_'+h;if(FC.snap[k]||+h<9)return;FC.snap[k]=1;
+  try{const ref=db.collection('pos_fc').doc(L.t),d=await ref.get();if(d.exists&&d.data()['h'+h])return;await ref.set({d:L.t,['h'+h]:{at:new Date().toISOString(),F:L.F,lo:L.lo,hi:L.hi,S:L.S,st:L.st}},{merge:true})}catch(e){}}
+async function fcShow(){if(!can('rep.fc'))return;$('fcMsg').textContent='Түүх ачаалж байна…';try{await fcLoadHist();fcListenToday();fcDraw()}catch(e){$('fcMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}
+  if(!FC.timer)FC.timer=setInterval(()=>{const c=document.querySelector('[data-rsub="fc"]');if(c&&!c.hidden&&!document.hidden){if(FC.day!==todayIso()){FC.loaded='';fcShow()}else fcDraw()}},60000);
+  if(!$('fcA').value){$('fcB').value=addD(todayIso(),-1);$('fcA').value=addD(todayIso(),-14)}}
+async function fcAcc(){const A=$('fcA').value,B=$('fcB').value,m=$('fcAccMsg');if(!A||!B)return;m.textContent='Ачаалж байна…';
+  try{const q=await db.collection('pos_fc').where('d','>=',A).where('d','<=',B).get(),HS=['11','13','15','17','19'],rows=[];
+    for(const d of q.docs.map(x=>x.data()).filter(x=>x.d>=A&&x.d<=B&&x.d<todayIso()).sort((a,b)=>a.d<b.d?-1:1)){const pr=FC.prof[d.d]||JSON.parse(((await db.collection('pos_fc_day').doc(d.d).get()).data()||{}).st||'{}'),act=Object.values(pr).reduce((a,x)=>a+x.tot,0);if(!act)continue;
+      const r=[d.d+' '+WD[new Date(d.d+'T12:00:00').getDay()],act];HS.forEach(h=>{const x=d['h'+h];r.push(x?x.F:null,x?Math.round((x.F/act-1)*1000)/10:null,x?(act>=x.lo&&act<=x.hi?'✓':'✗'):null)});rows.push(r)}
+    xtable('fcAcc','fca',['Өдөр','Бодит дүн',...HS.flatMap(h=>[h+':00 таамаг',h+':00 алдаа %',h+':00 хүрээнд'])],rows,{});
+    const err=h=>{const i=2+HS.indexOf(h)*3+1,a=rows.map(r=>r[i]).filter(v=>v!=null).map(Math.abs);return a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(1)+'%':'—'};
+    m.textContent=rows.length?'Дундаж алдаа: '+HS.map(h=>h+':00 → '+err(h)).join(' · '):'Хадгалсан таамаг алга (таамгийн хуудас нээлттэй үед цаг бүр хадгална).'}
+  catch(e){m.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}}
+$('fcGo').onclick=()=>{FC.loaded='';fcShow()};$('fcAccGo').onclick=fcAcc;$('fcAccX').onclick=()=>xtXlsx('fca','VIVI_taamag_narijvchlal','Нарийвчлал');
 /* ==== 📊 Урамшууллын үр дүн / 🤖 зөвлөх / 📅 календарь — POS + Smart түүхийн нэгдсэн өдрийн цуваа ==== */
 const addD=(d,k)=>{const x=new Date(d+'T00:00:00Z');x.setUTCDate(x.getUTCDate()+k);return x.toISOString().slice(0,10)},dDiff=(a,b)=>Math.round((new Date(b+'T00:00:00Z')-new Date(a+'T00:00:00Z'))/864e5)+1;
 const nextM=m=>{const [y,mo]=m.split('-').map(Number);return mo===12?(y+1)+'-01':y+'-'+String(mo+1).padStart(2,'0')},addL=(o,k,x)=>{const a=o[k]||(o[k]=[0,0,0,0]);a[0]+=x[0];a[1]+=x[1];a[2]+=x[2];a[3]=(a[3]||0)+(x[3]!=null?x[3]:(x[2]>0?x[1]:0))};
