@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="10.1">
+<meta name="vivi-ver" content="10.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -281,6 +281,14 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <!-- 6. Архив -->
   <div class="card" data-sub="lpp" style="padding:0;overflow:hidden"><iframe data-wh="wh" title="Агуулах (LPP)" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
   <div class="card" data-sub="rcv" style="padding:0;overflow:hidden"><iframe data-wh="rcv" title="Хүлээн авалт" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
+  <div class="card" data-sub="zinv" id="pivCard" style="margin-bottom:12px"><h2>📦 POS-ын үлдэгдлээр тооллого (бүсээр)</h2>
+    <div class="small" style="margin:-4px 0 8px">1) Энд тооллого үүсгэнэ — тухайн байршлын POS-ын одоогийн үлдэгдэл «систем» болно. 2) Доорх «Тооллого (бүсээр)»-д ажилчид бүсээр скан хийж, дуусаад <b>Хаах</b>. 3) Энд «📊 Үр дүн» → шалгаад <b>«POS-ын үлдэгдэлд тусгах»</b>: зөрүү тооллогын баримт болж архивт хадгалагдана, үлдэгдэл бодит тоо болно.<br>
+      Тооллогын үеийн POS борлуулалтыг автоматаар тооцно (тоолохоос өмнө зарагдсан бараа дутуу гэж гарахгүй). Шүүлтүүргүй бол <b>бүрэн тооллого</b>: тоологдоогүй бараа 0 болно.</div>
+    <div class="frm"><div><label class="f">Байршил</label><select id="pivLoc" class="inp"></select></div><div><label class="f">Нэр</label><input id="pivName" class="inp" placeholder="Food city — бүрэн тооллого"></div>
+      <div><label class="f">Шүүлтүүр (заавал биш): нэрэнд агуулах, таслалаар</label><input id="pivInc" class="inp" placeholder="жишээ: SINSAY, ^MD"></div><div><label class="f">Хасах (заавал биш)</label><input id="pivExc" class="inp"></div></div>
+    <label class="f" style="margin-top:6px">Бүсүүд (мөр бүр нэг бүс)</label><textarea id="pivZones" class="inp" rows="3" placeholder="Эрэгтэй хувцас&#10;Эмэгтэй хувцас&#10;Хүүхэд&#10;Агуулах тавиур 1"></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button id="pivNew" class="btn pri">＋ Тооллого үүсгэх</button><span id="pivMsg" class="small"></span></div>
+    <div id="pivList" class="scroll" style="margin-top:10px"></div></div>
   <div class="card" data-sub="zinv" style="padding:0;overflow:hidden"><iframe data-wh="inv" title="Тооллого (бүсээр)" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
   <div class="card" data-sub="whset" style="padding:0;overflow:hidden"><iframe data-wh="set" title="Агуулах (LPP) тохиргоо" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
   <div class="card" data-sub="arc"><h2>Хөдөлгөөний баримтын архив</h2>
@@ -292,7 +300,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <!-- 7. Эхний үлдэгдэл (тохиргоо) -->
   <div class="card" data-sub="open"><h2>Эхний үлдэгдэл — бүх байршил нэг файлаар</h2>
     <div class="small hot" style="margin-bottom:6px">Анхаар: хадгалахад байршил бүрийн одоогийн тооцоо шинээр эхэлнэ. Зөвхөн системийг эхлүүлэх үед (Smart-аас шилжихэд) ашиглана.</div>
-    <div class="small">Smart-ын «Ritel» / үлдэгдлийн файлын байршлын багануудыг нэрээр нь таньж нэгтгэнэ: <b>Food city</b> = «Food city…» бүх хэлтэс + «Онлайн дэлгүүр»; <b>Драгон</b> = «Драгон…»; <b>Нийслэл</b> = «Нийслэл…»; <b>Агуулах</b> = Хувцас, Гутал, Da Toy, Эрка; <b>Гэмтэлтэй бараа</b> = «Деффикт»; <b>Явуулын касс</b> = «Дархан Үзэсгэлэн». «Нэгж өртөг»-өөр жигнэсэн дундаж өртөг эхэлнэ.</div>
+    <div class="small">Smart-ын «Ritel» / үлдэгдлийн файлын байршлын багануудыг нэрээр нь таньж нэгтгэнэ: <b>Food city</b> = «Food city…» бүх хэлтэс + «Онлайн дэлгүүр»; <b>Food city агуулах</b> = «Food city…» нэрэнд «агуулах»; <b>Драгон</b> = «Драгон…»; <b>Нийслэл</b> = «Нийслэл…»; <b>Агуулах</b> = Хувцас, Гутал, Da Toy, Эрка; <b>Гэмтэлтэй бараа</b> = «Деффикт»; <b>Явуулын касс</b> = «Дархан Үзэсгэлэн». «Нэгж өртөг»-өөр жигнэсэн дундаж өртөг эхэлнэ.</div>
     <div class="step"><div class="sn">1</div><div style="flex:1"><div class="frm"><div><label class="f">Smart-аас файл татсан огноо, цаг</label><input type="datetime-local" id="aAt" class="inp"></div><div><label class="f">Файл</label><input type="file" id="aFile" accept=".xlsx,.xls"></div></div>
       <label class="inl" style="margin-top:6px"><input type="checkbox" id="aPos" checked> Манай POS-оор аль хэдийн хийсэн борлуулалтыг хасах (Smart-д ороогүй тул — тухайн дэлгүүрийн POS-ын эхний борлуулалтаас хойш)</label></div></div>
     <div class="step"><div class="sn">2</div><div style="flex:1"><b>Шалгах</b><div id="aPrev" class="small" style="margin-top:4px">Файл сонгоно уу</div></div></div>
@@ -1333,7 +1341,7 @@ const MOVT={in:['⬇ Орлого — нийлүүлэгчээс ирсэн ба
   move:['⇄ Шилжүүлэг — байршлаас байршил руу','Илгээх барааг уншуулна. Хадгалахад баримт хэвлэгдэж, бараа «замд» болно. Хүлээн авагч дэлгүүр касс дээрээ уншуулж хүлээн авна.','Тайлбар','Шилжүүлэг илгээх'],
   out:['⬆ Зарлага — гэмтэл, алдагдал, нийлүүлэгчид буцаалт','Байршлаас гарсан (зарагдаагүй) барааг шалтгаантай нь бүртгэнэ. Гэмтэлтэй барааг «Шилжүүлэг»-ээр «Гэмтэлтэй бараа» агуулах руу шилжүүлж болно.','Тайлбар','Зарлага хадгалах']};
 function stSub(k){{const L=SUBS.stock.filter(x=>subOk('stock',x));if(!L.some(x=>x[0]===k)&&L.length)k=L[0][0]}
-  const mv=['in','move','out'].includes(k);if(k==='open')setTimeout(clDraw,0);
+  const mv=['in','move','out'].includes(k);if(k==='open')setTimeout(clDraw,0);if(k==='zinv')setTimeout(pivFill,0);
   {const fr=document.querySelector('section[data-panel="stock"] .card[data-sub="'+k+'"] iframe[data-wh]');if(fr&&!fr.src)fr.src='wh.html?embed=1&tab='+fr.dataset.wh}
   document.querySelectorAll('#stNav [data-sub]').forEach(b=>b.classList.toggle('on',b.dataset.sub===k));subMark('stock',k);
   document.querySelectorAll('section[data-panel="stock"] .card[data-sub]').forEach(c=>c.hidden=c.dataset.sub!==(mv?'mov':k));
@@ -1417,20 +1425,22 @@ $('aFile').onchange=async()=>{const f=$('aFile').files[0];if(!f)return;openAll=n
     const first={};if($('aPos').checked){const q=await db.collection('pos_sales').where('date','>=','2026/11/01').get();q.docs.forEach(d=>{const x=d.data(),lc=x.stockFrom||STOCK_SRC[x.store]||x.store;if(x.iso&&(!first[lc]||x.iso<first[lc]))first[lc]=x.iso})}
     const ASOF={};Object.keys(L).forEach(lc=>{const t=T.toISOString();ASOF[lc]=first[lc]&&first[lc]<t?first[lc]:t});
     const cost=sc?sc.m:costMap,val=m=>{let v=0;m.forEach((q,c)=>{const k=cost.get(c);if(k!=null&&q>0)v+=k*q});return v};
-    openAll={L,ASOF,sc,file:f.name,cols:S.cols};
-    $('aPrev').innerHTML='<table><thead><tr><th>Байршил</th><th>Файлын баганууд</th><th class="n">Бараа</th><th class="n">Ширхэг</th><th class="n">Өртгийн дүн</th><th class="n">Эхний үлдэгдлийн огноо</th></tr></thead><tbody>'+
-      Object.keys(LOC).filter(lc=>L[lc]).map(lc=>{const m=L[lc];let q=0,neg=0;m.forEach(v=>{q+=v;if(v<0)neg++});return '<tr><td><b>'+LOC[lc]+'</b></td><td class="small">'+esc(S.cols.filter(c=>c[2]===lc).map(c=>c[1]).join(', '))+'</td><td class="n">'+m.size.toLocaleString('en-US')+'</td><td class="n">'+q.toLocaleString('en-US')+(neg?' <span class="hot">(хасах '+neg+')</span>':'')+'</td><td class="n">'+money(val(m))+'</td><td class="n">'+lt(ASOF[lc])+(ASOF[lc]!==T.toISOString()?' <span class="small">(POS эхэлсэн)</span>':'')+'</td></tr>'}).join('')+
+    openAll={L,ASOF,sc,file:f.name,cols:S.cols};const HAS={};for(const lc of Object.keys(L)){try{const d=await db.collection('pos_stock_open').doc(lc).get();if(d.exists)HAS[lc]=d.data()}catch(x){}}
+    $('aPrev').innerHTML='<table><thead><tr><th>Хадгалах</th><th>Байршил</th><th>Файлын баганууд</th><th class="n">Бараа</th><th class="n">Ширхэг</th><th class="n">Өртгийн дүн</th><th class="n">Эхний үлдэгдлийн огноо</th></tr></thead><tbody>'+
+      Object.keys(LOC).filter(lc=>L[lc]).map(lc=>{const m=L[lc];let q=0,neg=0;m.forEach(v=>{q+=v;if(v<0)neg++});return '<tr><td><input type="checkbox" data-aloc="'+lc+'"'+(HAS[lc]?'':' checked')+'>'+(HAS[lc]?'<div class="small hot">POS-д аль хэдийн<br>'+lt(HAS[lc].asOf)+'-аас</div>':'')+'</td><td><b>'+LOC[lc]+'</b></td><td class="small">'+esc(S.cols.filter(c=>c[2]===lc).map(c=>c[1]).join(', '))+'</td><td class="n">'+m.size.toLocaleString('en-US')+'</td><td class="n">'+q.toLocaleString('en-US')+(neg?' <span class="hot">(хасах '+neg+')</span>':'')+'</td><td class="n">'+money(val(m))+'</td><td class="n">'+lt(ASOF[lc])+(ASOF[lc]!==T.toISOString()?' <span class="small">(POS эхэлсэн)</span>':'')+'</td></tr>'}).join('')+
       '</tbody></table>'+(sc?'<div class="small">Өртөг: '+esc(sc.col)+' · '+sc.m.size.toLocaleString('en-US')+' бараа (жигнэсэн дундаж өртгийн эхлэл).</div>':'<div class="small hot">Файлд «Нэгж өртөг» багана алга — өртөг одоогийнхоороо үлдэнэ.</div>')+
-      '<div class="small">Хадгалахад байршил бүрийн хуучин эхний үлдэгдэл солигдоно. Эхний үлдэгдлийн огнооноос өмнөх хөдөлгөөн тооцогдохгүй.</div>';
+      '<div class="small">Зөвхөн <b>сонгосон</b> байршлын эхний үлдэгдэл солигдоно. POS-д аль хэдийн үлдэгдэлтэй байршил (жишээ нь бодит тооллоготой дэлгүүр) анхнаасаа сонгогдоогүй — солих бол өөрөө сонгоно. Эхний үлдэгдлийн огнооноос өмнөх хөдөлгөөн тооцогдохгүй.</div>';
     $('aUp').disabled=false}catch(e){$('aPrev').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
 $('aAt').onchange=$('aPos').onchange=()=>{if($('aFile').files[0])$('aFile').onchange()};
 $('aUp').onclick=async()=>{if(!openAll)return;const btn=$('aUp');btn.disabled=true;const out=$('aoMsg');
-  try{for(const lc of Object.keys(openAll.L)){const items=[...openAll.L[lc].entries()].filter(x=>x[1]),d=JSON.stringify(items);
+  const SEL=[...document.querySelectorAll('input[data-aloc]:checked')].map(x=>x.dataset.aloc);if(!SEL.length){btn.disabled=false;return out.innerHTML='<span class="hot">Байршил сонгоно уу</span>'}
+  if(!confirm(SEL.map(lc=>LOC[lc]).join(', ')+' — эхний үлдэгдлийг солих уу?')){btn.disabled=false;return}
+  try{for(const lc of SEL){const items=[...openAll.L[lc].entries()].filter(x=>x[1]),d=JSON.stringify(items);
       if(new TextEncoder().encode(d).length>1000000)throw new Error(LOC[lc]+': хэт том');out.textContent=LOC[lc]+' хадгалж байна…';
       await db.collection('pos_stock_open').doc(lc).set({store:lc,asOf:openAll.ASOF[lc],d,count:items.length,qty:items.reduce((a,x)=>a+x[1],0),column:openAll.cols.filter(c=>c[2]===lc).map(c=>c[1]).join(' + '),file:openAll.file,by:auth.currentUser.email||'',saved:new Date().toISOString()})}
     if(openAll.sc&&can('cost')){out.textContent='Өртөг хадгалж байна…';await writeChunks('pos_cost',mergeCost(openAll.sc.m,null),{src:'open',file:openAll.file},()=>{});await loadCost()}
-    await auditCfg('stock_open_all',{file:openAll.file,locs:Object.keys(openAll.L),asOf:openAll.ASOF});
-    out.innerHTML='<span class="chip">Хадгаллаа</span> '+Object.keys(openAll.L).map(lc=>LOC[lc]).join(', ')+'. Кассууд руу үлдэгдэл илгээж байна…';showOpen();await publishStock(true);out.innerHTML='<span class="chip">Хадгаллаа</span> Эхний үлдэгдэл, өртөг хадгалагдаж, кассууд руу илгээгдлээ.'}
+    await auditCfg('stock_open_all',{file:openAll.file,locs:SEL,asOf:openAll.ASOF});
+    out.innerHTML='<span class="chip">Хадгаллаа</span> '+SEL.map(lc=>LOC[lc]).join(', ')+'. Кассууд руу үлдэгдэл илгээж байна…';showOpen();await publishStock(true);out.innerHTML='<span class="chip">Хадгаллаа</span> Эхний үлдэгдэл, өртөг хадгалагдаж, кассууд руу илгээгдлээ.'}
   catch(e){btn.disabled=false;out.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}};
 /* ==== Тооллогын зөрүү: тоолсон − системийн үлдэгдэл → «adj» баримт ==== */
 let cntAdj=null;
@@ -1481,6 +1491,69 @@ async function lppSync(show){if(lppBusy)return;lppBusy=true;const out=t=>{if(sho
   catch(e){out('<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>');return 0}finally{lppBusy=false}}
 $('lppSave').onclick=async()=>{const v=$('lppFrom').value;if(!v)return;try{await db.collection('pos_config').doc('lpp').set({from:v,by:auth.currentUser.email||'',at:new Date().toISOString()});await auditCfg('lpp_from',{from:v});await lppSync(true)}catch(e){$('lppMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'}};
 $('lppGo').onclick=()=>lppSync(true);
+/* ==== Тооллого (бүсээр) ↔ POS: үүсгэх (POS үлдэгдэл = систем), үр дүнг POS-ын үлдэгдэлд тусгах (pos_stock_docs/inv_<id>_<байршил>) ====
+   C тоолсон, S тооллогын үеийн POS борлуулалт, B = POS үлдэгдэл (хаасан мөчид) + S  →  тоолохоос өмнө зарагдсан E = min(S, B − C) (C<B үед)
+   зөрүү d = C − B + E (Kontrola-ийн томьёо) */
+const PIV_LOCS=['FC','FW','DR','NS','AG','DF','YV'];let PIV=[];
+const pivTerms=t=>String(t||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+function pivMatch(flt,name){if(!flt||(!flt.inc&&!flt.exc))return true;const n=String(name||'').toLowerCase(),hit=t=>t[0]==='^'?n.startsWith(t.slice(1)):n.includes(t),inc=pivTerms(flt.inc),exc=pivTerms(flt.exc);return (!inc.length||inc.some(hit))&&!exc.some(hit)}
+const pivDec=k=>String(k).slice(1).replace(/_([0-9a-f]+)_/g,(m,h)=>String.fromCharCode(parseInt(h,16)));
+async function pivStock(loc,until,skip){const od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)throw new Error(LOC[loc]+': эхний үлдэгдэл алга');const O=od.data();
+  for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
+  const SD=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(d=>d.data()).filter(x=>(x.stockFrom||STOCK_SRC[x.store]||x.store)===loc&&x.iso>=O.asOf);
+  const keep=movDocs;if(skip)movDocs=movDocs.filter(m=>m.uid!==skip);let C;try{C=stockCalc(loc,O,SD,until)}finally{movDocs=keep}return {O,SD,M:new Map(C.rows.map(r=>[r.code,r]))}}
+function pivFill(){if(!$('pivLoc').options.length)$('pivLoc').innerHTML=PIV_LOCS.map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('');
+  $('pivCard').style.display=can('invadm')?'':'none';if(!can('invadm'))return;
+  db.collection('wh_inv').get().then(q=>{PIV=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.src==='pos').sort((a,b)=>a.createdAt<b.createdAt?1:-1);pivDraw()}).catch(e=>$('pivMsg').textContent='Алдаа: '+(e.code||e))}
+function pivDraw(){xtable('pivList','piv',['Үүсгэсэн','Байршил','Нэр','Бүс','Төлөв','POS-д тусгасан',''],PIV.map(x=>[lt(x.createdAt),LOC[x.store]||x.store,x.name,(x.zones||[]).length,x.status==='closed'?'хаасан':'тоолж байна',x.posApplied?lt(x.posApplied.at)+' · '+(x.posApplied.by||'').split('@')[0]+' · дутуу '+x.posApplied.short+', илүү '+x.posApplied.over:'',x.id]),
+  {cell:(r,c)=>c===6?'<button class="btn" data-pivr="'+esc(r[6])+'">📊 Үр дүн</button>':c===4?'<span class="chip'+(r[4]==='хаасан'?'':' b')+'">'+r[4]+'</span>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])})}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pivr]');if(b)pivResult(b.dataset.pivr)});
+$('pivNew').onclick=async()=>{const loc=$('pivLoc').value,zones=$('pivZones').value.split('\n').map(x=>x.trim()).filter(Boolean),flt=$('pivInc').value.trim()||$('pivExc').value.trim()?{inc:$('pivInc').value.trim(),exc:$('pivExc').value.trim()}:null;
+  const m=t=>$('pivMsg').innerHTML=t;if(!zones.length)return m('<span class="hot">Бүсүүдээ бичнэ үү</span>');
+  if(PIV.some(x=>x.store===loc&&x.status!=='closed')&&!confirm(LOC[loc]+'-д хаагаагүй тооллого байна. Шинээр үүсгэх үү?'))return;
+  $('pivNew').disabled=true;m('POS-ын үлдэгдэл тооцоолж байна…');
+  try{await loadPCat().catch(()=>{});const now=new Date().toISOString(),{M}=await pivStock(loc,now);
+    const items=[...M.values()].filter(r=>r.now).map(r=>({c:r.code,n:r.name||(itRow(r.code)||{}).name||'',l:loc,q:r.now,ag:[]}));
+    const ref=db.collection('wh_inv').doc(),id=ref.id,CH=2000,parts=Math.ceil(items.length/CH);
+    for(let i=0;i<parts;i++){m('Хадгалж байна… '+(i+1)+'/'+parts);await db.collection('wh_invpart').doc(id+'_'+i).set({inv:id,i,items:items.slice(i*CH,(i+1)*CH)})}
+    const name=$('pivName').value.trim()||LOC[loc]+' тооллого '+iso(new Date());
+    await ref.set({name,store:loc,locs:[loc],zones:zones.map(z=>({z,l:''})),flt,date:iso(new Date()),file:'POS',src:'pos',posAt:now,parts,nItems:items.length,bookQ:items.filter(x=>pivMatch(flt,x.n)).reduce((a,x)=>a+x.q,0),status:'open',createdAt:now,by:auth.currentUser.email||'',sales:null,recount:[]});
+    await auditCfg('inv_new',{id,loc,zones:zones.length});m('<span class="chip">Үүсгэлээ</span> '+esc(name)+' — доорх «Тооллого (бүсээр)»-д бүсээ сонгоод скан хийнэ');$('pivName').value='';$('pivZones').value='';$('pivInc').value='';$('pivExc').value='';pivFill();
+    const f=document.querySelector('iframe[data-wh="inv"]');if(f&&f.src)f.src=f.src}
+  catch(e){m('<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>')}finally{$('pivNew').disabled=false}};
+async function pivResult(id){const I=PIV.find(x=>x.id===id);if(!I)return;await loadPCat().catch(()=>{});
+  $('pbox').innerHTML='<div class="small">Тооцоолж байна…</div>';$('pm').classList.remove('hide');
+  try{const loc=I.store,docId='inv_'+id+'_'+loc,T0=I.posAt||I.createdAt,T1=I.closedAt&&I.status==='closed'?I.closedAt:new Date().toISOString();
+    const book=[];for(let i=0;i<(I.parts||0);i++){const d=await db.collection('wh_invpart').doc(id+'_'+i).get();if(d.exists)book.push(...(d.data().items||[]))}
+    const Z=(await db.collection('wh_invz').where('inv','==',id).get()).docs.map(d=>d.data()).filter(z=>z.inv===id),cnt=new Map(),re=new Map();
+    Z.forEach(z=>Object.entries(z.c||{}).forEach(([k,n])=>{const c=pivDec(k);if(z.zi==='re')re.set(c,n);else cnt.set(c,(cnt.get(c)||0)+(+n||0))}));re.forEach((n,c)=>{if(n!=null)cnt.set(c,+n)});
+    const zDone=Z.filter(z=>z.zi!=='re'&&z.status==='done').length,zAll=(I.zones||[]).length;
+    const {O,SD,M}=await pivStock(loc,T1,docId),S=new Map();SD.filter(x=>x.iso>T0&&x.iso<=T1).forEach(x=>(x.lines||[]).forEach(l=>{if(l.code!=='DELIVERY')S.set(l.code,(S.get(l.code)||0)+l.qty)}));
+    const nm=c=>(itRow(c)||{}).name||((M.get(c)||{}).name)||(book.find(b=>b.c===c)||{}).n||'',codes=new Set([...cnt.keys()]);
+    M.forEach((r,c)=>{if(r.now&&pivMatch(I.flt,nm(c)))codes.add(c)});S.forEach((q,c)=>{if(pivMatch(I.flt,nm(c)))codes.add(c)});
+    const ucost=c=>costMap.has(c)?costMap.get(c):0,ucash=c=>(itRow(c)||{}).price||0;
+    const L=[...codes].map(c=>{const s=S.get(c)||0,b=((M.get(c)||{}).now||0)+s,cn=cnt.get(c)||0,e=cn<b&&s>0?Math.min(s,b-cn):0,d=cn-b+e;return {c,n:nm(c),b,cn,s,e,d,re:re.has(c)}}).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d)||(a.c<b.c?-1:1));
+    const D=L.filter(x=>x.d),short=-D.filter(x=>x.d<0).reduce((a,x)=>a+x.d,0),over=D.filter(x=>x.d>0).reduce((a,x)=>a+x.d,0),vc=Math.round(D.reduce((a,x)=>a+x.d*ucost(x.c),0)),vk=Math.round(D.reduce((a,x)=>a+x.d*ucash(x.c),0));
+    const T=L.reduce((a,x)=>(a.b+=x.b,a.cn+=x.cn,a.s+=x.s,a),{b:0,cn:0,s:0}),warn=[];
+    if(I.status!=='closed')warn.push('Тооллого хаагаагүй байна — «Тооллого (бүсээр)»-д бүх бүсийг дуусгаад <b>Хаах</b> дарна.');if(zDone<zAll)warn.push('Бүс '+zDone+'/'+zAll+' дууссан.');
+    if(O.asOf>T0)warn.push('Энэ байршлын үлдэгдлийг тооллогын дараа ('+lt(O.asOf)+') хаасан тул тусгах боломжгүй.');
+    const ok=I.status==='closed'&&O.asOf<=T0,prev=movDocs.find(m=>m.uid===docId);
+    $('pbox').innerHTML='<h2 style="margin:0 0 4px">📦 Тооллого — '+esc(LOC[loc])+'</h2><div class="small">'+esc(I.name)+' · '+lt(T0)+' → '+(I.status==='closed'?lt(T1):'…')+(I.flt?' · шүүлтүүр: '+esc([I.flt.inc,I.flt.exc&&'хасах '+I.flt.exc].filter(Boolean).join(' · ')):' · бүрэн тооллого')+'</div>'+
+      (warn.length?'<div class="small hot" style="margin:6px 0">⚠ '+warn.join('<br>⚠ ')+'</div>':'')+
+      '<div style="margin:8px 0;padding:10px;border-radius:8px;background:var(--soft)">Систем (POS) <b>'+nfx(T.b)+'</b> ш · тоолсон <b>'+nfx(T.cn)+'</b> ш · тооллогын үеийн борлуулалт '+nfx(T.s)+' ш<br><b style="color:var(--bad)">Дутуу '+nfx(short)+' ш</b> · <b>илүү '+nfx(over)+' ш</b> · '+D.length+' код зөрүүтэй'+(can('cost')?' · өртгөөр <b>'+money(vc)+'</b>':'')+' · кассын үнээр <b>'+money(vk)+'</b>'+(prev?'<br><span class="chip">POS-д тусгасан '+lt(prev.saved||prev.at)+'</span> дахин тусгавал хуучныг солино.':'')+'</div>'+
+      '<div id="pivT" style="max-height:46vh;overflow:auto"></div><div id="piv_m" class="small hot" style="min-height:18px;margin-top:6px"></div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="piv_x">Хаах</button>'+(ok?'<button class="btn pri" id="piv_ok">✅ POS-ын үлдэгдэлд тусгах</button>':'')+'</div>';
+    xtable('pivT','pivr',['Код','Бараа','Систем (POS)','Тоолсон','Тооллогын үеийн борлуулалт','Тоолохоос өмнө зарагдсан','Зөрүү','Кассын үнээр'],L.map(x=>[x.c,x.n+(x.re?' (дахин тоолсон)':''),x.b,x.cn,x.s||null,x.e||null,x.d,x.d?(Math.round(x.d*ucash(x.c))||0):null]),
+      {cell:(r,c)=>c===6&&r[6]?'<b class="'+(r[6]<0?'hot':'')+'">'+(r[6]>0?'+':'')+nfx(r[6])+'</b>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])});
+    $('piv_x').onclick=pClose;
+    if($('piv_ok'))$('piv_ok').onclick=async()=>{if(!confirm(LOC[loc]+': '+D.length+' кодын зөрүүг (дутуу '+short+', илүү '+over+' ш) POS-ын үлдэгдэлд тусгах уу?'))return;$('piv_ok').disabled=true;
+      try{const by=auth.currentUser.email||'',at=new Date().toISOString(),lines=D.map(x=>[x.c,x.d,x.n]);
+        await db.collection('pos_stock_docs').doc(docId).set({uid:docId,no:'ТЛ-'+iso(new Date(T1)).replace(/-/g,'').slice(2)+'-'+loc,type:'adj',from:'',to:loc,at:T1,note:'Тооллого (бүсээр) · '+I.name+' · дутуу '+short+', илүү '+over,file:'',
+          lines:JSON.stringify(lines),count:lines.length,qty:lines.reduce((a,x)=>a+x[1],0),costSum:Math.round(lines.reduce((a,x)=>a+ucost(x[0])*x[1],0)),by,saved:at,src:'inv',inv:id,counted:T.cn,book:T.b,short,over});
+        await db.collection('wh_inv').doc(id).update({posApplied:{at,by,short,over,lines:lines.length}});await auditCfg('inv_apply',{id,loc,short,over});
+        $('piv_m').innerHTML='<span class="chip">Тусгалаа</span> Үлдэгдэл шинэчлэгдлээ, баримт архивт.';pivFill();setTimeout(()=>publishStock(true),500)}
+      catch(e){$('piv_ok').disabled=false;$('piv_m').textContent='Алдаа: '+(e.code||e.message||e)}}}
+  catch(e){$('pbox').innerHTML='<div class="hot">Алдаа: '+esc(e.code||e.message||e)+'</div><button class="btn" onclick="pClose()">Хаах</button>'}}
 async function autoStock(){let ch=0;try{if(can('stock')){$('lppFrom').value=await lppFrom();ch=await lppSync(false)}}catch(e){}try{const m=await db.collection('pos_stock_view').doc('meta').get();const v=m.exists?m.data().version:'';
   $('sPubM').textContent=v?'Кассууд дахь үлдэгдэл: '+lt(v)+'-ийн байдлаар':'Кассууд руу үлдэгдэл хараахан илгээгээгүй';
   if(!v||ch||Date.now()-new Date(v)>60*60e3)publishStock(true)}catch(e){}}
