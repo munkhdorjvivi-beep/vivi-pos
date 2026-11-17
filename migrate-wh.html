@@ -56,11 +56,15 @@ pos.auth().onAuthStateChanged(async u => {
 fin.auth().onAuthStateChanged(u => { finOk = !!u && (u.email || '').toLowerCase() === FIN_OWNER;
   $('finWho').innerHTML = !u ? 'нэвтрээгүй' : finOk ? `<span class="ok">✓ ${esc(u.email)}</span>` : `<span class="bad">${esc(u.email)} — эзэмшигч (${FIN_OWNER}) биш</span>`; ready(); });
 $('finIn').onclick = async () => { const p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({prompt: 'select_account', login_hint: FIN_OWNER}); try{ await fin.auth().signInWithPopup(p); }catch(e){ $('finWho').innerHTML = '<span class="bad">' + esc(e.code || e.message) + '</span>'; } };
-async function writeAll(col, docs){   // ≤ 200 бичлэг ба ≈ 4 MB тутамд нэг batch
-  let b = pdb.batch(), n = 0, sz = 0, done = 0;
-  for (const [id, data] of docs){ const z = JSON.stringify(data).length; if (n && (n >= 200 || sz + z > 4e6)){ await b.commit(); b = pdb.batch(); n = 0; sz = 0; }
-    b.set(pdb.collection(col).doc(id), data); n++; sz += z; done++; }
-  if (n) await b.commit(); return done;
+async function writeAll(col, docs){   // Firebase: нэг batch ≤ 10 MB → ≈ 2.5 MB (UTF-8 байтаар) ба ≤ 100 бичлэг; алдаа гарвал нэг нэгээр
+  const TE = new TextEncoder(), bytes = x => TE.encode(JSON.stringify(x)).length;
+  let part = [], sz = 0, done = 0;
+  const flush = async () => { if (!part.length) return;
+    try{ const b = pdb.batch(); part.forEach(([id, d]) => b.set(pdb.collection(col).doc(id), d)); await b.commit(); }
+    catch(e){ if (part.length === 1) throw e; for (const [id, d] of part) await pdb.collection(col).doc(id).set(d); }
+    done += part.length; part = []; sz = 0; };
+  for (const [id, data] of docs){ const z = bytes(data); if (part.length && (part.length >= 100 || sz + z > 2.5e6)) await flush(); part.push([id, data]); sz += z; }
+  await flush(); return done;
 }
 $('go').onclick = async () => {
   const m = await pdb.doc('wh_config/migrated').get().catch(() => null);
