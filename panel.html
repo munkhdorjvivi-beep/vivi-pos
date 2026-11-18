@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="11.1">
+<meta name="vivi-ver" content="11.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -730,7 +730,7 @@ function xtData(key){const T=XT[key];if(!T)return {L:[]};const st=xState(key);
 function xtDraw(key){const {T,st,L}=xtData(key),o=T.o,head=T.head,isN=v=>typeof v==='number',el=$(T.id);if(!el)return;
   if(!T.rows.length){el.innerHTML='<div class="small">Өгөгдөл алга</div>';return}
   const numCol=head.map((h,c)=>T.rows.every(x=>x[c]==null||x[c]===''||isN(x[c]))&&T.rows.some(x=>isN(x[c])));
-  const sums=head.map((h,c)=>numCol[c]&&xSumHead(h)?L.reduce((a,x)=>a+(isN(x[c])?x[c]:0),0):null),act=Object.values(st.f).filter(Boolean).length,lim=o.limit||500;
+  const sums=head.map((h,c)=>numCol[c]&&xSumHead(h)&&!(o.noSum||[]).includes(c)?L.reduce((a,x)=>a+(isN(x[c])?x[c]:0),0):null),act=Object.values(st.f).filter(Boolean).length,lim=o.limit||500;
   el.innerHTML=xInfo(L.length,T.rows.length,act,st.sort)+'<table class="xt'+(o.cls?' '+o.cls:'')+'"><thead><tr>'+head.map((h,c)=>'<th'+(numCol[c]?' class="n"':'')+'><button class="xfb'+(st.f[c]?' on':'')+(st.sort&&st.sort[0]===c?' srt':'')+'" data-c="'+c+'">'+esc(h)+' <span>'+(st.sort&&st.sort[0]===c?(st.sort[1]>0?'▲':'▼'):'')+(st.f[c]?'⛃':'▾')+'</span></button></th>').join('')+'</tr></thead><tbody>'+
     L.slice(0,lim).map(x=>'<tr'+(o.rowAttr?o.rowAttr(x):'')+'>'+head.map((h,c)=>{const v=x[c];return '<td'+(numCol[c]?' class="n"':'')+'>'+(o.cell?o.cell(x,c):v==null?'':isN(v)?nfx(v):esc(v))+'</td>'}).join('')+'</tr>').join('')+'</tbody>'+
     (L.length&&sums.some(v=>v!=null)?'<tfoot><tr>'+sums.map((v,c)=>'<td class="n"><b>'+(c===0&&v==null?'Нийт':v!=null?nfx(Math.round(v*100)/100):'')+'</b></td>').join('')+'</tr></tfoot>':'')+'</table>'+
@@ -1633,7 +1633,37 @@ function drawStock(){const q=$('sQ').value.trim().toLowerCase(),L=stockRows.filt
   if(!stockRows.length){$('sTbl').innerHTML='';return}const n=v=>v==null?null:Math.round(v),val=r=>[r.cost==null?null:r.cost,r.cost==null?null:n(r.cost*r.now),r.cash||null,r.cash?n(r.cash*r.now):null];
   const rows=stockAllMode?L.map(r=>[r.code,r.name,...r.loc.map(x=>x||null),r.now,...val(r)]):L.map(r=>[r.code,r.name,r.open,r.inn||null,r.out||null,r.sold||null,r.ret||null,r.adj||null,r.now,...val(r)]);
   const ni=stockHead.indexOf(stockAllMode?'Нийт':'Одоо');
-  xtable('sTbl','stock',stockHead,rows,{cell:(x,c)=>c===ni?'<b'+(x[c]<0?' class="hot"':'')+'>'+x[c]+'</b>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}
+  // тоон дээр дарахад тухайн бараа, байршлын бүх хөдөлгөөн (баримт, хэн, хэзээ, эх баримт…)
+  const KC=['open','in','out','sold','ret','adj'],st0=$('sSt').value,lk=(x,c)=>{if(x[c]==null||x[c]===0&&c!==2)return null;if(stockAllMode){const k=c-2;return k>=0&&k<negSrc.locs.length?negSrc.locs[k]+'|all':c===ni?'*|all':null}return c>=2&&c<=7?st0+'|'+KC[c-2]:c===ni?st0+'|all':null};
+  xtable('sTbl','stock',stockHead,rows,{cell:(x,c)=>{const v=c===ni?'<b'+(x[c]<0?' class="hot"':'')+'>'+x[c]+'</b>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c]),L=typeof x[c]==='number'?lk(x,c):null;
+    return L?'<a href="#" data-sth="'+esc(x[0]+'|'+L)+'" style="color:inherit;text-decoration:underline dotted" title="Түүх харах">'+v+'</a>':v}})}
+document.addEventListener('click',e=>{const a=e.target.closest('[data-sth]');if(!a)return;e.preventDefault();const [code,loc,kind]=a.dataset.sth.split('|');stHist(code,loc,kind)});
+/* Барааны хөдөлгөөний түүх: эхний үлдэгдэл, орлого, шилжүүлэг, зарлага, борлуулалт, буцаалт, солилт, тооллого — хугацааны дарааллаар, үлдэгдэл давхарлаж */
+const STH_K={open:'Эхний үлдэгдэл',in:'Орлого / ирсэн шилжүүлэг',out:'Зарлага / явуулсан шилжүүлэг',sold:'Борлуулалт',ret:'Буцаалт',adj:'Тооллогын зөрүү'};
+async function stHist(code,loc,kind){const locs=loc==='*'?negSrc.locs:[loc],nm=(itRow(code)||{}).name||(stockRows.find(r=>r.code===code)||{}).name||'',E=[],tm=t=>t?lt(t):'';
+  let RQ={};
+  for(const L of locs){const O=negSrc.O[L];if(!O)continue;const o=JSON.parse(O.d).find(x=>x[0]===code);
+    E.push({t:O.asOf,k:'open',type:'Эхний үлдэгдэл',q:o?o[1]:0,loc:L,no:'',who:O.by||'',info:(O.file||'')+(O.kind==='close'?' (сарын хаалт)':'')});
+    movDocs.forEach(m=>{const at=m.at;if(m.type==='adj'){if(m.to===L&&at>=O.asOf){const x=JSON.parse(m.lines).find(y=>y[0]===code);if(x)E.push({t:at,k:'adj',type:'Тооллогын зөрүү',q:x[1],loc:L,no:m.no||m.uid,who:m.by||'',info:m.note||''})}return}
+      if(m.from===L&&at>=O.asOf){const x=JSON.parse(m.lines).filter(y=>y[0]===code).reduce((a,y)=>a+y[1],0);if(x)E.push({t:at,k:'out',type:m.type==='out'?'Зарлага':'Шилжүүлэг → '+(LOC[m.to]||m.to||''),q:-x,loc:L,no:m.no||m.uid,who:m.by||'',info:[m.reason,m.note].filter(Boolean).join(' · ')})}
+      const ra=m.recvAt||m.at;if(m.to===L&&m.status!=='sent'&&ra>=O.asOf){const x=JSON.parse(m.recvLines||m.lines).filter(y=>y[0]===code).reduce((a,y)=>a+y[1],0);if(x)E.push({t:ra,k:'in',type:m.src==='lpp'?'LPP хүлээн авалт':m.type==='in'?'Орлого'+(m.supplier?' · '+m.supplier:''):'Шилжүүлэг ← '+(LOC[m.from]||m.from||''),q:x,loc:L,no:m.no||m.uid,who:m.recvBy||m.by||'',info:[m.note,m.invoice].filter(Boolean).join(' · ')})}});
+    (negSrc.sales||[]).filter(x=>(x.stockFrom||STOCK_SRC[x.store]||x.store)===L&&x.iso>=O.asOf).forEach(x=>(x.lines||[]).forEach(l=>{if(l.code!==code)return;const ret=l.qty<0;
+      E.push({t:x.iso,k:ret?'ret':'sold',type:x.exch?(x.type==='return'?'Солилт — буцааж авсан':'Солилт — шинээр авсан'):ret?'Буцаалт':'Борлуулалт',q:-l.qty,loc:L,no:x.id||'',who:x.cashier||'',sum:l.sum,
+        store:(x.storeName||LOC[x.store]||x.store||'')+(x.reg?' · касс '+x.reg:''),ref:x.ref?x.ref+(x.refDate?' ('+x.refDate+')':''):'',why:x.reason||'',cust:x.cust?[x.cust.name,x.cust.phone].filter(Boolean).join(' · '):'',ok:x.approvedBy||'',rq:x.request||(x.exch&&x.exch.id)||''})}))}
+  E.sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0);let bal=0;E.forEach(x=>{bal+=x.q;x.bal=bal});
+  // нягтлангийн шалгалтын төлөв (буцаалт, солилтын хүсэлт)
+  const SN={pending:'хүлээгдэж байна',approved:'баталсан',rejected:'татгалзсан / тодруулах',done:'гүйцээсэн'};
+  for(const id of [...new Set(E.map(x=>x.rq).filter(Boolean))]){try{const d=await db.collection('pos_requests').doc(id).get();if(d.exists){const r=d.data();RQ[id]=(SN[r.status]||r.status||'')+(r.decidedBy?' · '+String(r.decidedBy).split('@')[0]:'')}}catch(e){}}
+  const kinds=['all',...Object.keys(STH_K)],sel=kind&&kind!=='all'?kind:'all';
+  $('pbox').innerHTML='<h2 style="margin:0 0 4px">📜 '+esc(code)+' '+esc(nm)+'</h2><div class="small">'+esc(locs.map(l=>LOC[l]||l).join(', '))+' · эхний үлдэгдлээс хойших бүх хөдөлгөөн · «Үлдэгдэл» = тухайн мөрийн дараах үлдэгдэл</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+kinds.map(k=>'<button class="btn'+(k===sel?' pri':'')+'" data-sthk="'+k+'">'+(k==='all'?'Бүгд':STH_K[k])+' ('+(k==='all'?E.length:E.filter(x=>x.k===k).length)+')</button>').join('')+'<button class="btn" id="sthX" style="margin-left:auto">Excel</button><button class="btn" onclick="pClose()">Хаах</button></div><div id="sthT" style="max-height:62vh;overflow:auto"></div>';
+  const draw=k=>{const L=E.filter(x=>k==='all'||x.k===k);
+    xtable('sthT','sth',['Огноо, цаг','Төрөл','Тоо (+/−)','Үлдэгдэл',...(locs.length>1?['Байршил']:[]),'Баримт №','Дэлгүүр / касс','Хэн (кассчин / хэрэглэгч)','Дүн','Эх баримт (огноо)','Шалтгаан / тайлбар','Үйлчлүүлэгч','Зөвшөөрсөн','Нягтлангийн шалгалт'],
+      L.map(x=>[tm(x.t),x.type,x.q,x.bal,...(locs.length>1?[LOC[x.loc]||x.loc]:[]),x.no,x.store||'',x.who,x.sum==null?null:x.sum,x.ref||'',x.why||x.info||'',x.cust||'',x.ok||'',x.rq?RQ[x.rq]||'':'']),
+      {noSum:[3],cell:(r,c)=>c===2?'<b class="'+(r[2]<0?'hot':'')+'">'+(r[2]>0?'+':'')+nfx(r[2])+'</b>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])});
+    document.querySelectorAll('[data-sthk]').forEach(b=>b.classList.toggle('pri',b.dataset.sthk===k))};
+  $('pm').classList.remove('hide');draw(sel);
+  document.querySelectorAll('[data-sthk]').forEach(b=>b.onclick=()=>draw(b.dataset.sthk));$('sthX').onclick=()=>xtXlsx('sth','tuuh_'+code+'_'+loc,'Түүх')}
 $('sPub').onclick=()=>publishStock(false);
 $('sXl').onclick=()=>{if(!stockRows.length)return $('sMsg').textContent='Эхлээд «Тооцоолох» дарна уу';xtXlsx('stock','uldegdel_'+$('sSt').value+'_'+iso(new Date()),'Үлдэгдэл')};
 
