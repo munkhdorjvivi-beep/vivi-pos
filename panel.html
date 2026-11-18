@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="11.4">
+<meta name="vivi-ver" content="11.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -48,7 +48,14 @@ main{padding:14px 16px;display:grid;gap:12px;max-width:1200px;margin:0 auto}
 .stt .h{display:flex;justify-content:space-between;gap:6px;font-weight:700;font-size:15px}.stt .v{font-size:26px;font-weight:800;margin:6px 0 4px}
 .stt .m{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;opacity:.85;margin-top:3px}.stt .dot{font-size:11.5px;font-weight:600;opacity:.7}.stt .dot.g{color:#1a7f37;opacity:1}
 .stt .share{height:5px;background:#eee;border-radius:9px;overflow:hidden;margin:2px 0 6px}.stt .share i{display:block;height:100%;background:var(--red)}
-.drng{display:inline-flex;gap:6px;align-items:center}.drng input{font:inherit;min-height:36px;border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fff}
+.drng{display:inline-flex;gap:6px;align-items:center}
+#busy{position:fixed;inset:0;z-index:95;display:flex;align-items:flex-start;justify-content:center;padding-top:22vh;background:rgba(246,247,249,.55);pointer-events:none}#busy.hide{display:none}
+#busy .bx{pointer-events:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(21,24,29,.16);padding:16px 22px;display:flex;align-items:center;gap:14px;font-weight:650;color:var(--ink)}
+#busy .bx small{display:block;font-weight:500;color:#7b8494;margin-top:2px}
+.spin{width:34px;height:34px;border-radius:50%;border:4px solid #f3d3d6;border-top-color:var(--red);animation:vspin .75s linear infinite;flex:0 0 auto}@keyframes vspin{to{transform:rotate(360deg)}}
+.dgo.pend{background:var(--red);color:#fff;border-color:var(--red);animation:vpulse 1.4s ease-in-out infinite}@keyframes vpulse{50%{box-shadow:0 0 0 5px rgba(193,18,31,.18)}}
+.slf{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 14px;padding:10px 12px;background:var(--soft);border:1px solid var(--line);border-radius:12px}
+.slf label.f{margin:6px 0 3px}.slf .two{display:flex;gap:6px;align-items:center}.slf .two .inp{min-width:0;flex:1;padding:8px 6px}.slf .nm{font-size:12px;color:#7b8494;min-height:16px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.drng input{font:inherit;min-height:36px;border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fff}
 .xt th,.xd th{padding:0}.xinfo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:2px 0 6px}.xfb{font:inherit;font-size:11px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);background:none;border:0;padding:8px 8px;cursor:pointer;width:100%;text-align:inherit;white-space:nowrap}
 .xfb span{opacity:.6;margin-left:2px}.xfb:hover{background:#eef}.xfb.on{color:var(--blue);background:#e1edfa}.xfb.on span,.xfb.srt span{opacity:1}
 .xt tfoot td,.xd tfoot td{position:sticky;bottom:0;background:var(--soft);border-top:2px solid var(--ink)}
@@ -102,10 +109,11 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <div id="lm" class="small" style="color:var(--red);min-height:18px;margin-top:8px"></div>
 </div>
 <div id="pm" class="modal hide"><div class="box" id="pbox"></div></div>
+<div id="busy" class="hide"><div class="bx"><div class="spin"></div><div><span id="busyT">Ачаалж байна…</span><small>Түр хүлээнэ үү — өгөгдлийг сангаас уншиж байна</small></div></div></div>
 <div id="app" class="hide">
 <header>
   <b>VIVI</b><span>POS хяналт</span><span class="ver">v<span class="appver"></span></span><span class="sp"></span>
-  <input type="date" id="d1"><span>→</span><input type="date" id="d2"><select id="gStSel" title="Дэлгүүр"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="ON">Онлайн дэлгүүр</option><option value="YV">Явуулын касс</option></select>
+  <input type="date" id="d1"><span>→</span><input type="date" id="d2"><button id="dGo" class="btn dgo" style="min-height:30px;padding:2px 12px" title="Сонгосон хугацааны өгөгдлийг ачаална">Харах</button><select id="gStSel" title="Дэлгүүр"><option value="">Бүх дэлгүүр</option><option value="FC">Food city</option><option value="DR">Драгон</option><option value="NS">Нийслэл</option><option value="ON">Онлайн дэлгүүр</option><option value="YV">Явуулын касс</option></select>
   <span id="who" class="small" style="opacity:.75"></span><button id="logout" class="btn" style="min-height:30px;padding:2px 10px">Гарах</button><span id="live">холбогдож байна…</span>
   <nav class="tabs" id="tabs"><button data-tab="home">Нүүр</button><button data-tab="req">Хүсэлт<span class="tn hide" id="tnReq"></span></button><button data-tab="chat">💬 Чат<span class="tn hide" id="tnChat"></span></button><button data-tab="rep">Борлуулалтын тайлан</button><button data-tab="rcpt">Баримтууд</button><button data-tab="cash">Ээлж, бэлэн мөнгө</button><button data-tab="stock">Агуулах, хөдөлгөөн<span class="tn hide" id="tnStk"></span></button><button data-tab="items">Бараа, үнэ, шошго</button><button data-tab="promo">Урамшуулал</button><button data-tab="guide">📜 Удирдамж<span class="tn hide" id="tnGd"></span></button><button data-tab="vch">🎫 Ваучер</button><button data-tab="till">Касс, ажилтан</button><button data-tab="set">Тохиргоо</button><button data-tab="users" hidden>👤 Хэрэглэгч</button></nav>
   <nav id="subtabs" class="hide"></nav>
@@ -177,6 +185,21 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div id="hcKpi" class="kpi" style="margin-top:10px"></div><div id="hcChart" style="margin-top:8px"></div><div class="scroll" id="hcTbl" style="margin-top:8px"></div>
     <div style="margin-top:6px"><button id="hcX" class="btn">⬇ Excel</button></div></div>
   <div data-rsub="trip" class="card"><h2>Явуулын касс — аянаар</h2><div class="small" style="margin:-4px 0 8px">Дээрх огнооны хугацаанд хийгдсэн Явуулын кассын борлуулалт аян бүрээр. Бүх аяныг харьцуулах бол хугацааг уртаар сонгоно.</div><div class="scroll" id="cTrip" style="max-height:360px;overflow:auto"></div></div>
+  <div data-rsub="acc" class="card" id="slCard"><h2>📋 Борлуулалтын жагсаалт</h2>
+    <div class="small" style="margin:-4px 0 8px">Шүүлтийн нөхцөлөө сонгоод <b>Харах</b> — сонгосон хугацааны баримтуудыг сангаас уншина. Бусад шүүлтүүр шууд үйлчилнэ. <b>Excel</b> нь Smart-ын «Борлуулалтын жагсаалт» маягтаар (баримтаар бүлэглэсэн) зөвхөн шүүсэн мөрүүдийг татна.</div>
+    <div class="slf">
+      <div><label class="f">Огноо</label><div class="two"><input type="date" id="slA" class="inp"><span>—</span><input type="date" id="slB" class="inp"></div></div>
+      <div><label class="f">Байршил</label><select id="slSt" class="inp"><option value="">Бүгд</option></select></div>
+      <div><label class="f">Касс</label><select id="slKs" class="inp"><option value="">Бүгд</option></select></div>
+      <div><label class="f">Харилцагч</label><input id="slPt" class="inp" list="slPtL" placeholder="нэр…"><datalist id="slPtL"></datalist></div>
+      <div><label class="f">Бараа</label><input id="slIt" class="inp" list="slItL" placeholder="код эсвэл нэр…"><datalist id="slItL"></datalist><div class="nm" id="slItN"></div></div>
+      <div><label class="f">Барааны бүлэг</label><input id="slGr" class="inp" list="slGrL" placeholder="бүлэг…"><datalist id="slGrL"></datalist></div>
+      <div><label class="f">Бэлтгэн нийлүүлэгч</label><input id="slSu" class="inp" list="slSuL" placeholder="нэр…"><datalist id="slSuL"></datalist><div class="nm" id="slSuN"></div></div>
+      <div><label class="f">Ангилал</label><select id="slCa" class="inp"><option value="">Бүгд</option></select></div>
+      <div><label class="f">Брэнд</label><input id="slBr" class="inp" list="slBrL" placeholder="брэнд…"><datalist id="slBrL"></datalist></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><button id="slGo" class="btn pri dgo">Харах</button><button id="slXl" class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)">Excel татах (Smart маягт)</button><button id="slClr" class="btn">Шүүлтүүр цэвэрлэх</button><span id="slMsg" class="small"></span></div>
+    <div class="kpi" id="slKpi" style="margin-top:8px"></div><div id="slTbl" class="scroll" style="margin-top:8px;max-height:560px;overflow:auto"></div></div>
   <div data-rsub="acc" class="card"><h2>Тайлан (Smart-тай ижил нэр, багана)</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 10px;background:var(--soft);border-radius:10px"><b class="small">Тайлангийн хугацаа:</b><span class="drng"><label class="small">Огноо</label><input type="date" class="dr1" id="rd1"><span>→</span><input type="date" class="dr2" id="rd2"></span><span id="rdInfo" class="small"></span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><select id="rSel" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);padding:6px 10px;flex:1;min-width:220px"></select><button id="rDl" style="font:inherit;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--soft);padding:6px 14px;cursor:pointer">CSV татах</button><button id="rXl" style="font:inherit;min-height:40px;border-radius:8px;border:0;background:var(--ink);color:#fff;padding:6px 14px;cursor:pointer">Excel татах</button></div>
@@ -530,14 +553,14 @@ $('lgG').onclick=()=>{$('lm').textContent='Google-ээр нэвтэрч байн
 const PERM_TABS=[['home','Нүүр','дэлгүүрийн борлуулалт, нийлүүлэгч'],['req','Хүсэлт','буцаалт, солилт, төлбөр засах зөвшөөрөх; буцаалтын маягт шалгах'],['chat','Чат','кассуудтай чатлах'],['rep','Борлуулалтын тайлан','тайлан, Excel, SaleMany'],['rcpt','Баримтууд','баримт харах, устгах, сэргээх'],['cash','Ээлж, бэлэн мөнгө','ээлж, кассчны үйлдэл'],['stock','Агуулах, хөдөлгөөн','үлдэгдэл, орлого, шилжүүлэг, зарлага'],['items','Бараа, үнэ, шошго','бараа бүртгэх, үнэ, каталог оруулах'],['promo','Урамшуулал','урамшуулал үүсгэх, засах'],['vch','Ваучер','ваучер бүртгэх, үлдэгдэл засах'],['till','Касс, ажилтан','кассчин, ПИН, касс, аян, буцаалтын тохиргоо'],['bonus','💰 Кассын урамшуулал','«Касс, ажилтан» цэс дотор: кассчны баримтын урамшуулал тооцох, дүн тохируулах'],['guide','📜 Удирдамж (бичих)','урамшууллын удирдамж бичих, нийтлэх — унших, танилцахыг бүх хэрэглэгч хийнэ'],['set','Тохиргоо','харилцагч, нөөц хуулбар']];
 /* Дэд цэсийн эрх: үндсэн цэсийг сонговол бүх дэд цэс; эсвэл зөвхөн сонгосон дэд цэс */
 const PERM_SUB={
-  rep:[['rep.sum','📊 Тойм'],['rep.fc','📈 Өнөөдрийн таамаг (борлуулалтын урьдчилсан тооцоо)'],['rep.hour','⏱ Цагаар харьцуулах'],['rep.acc','🧾 Smart тайлан, SaleMany, нягтлангийн тохиргоо'],['rep.disc','🔍 Хөнгөлөлтийн хяналт'],['rep.hist','📥 Smart-ын түүх'],['rep.trip','🚐 Явуулын касс']],
+  rep:[['rep.sum','📊 Тойм'],['rcpt','🧾 Баримтууд — харах, устгах, сэргээх'],['cash','💵 Ээлж, бэлэн мөнгө, Z тайлан, кассчны үйлдэл'],['rep.fc','📈 Өнөөдрийн таамаг (борлуулалтын урьдчилсан тооцоо)'],['rep.hour','⏱ Цагаар харьцуулах'],['rep.acc','📋 Борлуулалтын жагсаалт, Smart тайлан, SaleMany, нягтлангийн тохиргоо'],['rep.disc','🔍 Хөнгөлөлтийн хяналт'],['rep.hist','📥 Smart-ын түүх'],['rep.trip','🚐 Явуулын касс']],
   stock:[['stock.bal','📦 Үлдэгдэл, хасах үлдэгдэл, ⏳ насжилт'],['stock.in','⬇ Орлого'],['stock.move','⇄ Шилжүүлэг'],['stock.out','⬆ Зарлага'],['stock.cnt','✓ Тооллого (кассаар)'],
     ['wh','🚚 Агуулах (LPP) — скан, илгээмж, хүргэлт, шошго, бүтээмж'],['whedit','🚚 Агуулах (LPP) — илгээмж засах, цуцлах, хүргэлт устгах'],
     ['rcv_fc','📥 Хүлээн авалт — Food city'],['rcv_dr','📥 Хүлээн авалт — Драгон'],['rcv_ns','📥 Хүлээн авалт — Нийслэл'],['rcv_ht','📥 Хүлээн авалт — Бөөн'],
     ['inv','🗂 Тооллого (бүсээр) — тоолох'],['invadm','🗂 Тооллого (бүсээр) — үүсгэх, тайлан, Smart файл'],['stock.arc','🗂 Архив'],['stock.open','⚙ Эхний үлдэгдэл, сарын хаалт']],
   till:[['till.cfg','Кассчин, ПИН, касс, аян, буцаалт, хүргэлтийн тохиргоо'],['bonus','💰 Кассын урамшуулал']]};
-const PERM_PARENT={};Object.entries(PERM_SUB).forEach(([m,L])=>L.forEach(x=>PERM_PARENT[x[0]]=m));
-const PERM_ALL=PERM_TABS.map(x=>x[0]).filter(k=>k!=='bonus').concat(['cost']);
+const PERM_HIDE=new Set(['bonus','rcpt','cash']);const PERM_PARENT={};Object.entries(PERM_SUB).forEach(([m,L])=>L.forEach(x=>PERM_PARENT[x[0]]=m));
+const PERM_ALL=PERM_TABS.map(x=>x[0]).filter(k=>!PERM_HIDE.has(k)).concat(['cost']);
 const WH_P=['wh','whedit','rcv_fc','rcv_dr','rcv_ns','rcv_ht','inv','invadm'],whAnyP=()=>WH_P.some(k=>can(k)),rcvAnyP=()=>['rcv_fc','rcv_dr','rcv_ns','rcv_ht'].some(k=>can(k)),
   stPosP=()=>['stock.bal','stock.in','stock.move','stock.out','stock.cnt','stock.arc','stock.open'].some(k=>can(k));
 let ME=null;
@@ -600,14 +623,76 @@ function drawReqHist(){const k=$('rhK').value,L=allReqs.filter(r=>(!gSt||r.store
   xtable('cRqH','reqhist',['Огноо','Төрөл','Дэлгүүр','Кассчин','Баримт','Дүн','Юу өөрчлөгдөх / өөрчлөгдсөн','Төлөв','Шийдвэрлэсэн','Шийдсэн огноо','Тайлбар'],
     L.map(r=>{const kk=r.kind||'return',st=stOf(r);return [lt(r.created),RQK[kk]+(r.diffType?' ('+r.diffType+')':''),r.storeName||'',r.cashier||'',r.ref||'',kk==='exchange'?(r.diff||0):kk==='paychange'?(r.total||0):-(r.total||0),chgT(r),st[0],(r.decidedBy||'').split('@')[0],r.decidedAt?lt(r.decidedAt):'',r.note||r.reason||'']}),
     {cell:(x,c)=>c===7?'<span class="chip '+(/татгалз|✗/.test(x[7])?'r':/хүлээгд/.test(x[7])?'b':'')+'">'+esc(x[7])+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}
-function listen(){
+/* ==== 📋 Борлуулалтын жагсаалт: Smart-ын шүүлтийн нөхцөл + баримтаар бүлэглэсэн Excel ==== */
+let SL={key:'',lines:[],rows:[]};
+const slBrand=n=>{const w=String(n||'').trim().split(/\s+/)[0]||'';return /^[A-Za-zА-Яа-яЁёӨөҮү]{2,}$/.test(w)?w.toUpperCase():''};
+function slDeptName(l,st){try{const d=smDeptOf(l,st),C=smCfg;if(d&&d.code){const nm=Object.keys(C.deptCodes||{}).find(n=>C.deptCodes[n]===d.code&&smartLoc(n)===st);if(nm)return nm}}catch(e){}return st==='ON'?'Онлайн дэлгүүр':LOC[st]||st||''}
+const slStN=st=>st==='ON'?'Онлайн дэлгүүр':LOC[st]||st||'';
+function slInit(){if($('slA').value)return;$('slA').value=$('slB').value=iso(new Date());
+  $('slSt').innerHTML='<option value="">Бүгд</option>'+['FC','DR','NS','ON','YV'].map(k=>'<option value="'+k+'">'+esc(slStN(k))+'</option>').join('');slPend()}
+function slPend(){$('slGo').classList.toggle('pend',$('slA').value+'|'+$('slB').value!==SL.key)}
+async function slLoad(){const A=$('slA').value,B=$('slB').value>=$('slA').value?$('slB').value:$('slA').value;if(!A)return;
+  await withBusy('Борлуулалтын жагсаалт ачаалж байна…',async()=>{await loadPCat().catch(()=>{});try{await loadDept()}catch(e){}
+    const L=(await db.collection('pos_sales').where('date','>=',A.replace(/-/g,'/')).where('date','<=',B.replace(/-/g,'/')).get()).docs.map(d=>d.data()).filter(x=>(x.type==='sale'||x.type==='return')&&x.date>=A.replace(/-/g,'/')&&x.date<=B.replace(/-/g,'/')).sort((a,b)=>a.iso<b.iso?-1:1);
+    const out=[];L.forEach(sx=>{const pays=[...new Set((sx.payments||[]).map(p=>p.bank||p.form).filter(Boolean))].join(', '),part=[...new Set((sx.payments||[]).map(p=>p.partner).filter(Boolean))].join(', ')||(sx.cust&&sx.cust.name)||'',ret=sx.type==='return';
+      (sx.lines||[]).forEach(l=>{const it=itRow(l.code)||{},name=l.code==='DELIVERY'?'Хүргэлт':(l.name||it.name||''),sup=l.sup||it.sup||'',grp=l.grp||it.grp||'',q=+l.qty||0,uc=costMap.has(l.code)?costMap.get(l.code):null;
+        out.push({s:sx,code:l.code,name,sup,grp,brand:slBrand(name),cat:catOf(name).typ,st:sx.store,stN:sx.storeName||slStN(sx.store),ks:(sx.storeName||slStN(sx.store))+' · касс '+(sx.reg||'')+' · '+(sx.cashier||''),cashier:sx.cashier||'',part,pays,
+          base:+l.base||0,unit:q?Math.round((+l.sum||0)/q):0,qty:ret?0:q,ret:ret?-q:0,sum:+l.sum||0,cost:uc==null?null:uc*q,dept:slDeptName({code:l.code,sup,grp,name},sx.store)})})});
+    SL={key:A+'|'+B,lines:out};slOpts();slDraw();slPend()})}
+function slOpts(){const u=f=>[...new Set(SL.lines.map(f).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const fill=(id,arr)=>$(id).innerHTML=arr.slice(0,3000).map(v=>'<option value="'+esc(v)+'">').join('');
+  fill('slPtL',u(x=>x.part));fill('slGrL',u(x=>x.grp));fill('slSuL',u(x=>x.sup));fill('slBrL',u(x=>x.brand));
+  const items=new Map();SL.lines.forEach(x=>items.set(x.code,x.name));$('slItL').innerHTML=[...items].slice(0,5000).map(([c,n])=>'<option value="'+esc(c)+'">'+esc(n)+'</option>').join('');
+  const cur=$('slKs').value;$('slKs').innerHTML='<option value="">Бүгд</option>'+u(x=>x.ks).map(v=>'<option'+(v===cur?' selected':'')+'>'+esc(v)+'</option>').join('');
+  const cc=$('slCa').value;$('slCa').innerHTML='<option value="">Бүгд</option>'+u(x=>x.cat).map(v=>'<option'+(v===cc?' selected':'')+'>'+esc(v)+'</option>').join('')}
+function slFilt(){const v=id=>$(id).value.trim().toLowerCase(),st=$('slSt').value,ks=$('slKs').value,pt=v('slPt'),it=v('slIt'),gr=v('slGr'),su=v('slSu'),ca=$('slCa').value,br=v('slBr');
+  const has=(a,b)=>!b||String(a||'').toLowerCase().includes(b);
+  return SL.lines.filter(x=>(!st||x.st===st)&&(!ks||x.ks===ks)&&has(x.part,pt)&&(!it||String(x.code).toLowerCase()===it||has(x.name,it))&&has(x.grp,gr)&&has(x.sup,su)&&(!ca||x.cat===ca)&&has(x.brand,br))}
+function slDraw(){if(!SL.key){$('slMsg').textContent='Хугацаагаа сонгоод «Харах» дарна уу';return}
+  const it=$('slIt').value.trim(),f=SL.lines.find(x=>x.code===it);$('slItN').textContent=f?f.name:'';const su=$('slSu').value.trim();$('slSuN').textContent=su?SL.lines.filter(x=>x.sup&&x.sup.toLowerCase().includes(su.toLowerCase())).length+' мөр':'';
+  const F=slFilt();SL.rows=F;const cc=can('cost'),rc=new Set(F.map(x=>x.s.uid||x.s.id)).size,T=k=>F.reduce((a,x)=>a+(+x[k]||0),0);
+  $('slKpi').innerHTML=[['Баримт',rc.toLocaleString('en-US')],['Мөр',F.length.toLocaleString('en-US')],['Тоо хэмжээ',T('qty').toLocaleString('en-US')+(T('ret')?' <span class="small">буцаалт '+T('ret')+'</span>':'')],['Нийт дүн',money(T('sum'))],...(cc?[['Өртөг',money(T('cost'))]]:[])]
+    .map(k=>'<div class="k"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
+  xtable('slTbl','sl',['№','Баримт','Огноо','Байршил','Харилцагч','Брэнд','Бэлтгэн нийлүүлэгч','Барааны код','Барааны бүлэг','Барааны нэр','Үндсэн үнэ','Касс үнэ','Тоо хэмжээ','Буцаалт','Тасаг','Касс','Нийт дүн','Цэвэр борлуулалт','Төлбөр',...(cc?['Өртөг']:[])],
+    F.map((x,i)=>[i+1,x.s.id||'',dIso(x.s.date),x.stN,x.part,x.brand,x.sup,x.code,x.grp,x.name,x.base,x.unit,x.qty||null,x.ret||null,x.dept,x.cashier,x.sum,x.sum,x.pays,...(cc?[x.cost==null?null:Math.round(x.cost*100)/100]:[])]),{noSum:[0,10,11],limit:500});
+  $('slMsg').textContent=SL.key.replace('|',' — ')+' · '+F.length+' / '+SL.lines.length+' мөр'}
+async function slXlsx(){if(SL.key!==$('slA').value+'|'+$('slB').value)await slLoad();if(!SL.lines.length)return $('slMsg').textContent='Мөр алга';
+  await withBusy('Excel бэлдэж байна…',async()=>{if(!window.ExcelJS)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+    const D=xtData('sl'),idx=new Set(D.L.map(r=>r[0]-1)),F=SL.rows.filter((x,i)=>idx.has(i)),cc=can('cost'),N=cc?20:19;
+    const flt=[$('slSt').value&&slStN($('slSt').value),$('slKs').value,$('slPt').value,$('slIt').value,$('slGr').value,$('slSu').value,$('slCa').value,$('slBr').value].filter(Boolean).join(' · ');
+    const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Sheet',{views:[{state:'frozen',ySplit:2}]});
+    ws.columns=[10,12,11,13,14,10,25,15,15,30,10,10,9,9,22,13,12,14,16,13].slice(0,N).map(w=>({width:w}));
+    const thin={style:'thin',color:{argb:'FFBFBFBF'}},bd={top:thin,left:thin,bottom:thin,right:thin},fill=c=>({type:'pattern',pattern:'solid',fgColor:{argb:c}});
+    const t=ws.addRow(['Борлуулалтын жагсаалт · '+SL.key.replace(/-/g,'/').replace('|',' — ')+(flt?' · '+flt:'')]);ws.mergeCells(1,1,1,N);t.font={bold:true,size:16};t.height=24;
+    const h=ws.addRow(['№','','Огноо','Байршил','Харилцагч','Бренд','Бэлтгэн нийлүүлэгчийн нэр','Барааны код','Барааны бүлэг','Барааны нэр','Үндсэн үнэ','Касс үнэ','Тоо хэмжээ','Буцаалт','Тасаг','Касс','Нийт дүн','Цэвэр борлуулалт','Төлбөр',...(cc?['Өртөг']:[])]);
+    h.eachCell(c=>{c.font={bold:true};c.fill=fill('FFD3D3D3');c.border=bd;c.alignment={vertical:'middle',horizontal:'center',wrapText:true}});h.height=30;
+    let k=0,last=null;F.forEach(x=>{const id=x.s.uid||x.s.id;if(id!==last){last=id;k++;const g=ws.addRow(['Баримт: '+k]);ws.mergeCells(g.number,1,g.number,N);g.getCell(1).fill=fill('FFDCDCDC');g.getCell(1).font={bold:true};g.getCell(1).border=bd}
+      const [y,m,d]=dIso(x.s.date).split('-').map(Number);
+      const r=ws.addRow(['',x.s.id||'',new Date(Date.UTC(y,m-1,d)),x.stN,x.part,x.brand,x.sup,x.code,x.grp,x.name,x.base,x.unit,x.qty||null,x.ret||null,x.dept,x.cashier,x.sum,x.sum,x.pays,...(cc?[x.cost==null?null:Math.round(x.cost*100)/100]:[])]);
+      r.eachCell({includeEmpty:true},(c,i)=>{if(i>N)return;c.border=bd;if(i===3)c.numFmt='yyyy/mm/dd';else if(i===20)c.numFmt='#,##0.00';else if(i>=11&&i<=18&&i!==15&&i!==16)c.numFmt='#,##0'})});
+    const S=f=>F.reduce((a,x)=>a+(+x[f]||0),0),ft=new Array(N).fill(null);ft[0]=F.length;ft[12]=S('qty');ft[13]=S('ret')||null;ft[16]=S('sum');ft[17]=S('sum');if(cc)ft[19]=Math.round(S('cost')*100)/100;
+    const fr=ws.addRow(ft);fr.eachCell({includeEmpty:true},(c,i)=>{if(i>N)return;c.font={bold:true};c.fill=fill('FFF2F2F2');c.border=bd;if(i>1)c.numFmt=i===20?'#,##0.00':'#,##0'});
+    const n=new Date(),p2=v=>String(v).padStart(2,'0');ws.addRow([]);const pr=ws.addRow(['Хэвлэсэн :  '+n.getFullYear()+'/'+p2(n.getMonth()+1)+'/'+p2(n.getDate())+' '+p2(n.getHours())+':'+p2(n.getMinutes())+':'+p2(n.getSeconds())]);ws.mergeCells(pr.number,1,pr.number,7);pr.font={italic:true,color:{argb:'FF666666'}};
+    ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9};
+    const buf=await wb.xlsx.writeBuffer(),su=$('slSu').value.trim(),a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download='Borluulaltyn_jagsaalt_'+SL.key.replace('|','_')+(su?'_'+su.replace(/[^\wА-яӨөҮүЁё]+/g,'_').slice(0,30):'')+'.xlsx';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)})}
+$('slGo').onclick=slLoad;
+// хүнд тайлангууд ачаалах үед спиннер
+[['zRun','Z тайлан ачаалж байна…'],['calcStock','Үлдэгдэл тооцоолж байна…'],['fcLoadHist','Түүхэн борлуулалт ачаалж байна…']].forEach(([n,t])=>{const f=window[n];if(typeof f==='function')window[n]=function(...a){return withBusy(t,()=>f.apply(this,a))}});$('slXl').onclick=slXlsx;
+['slA','slB'].forEach(id=>$(id).onchange=slPend);
+['slSt','slKs','slCa'].forEach(id=>$(id).onchange=slDraw);['slPt','slIt','slGr','slSu','slBr'].forEach(id=>$(id).oninput=()=>{clearTimeout(slDraw.t);slDraw.t=setTimeout(slDraw,250)});
+$('slClr').onclick=()=>{['slSt','slKs','slCa'].forEach(id=>$(id).value='');['slPt','slIt','slGr','slSu','slBr'].forEach(id=>$(id).value='');slDraw()};
+let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
+async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
+function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
   if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
-  const err=e=>{$('live').textContent='алдаа: '+(e.code||e);$('live').className=''};
+  const err=e=>{done();$('live').textContent='алдаа: '+(e.code||e);$('live').className=''};
   const ok=()=>{$('live').textContent='шууд · '+new Date().toTimeString().slice(0,5);$('live').className='on'};
-  unsub.push(db.collection('pos_sales').where('date','>=',A).where('date','<=',B).onSnapshot(s=>{allSales=s.docs.map(d=>d.data());ok();drawSoon()},err));
+  unsub.push(db.collection('pos_sales').where('date','>=',A).where('date','<=',B).onSnapshot(s=>{allSales=s.docs.map(d=>d.data());ok();drawSoon();done()},err));
   unsub.push(db.collection('pos_audit').where('t','>=',t1).where('t','<=',t2).onSnapshot(s=>{allAudit=s.docs.map(d=>d.data());drawSoon()},err));
   unsub.push(db.collection('pos_shifts').where('opened','>=',t1).where('opened','<=',t2).onSnapshot(s=>{allShifts=s.docs.map(d=>d.data());drawSoon()},err));
 
@@ -641,7 +726,7 @@ function drawStores(){
   $('cDays').innerHTML=tbl(['Огноо'].concat(cols.map(c=>STN[c]),['Нийт']),days.map(d=>{const L=allSales.filter(s=>s.date===d);return '<tr><td>'+esc(d.slice(5))+' <span class="small">'+wd[new Date(d.replace(/\//g,'-')+'T12:00:00').getDay()]+'</span></td>'+cols.map(c=>cell(L.filter(s=>s.store===c))).join('')+cell(L)+'</tr>'}).concat(['<tr class="xtot" style="border-top:2px solid var(--ink)"><td><b>Нийт</b></td>'+cols.map(c=>cell(allSales.filter(s=>s.store===c))).join('')+cell(allSales)+'</tr>']));
 }
 function quickRange(k){const t=new Date(),f=new Date();if(k==='y'){t.setDate(t.getDate()-1);f.setDate(f.getDate()-1)}else if(k==='w')f.setDate(f.getDate()-6);else if(k==='m')f.setDate(1);else if(k==='pm'){f.setMonth(f.getMonth()-1,1);t.setDate(0)}
-  setRange(iso(f),iso(t))}
+  setRange(iso(f),iso(t),true)}
 // Ачаалал ихтэй үед олон өөрчлөлтийг нэгтгэж 300 мс тутам нэг удаа зурна (самбар гацахгүй)
 function drawSoon(){if(drawSoon.h)return;drawSoon.h=setTimeout(()=>{drawSoon.h=0;draw()},300)}
 function draw(){
@@ -947,20 +1032,25 @@ function drawTrips(){const L=allSales.filter(s=>s.store==='YV'),m=new Map();
     {cell:(r,i)=>r[i]==null?'':typeof r[i]==='number'?(i===8?r[i]+'%':i>=6?money(r[i]):r[i]):esc(r[i])})}
 
 /* ==== Цэс: таб бүр тусдаа хуудас. Хаяг (#rep гэх мэт) хадгалагдаж, хөтчийн «буцах» товч ажиллана ==== */
+// «Баримтууд», «Ээлж, бэлэн мөнгө» → «Борлуулалтын тайлан»-ийн дэд цэс
+(()=>{const rep=document.querySelector('section[data-panel="rep"]');
+  [...document.querySelectorAll('section[data-panel="rcpt"] > *')].forEach(c=>{c.dataset.rsub='rcpt';c.hidden=true;rep.appendChild(c)});
+  [...document.querySelectorAll('section[data-panel="cash"] > *')].forEach(c=>{c.dataset.rsub=c.dataset.csub||'sh';delete c.dataset.csub;c.hidden=true;rep.appendChild(c)});
+  ['rcpt','cash'].forEach(t=>{const b=document.querySelector('#tabs [data-tab="'+t+'"]');if(b)b.remove();const x=document.querySelector('section[data-panel="'+t+'"]');if(x)x.remove()})})();
+const TAB_RED={rcpt:'rcpt',cash:'sh'};
 const TABK=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab);
 /* ==== Дэд цэс: үндсэн цэс бүрийн доорх хуудсууд ==== */
 const SUBS={stock:[['bal','📦 Үлдэгдэл'],['age','⏳ Насжилт'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['lpp','🚚 Агуулах (LPP)',()=>can('wh')||can('whedit')],['rcv','📥 Хүлээн авалт',()=>can('wh')||can('whedit')||rcvAnyP()],['zinv','🗂 Тооллого (бүсээр)',()=>can('inv')||can('invadm')],['whset','⚙ LPP тохиргоо',()=>!!(ME&&ME.admin)],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
-  cash:[['sh','💵 Ээлж, бэлэн мөнгө'],['z','🧾 Z тайлан (ээлж хаалт)'],['aud','👁 Хяналт: кассчны үйлдэл']],
-  rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','🧾 Smart тайлан, SaleMany'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
+  rep:[['sum','📊 Тойм'],['acc','📋 Борлуулалтын жагсаалт'],['rcpt','🧾 Баримтууд'],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
 let CURTAB='';
 const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'vivipanel_sub_'+t)}catch(e){return ''}};
 function subMark(t,k){if(CURTAB!==t)return;document.querySelectorAll('#subtabs [data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===k||(t==='stock'&&k==='mov'&&false)))}
-const SUBK={stock:{bal:'stock.bal',age:'stock.bal',in:'stock.in',move:'stock.move',out:'stock.out',cnt:'stock.cnt',arc:'stock.arc',open:'stock.open'},rep:{sum:'rep.sum',fc:'rep.fc',hour:'rep.hour',acc:'rep.acc',disc:'rep.disc',hist:'rep.hist',trip:'rep.trip'}};
+const SUBK={stock:{bal:'stock.bal',age:'stock.bal',in:'stock.in',move:'stock.move',out:'stock.out',cnt:'stock.cnt',arc:'stock.arc',open:'stock.open'},rep:{sum:'rep.sum',rcpt:'rcpt',sh:'cash',z:'cash',aud:'cash',fc:'rep.fc',hour:'rep.hour',acc:'rep.acc',disc:'rep.disc',hist:'rep.hist',trip:'rep.trip'}};
 const subOk=(t,x)=>x[2]?x[2]():(SUBK[t]&&SUBK[t][x[0]]?can(SUBK[t][x[0]]):true);
 function drawSubtabs(t){const L=(SUBS[t]||[]).filter(x=>subOk(t,x)),el=$('subtabs');el.classList.toggle('hide',!L.length);if(!L.length){el.innerHTML='';return}
   let cur=subGet(t);if(!L.some(x=>x[0]===cur))cur=L[0][0];el.innerHTML=L.map(([k,l])=>'<button data-st="'+k+'"'+(k===cur?' class="on"':'')+'>'+l+'<span class="sn hide" id="sn_'+t+'_'+k+'"></span></button>').join('');
   if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0);else if(t==='cash')csSub(cur)}
-function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='fc')setTimeout(fcShow,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
+function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='fc')setTimeout(fcShow,0);if(k==='z')setTimeout(zInit,0);if(k==='acc')setTimeout(slInit,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
 $('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);else if(CURTAB==='cash')csSub(k);window.scrollTo(0,0)};
 function csSub(k){document.querySelectorAll('section[data-panel="cash"] [data-csub]').forEach(c=>c.hidden=c.dataset.csub!==k);try{localStorage.setItem('vivipanel_sub_cash',k)}catch(e){}subMark('cash',k);if(k==='z')setTimeout(zInit,0)}
 /* ==== 🧾 Z тайлан: хаасан ээлжүүд (pos_shifts), огнооны хүрээгээр; Excel, A4 хүснэгт, 80 мм Z баримт ==== */
@@ -1009,7 +1099,7 @@ function zRec(A,B){const shut=new Set(ZL.filter(h=>!h.open).map(h=>h.id)),S={};
 $('zGo').onclick=zRun;$('zBy').onchange=zRun;$('zXl').onclick=()=>{if(!ZL.length)return;xtXlsx('zr','Z_tailan_'+$('zA').value+'_'+$('zB').value,'Z тайлан')};$('zPrAll').onclick=zPrintTable;
 $('zPrZ').onclick=()=>{const ids=new Set(xtData('zr').L.map(r=>r[r.length-1]));zPrint(ZL.filter(h=>ids.has(h.id)&&!h.open))};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-zp]');if(!b)return;const h=ZL.find(x=>x.id===b.dataset.zp);if(h)zPrint([h])});
-function showTab(t,push){if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
+function showTab(t,push){if(TAB_RED[t]){try{localStorage.setItem('vivipanel_sub_rep',TAB_RED[t])}catch(e){}t='rep'}if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
   document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   document.querySelectorAll('section[data-panel]').forEach(x=>x.hidden=x.dataset.panel!==t);
   CURTAB=t;drawSubtabs(t);
@@ -2631,7 +2721,7 @@ function gdEdit(id){if(!can('guide'))return;const g=id?GD[id]:{title:'',body:'',
 let PU={};
 function watchPU(){db.collection('pos_panel_users').onSnapshot(s=>{PU={};s.docs.forEach(d=>PU[d.id]=d.data());drawPU()},e=>{$('puMsg').textContent='Алдаа: '+(e.code||e)})}
 const puPerms=x=>{if(x.admin)return 'бүх эрх (админ)';const P=x.perms||[],out=[];
-  PERM_TABS.filter(t=>t[0]!=='bonus').forEach(t=>{if(P.includes(t[0]))out.push(t[1]+(PERM_SUB[t[0]]?' (бүгд)':''));else{const S=(PERM_SUB[t[0]]||[]).filter(x=>P.includes(x[0]));if(S.length)out.push(t[1]+': '+S.map(x=>x[1].replace(/^\S+ /,'')).join(', '))}});
+  PERM_TABS.filter(t=>!PERM_HIDE.has(t[0])).forEach(t=>{if(P.includes(t[0]))out.push(t[1]+(PERM_SUB[t[0]]?' (бүгд)':''));else{const S=(PERM_SUB[t[0]]||[]).filter(x=>P.includes(x[0]));if(S.length)out.push(t[1]+': '+S.map(x=>x[1].replace(/^\S+ /,'')).join(', '))}});
   if(P.includes('cost'))out.push('💰 өртөг');return out.join(' · ')};
 function drawPU(){const L=Object.values(PU).sort((a,b)=>(a.name||a.email).localeCompare(b.name||b.email));
   xtable('puList','pu',['Нэр','Имэйл','Харах цэс, эрх','Төлөв','Сүүлд нэвтэрсэн','Нэмсэн',''],
@@ -2641,7 +2731,7 @@ function puEdit(em){const x=em?PU[em]:{email:'',name:'',perms:['home','rep'],adm
   $('pbox').innerHTML='<h2 style="margin:0 0 6px">'+(isNew?'Хэрэглэгч нэмэх':'Хэрэглэгч засах')+'</h2><div class="frm"><div><label class="f">Gmail хаяг *</label><input id="pu_e" class="inp" type="email" placeholder="нэр@gmail.com" value="'+esc(x.email)+'" '+(isNew?'':'disabled')+'></div><div><label class="f">Нэр, албан тушаал *</label><input id="pu_n" class="inp" placeholder="ж: Оюун — нягтлан" value="'+esc(x.name||'')+'"></div></div>'+
     '<div style="margin-top:10px;font-weight:650">Харах цэс</div><div class="small" style="margin-bottom:4px">Сонгосон цэс л харагдана; тэр цэсэн дэх өөрчлөлт (хадгалах, устгах) хийх эрх ч мөн адил.</div>'+
     '<div class="small" style="margin:-2px 0 6px">Үндсэн цэсийг сонговол түүний <b>бүх дэд цэс</b> орно. Зөвхөн зарим дэд цэс өгөх бол үндсэн цэсийг сонгохгүй, доорх дэд цэсүүдээс сонгоно.</div>'+
-    '<div id="pu_t" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 14px;align-items:start">'+PERM_TABS.filter(t=>t[0]!=='bonus').map(t=>{const S=PERM_SUB[t[0]],on=P.has(t[0]);
+    '<div id="pu_t" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 14px;align-items:start">'+PERM_TABS.filter(t=>!PERM_HIDE.has(t[0])).map(t=>{const S=PERM_SUB[t[0]],on=P.has(t[0]);
       return '<div style="'+(S?'grid-column:1/-1;border:1px solid var(--line);border-radius:10px;padding:8px 10px':'')+'"><label class="inl" style="align-items:flex-start"><input type="checkbox" class="pu_m" value="'+t[0]+'" '+(on?'checked':'')+'> <span><b>'+t[1]+'</b>'+(S?' <span class="small">(бүгд)</span>':'')+'<br><span class="small">'+t[2]+'</span></span></label>'+
         (S?'<div data-subof="'+t[0]+'" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2px 14px;margin:6px 0 0 26px">'+S.map(x=>'<label class="inl"><input type="checkbox" class="pu_s" data-m="'+t[0]+'" value="'+x[0]+'" '+(on||P.has(x[0])?'checked':'')+(on?' disabled':'')+'> '+x[1]+'</label>').join('')+'</div>':'')+'</div>'}).join('')+'</div>'+
     '<label class="inl" style="margin-top:10px;align-items:flex-start"><input type="checkbox" id="pu_c" '+(P.has('cost')?'checked':'')+'> <span><b>💰 Өртөг, ашиг харах</b><br><span class="small">Худалдан авах өртөг, ашиг, ашгийн хувь, үлдэгдлийн үнэлгээ. Сонгоогүй бол эдгээр багана хоосон.</span></span></label>'+
@@ -2959,8 +3049,13 @@ $('d1').value=$('d2').value=iso(new Date());$('a2').value=iso(new Date());$('a1'
 // Нэг хугацаа бүх самбар, тайланд: аль ч огнооны талбарт өөрчилбөл бүгд шинэчлэгдэнэ
 function syncDates(){document.querySelectorAll('.dr1').forEach(e=>e.value=$('d1').value);document.querySelectorAll('.dr2').forEach(e=>e.value=$('d2').value);
   const f=$('d1').value,t=$('d2').value,txt=f===t?f:f+' → '+t;$('stPer').textContent=txt;$('rdInfo').textContent='Доорх бүх тайлан, Excel, CSV, SaleMany энэ хугацаагаар';}
-function setRange(f,t){if(f&&t&&f>t)[f,t]=[t,f];$('d1').value=f;$('d2').value=t;syncDates();if(db&&auth.currentUser)listen()}
+// Хугацаа сонгоход шууд ачаалахгүй — «Харах» дарахад сангаас уншина (хүлээгдэж буй үед товч улаанаар анивчина)
+let RANGE_LOADED='';const rangeKey=()=>$('d1').value+'|'+$('d2').value;
+function rangePend(){const p=rangeKey()!==RANGE_LOADED;document.querySelectorAll('.dgo').forEach(b=>b.classList.toggle('pend',p))}
+function setRange(f,t,go){if(f&&t&&f>t)[f,t]=[t,f];$('d1').value=f;$('d2').value=t;syncDates();if(go&&db&&auth.currentUser){RANGE_LOADED=rangeKey();listen()}rangePend()}
 $('d1').onchange=$('d2').onchange=()=>setRange($('d1').value,$('d2').value);
+$('dGo').onclick=()=>setRange($('d1').value,$('d2').value,true);
+document.querySelectorAll('.drng').forEach(box=>{if(!box.querySelector('.dgo')){const b=document.createElement('button');b.className='btn dgo';b.textContent='Харах';b.style.minHeight='36px';b.onclick=()=>setRange(box.querySelector('.dr1').value,box.querySelector('.dr2').value,true);box.appendChild(b)}});
 document.querySelectorAll('.dr1,.dr2').forEach(e=>e.onchange=()=>{const box=e.closest('.drng');setRange(box.querySelector('.dr1').value,box.querySelector('.dr2').value)});
 syncDates();
 init();
