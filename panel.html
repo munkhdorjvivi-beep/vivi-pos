@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="11.7">
+<meta name="vivi-ver" content="11.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -632,14 +632,14 @@ const slBrand=n=>{const w=String(n||'').trim().split(/\s+/)[0]||'';return /^[A-Z
 function slDeptName(l,st){try{const d=smDeptOf(l,st),C=smCfg;if(d&&d.code){const nm=Object.keys(C.deptCodes||{}).find(n=>C.deptCodes[n]===d.code&&smartLoc(n)===st);if(nm)return nm}}catch(e){}return st==='ON'?'Онлайн дэлгүүр':LOC[st]||st||''}
 const slStN=st=>st==='ON'?'Онлайн дэлгүүр':LOC[st]||st||'';
 /* Жагсаалттай сонголтын талбар (Excel/Smart шиг): ▾ дарахад бүх утга, бичихэд шүүнэ, × цэвэрлэнэ */
-function combo(id,src,onPick){const inp=$(id);if(inp.closest('.cb'))return;const w=document.createElement('div');w.className='cb';inp.parentNode.insertBefore(w,inp);w.appendChild(inp);inp.autocomplete='off';
+function combo(id,src,onPick,ensure){const inp=$(id);if(inp.closest('.cb'))return;const w=document.createElement('div');w.className='cb';inp.parentNode.insertBefore(w,inp);w.appendChild(inp);inp.autocomplete='off';
   const mk=(c,t,ti)=>{const b=document.createElement('button');b.type='button';b.className='cbb '+c;b.textContent=t;b.title=ti;w.appendChild(b);return b};
   const xx=mk('xx','×','Цэвэрлэх'),ar=mk('ar','▾','Жагсаалт'),pan=document.createElement('div');pan.className='cbp';pan.hidden=true;w.appendChild(pan);
   let full=false,act=-1,shown=[];const lo=v=>String(v==null?'':v).toLowerCase(),MAX=400;
   const sx=()=>xx.classList.toggle('hide',!inp.value);
   function render(){const q=full?'':lo(inp.value.trim()),all=src()||[];const L=q?all.filter(o=>lo(o.v).includes(q)||lo(o.l).includes(q)):all;shown=L.slice(0,MAX);act=Math.min(act,shown.length-1);
     pan.innerHTML=(shown.length?shown.map((o,i)=>'<div class="o'+(i===act?' act':'')+(o.d?' dim':'')+'" data-i="'+i+'"><span>'+(o.l&&o.l!==o.v?'<b>'+esc(o.v)+'</b> '+esc(o.l):esc(o.v))+'</span>'+(o.s?'<small>'+esc(o.s)+'</small>':'')+'</div>').join(''):'<div class="more">Олдсонгүй</div>')+(L.length>MAX?'<div class="more">… бас '+(L.length-MAX).toLocaleString('en-US')+' — бичиж хайна уу</div>':'')}
-  const open=f=>{full=!!f;act=-1;render();pan.hidden=false;const a=pan.querySelector('.o');pan.scrollTop=0},close=()=>{pan.hidden=true};
+  const open=f=>{full=!!f;act=-1;render();pan.hidden=false;pan.scrollTop=0;if(ensure&&!(src()||[]).length){pan.innerHTML='<div class="more" style="border:0;display:flex;gap:8px;align-items:center"><span class="spin" style="width:16px;height:16px;border-width:3px"></span>Жагсаалт ачаалж байна…</div>';Promise.resolve(ensure()).catch(()=>{}).then(()=>{if(!pan.hidden)render()})}},close=()=>{pan.hidden=true};
   const pick=o=>{inp.value=o.v;close();sx();onPick()};
   ar.onmousedown=e=>{e.preventDefault();if(pan.hidden){open(true);inp.focus()}else close()};
   xx.onmousedown=e=>{e.preventDefault();inp.value='';sx();close();onPick()};
@@ -652,19 +652,22 @@ function combo(id,src,onPick){const inp=$(id);if(inp.closest('.cb'))return;const
 let SLO={cat:null,key:null,o:{}};
 function slCatOpts(){if(!PCAT||SLO.cat===PCAT)return;SLO.cat=PCAT;const g=new Set(),su=new Set(),br=new Set(),ca=new Set();
   PCAT.forEach(r=>{if(r[6])g.add(r[6]);if(r[5])su.add(r[5]);const b=slBrand(r[2]);if(b)br.add(b);const c=catOf(r[2]).typ;if(c)ca.add(c)});SLO.base={grp:g,sup:su,br,ca}}
-function slOpts(){slCatOpts();const B=SLO.base||{grp:new Set(),sup:new Set(),br:new Set(),ca:new Set()},cnt=f=>{const m=new Map();SL.lines.forEach(x=>{const v=f(x);if(v)m.set(v,(m.get(v)||0)+1)});return m};
+function slOpts(){SLO.k=slOK();slCatOpts();const B=SLO.base||{grp:new Set(),sup:new Set(),br:new Set(),ca:new Set()},cnt=f=>{const m=new Map();SL.lines.forEach(x=>{const v=f(x);if(v)m.set(v,(m.get(v)||0)+1)});return m};
   const ld=!!SL.key,mk=(base,f)=>{const m=cnt(f),all=new Set([...base,...m.keys()]);return [...all].sort((a,b)=>String(a).localeCompare(String(b))).map(v=>({v,s:ld?(m.get(v)?m.get(v).toLocaleString('en-US')+' мөр':'—'):'',d:ld&&!m.get(v)}))};
   SLO.o.grp=mk(B.grp,x=>x.grp);SLO.o.sup=mk(B.sup,x=>x.sup);SLO.o.br=mk(B.br,x=>x.brand);
-  const pm=cnt(x=>x.part),pn=new Map((PART||[]).map(p=>[String(p[1]),String(p[0])]));[...pm.keys()].forEach(n=>{if(!pn.has(n))pn.set(n,'')});
+  const pm=cnt(x=>x.part),pn=new Map((partList()||[]).map(p=>[String(p[1]),String(p[0])]));[...pm.keys()].forEach(n=>{if(!pn.has(n))pn.set(n,'')});
   SLO.o.pt=[...pn].sort((a,b)=>a[0].localeCompare(b[0])).map(([n,c])=>({v:n,s:(c?'код '+c:'')+(ld?(c?' · ':'')+(pm.get(n)||0)+' мөр':''),d:ld&&!pm.get(n)}));
   const km=cnt(x=>x.cashier),kn=new Set([...(users||[]).map(u=>u&&u.name).filter(Boolean),...km.keys()]);
   SLO.o.ks=[...kn].sort((a,b)=>a.localeCompare(b)).map(v=>{const u=(users||[]).find(x=>x&&x.name===v);return {v,s:[(u&&u.stores||[]).map(st=>slStN(st)).join(', '),ld?(km.get(v)||0)+' мөр':''].filter(Boolean).join(' · '),d:ld&&!km.get(v)}});
   const im=cnt(x=>x.code),seen=new Set(),it=[];SL.lines.forEach(x=>{if(!seen.has(x.code)){seen.add(x.code);it.push({v:x.code,l:x.name,s:im.get(x.code)+' мөр'})}});
   if(PCAT)PCAT.forEach(r=>{if(!seen.has(r[0])){seen.add(r[0]);it.push({v:r[0],l:r[2],s:ld?'—':'',d:ld})}});SLO.o.it=it;
   const cc=$('slCa').value,cm=cnt(x=>x.cat);$('slCa').innerHTML='<option value="">Бүгд</option>'+[...new Set([...B.ca,...cm.keys()])].sort((a,b)=>a.localeCompare(b)).map(v=>'<option value="'+esc(v)+'">'+esc(v)+(ld?' ('+(cm.get(v)||0)+')':'')+'</option>').join('');$('slCa').value=cc}
+const slOK=()=>[PCAT?PCAT.length:0,(partList()||[]).length,(users||[]).length,SL.key,SL.lines.length].join('|');
+const slO=k=>{if(SLO.k!==slOK())slOpts();return SLO.o[k]};
+async function slEnsure(){if(!PCAT)await loadPCat();slOpts()}
 function slInit(){if(!$('slA').value){$('slA').value=$('slB').value=iso(new Date());
   $('slSt').innerHTML='<option value="">Бүгд</option>'+['FC','DR','NS','ON','YV'].map(k=>'<option value="'+k+'">'+esc(slStN(k))+'</option>').join('');slPend();
-  const on=()=>slDraw();[['slPt','pt'],['slKs','ks'],['slIt','it'],['slGr','grp'],['slSu','sup'],['slBr','br']].forEach(([id,k])=>SLO['c_'+id]=combo(id,()=>SLO.o[k],on))}
+  const on=()=>slDraw();[['slPt','pt'],['slKs','ks'],['slIt','it'],['slGr','grp'],['slSu','sup'],['slBr','br']].forEach(([id,k])=>SLO['c_'+id]=combo(id,()=>slO(k),on,slEnsure))}
   slOpts();if(!PCAT)loadPCat().then(()=>{slOpts()}).catch(()=>{})}
 function slPend(){$('slGo').classList.toggle('pend',$('slA').value+'|'+$('slB').value!==SL.key)}
 async function slLoad(){const A=$('slA').value,B=$('slB').value>=$('slA').value?$('slB').value:$('slA').value;if(!A)return;
