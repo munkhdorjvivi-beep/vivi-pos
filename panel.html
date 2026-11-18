@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="11.5">
+<meta name="vivi-ver" content="11.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -553,7 +553,7 @@ $('lgG').onclick=()=>{$('lm').textContent='Google-ээр нэвтэрч байн
 const PERM_TABS=[['home','Нүүр','дэлгүүрийн борлуулалт, нийлүүлэгч'],['req','Хүсэлт','буцаалт, солилт, төлбөр засах зөвшөөрөх; буцаалтын маягт шалгах'],['chat','Чат','кассуудтай чатлах'],['rep','Борлуулалтын тайлан','тайлан, Excel, SaleMany'],['rcpt','Баримтууд','баримт харах, устгах, сэргээх'],['cash','Ээлж, бэлэн мөнгө','ээлж, кассчны үйлдэл'],['stock','Агуулах, хөдөлгөөн','үлдэгдэл, орлого, шилжүүлэг, зарлага'],['items','Бараа, үнэ, шошго','бараа бүртгэх, үнэ, каталог оруулах'],['promo','Урамшуулал','урамшуулал үүсгэх, засах'],['vch','Ваучер','ваучер бүртгэх, үлдэгдэл засах'],['till','Касс, ажилтан','кассчин, ПИН, касс, аян, буцаалтын тохиргоо'],['bonus','💰 Кассын урамшуулал','«Касс, ажилтан» цэс дотор: кассчны баримтын урамшуулал тооцох, дүн тохируулах'],['guide','📜 Удирдамж (бичих)','урамшууллын удирдамж бичих, нийтлэх — унших, танилцахыг бүх хэрэглэгч хийнэ'],['set','Тохиргоо','харилцагч, нөөц хуулбар']];
 /* Дэд цэсийн эрх: үндсэн цэсийг сонговол бүх дэд цэс; эсвэл зөвхөн сонгосон дэд цэс */
 const PERM_SUB={
-  rep:[['rep.sum','📊 Тойм'],['rcpt','🧾 Баримтууд — харах, устгах, сэргээх'],['cash','💵 Ээлж, бэлэн мөнгө, Z тайлан, кассчны үйлдэл'],['rep.fc','📈 Өнөөдрийн таамаг (борлуулалтын урьдчилсан тооцоо)'],['rep.hour','⏱ Цагаар харьцуулах'],['rep.acc','📋 Борлуулалтын жагсаалт, Smart тайлан, SaleMany, нягтлангийн тохиргоо'],['rep.disc','🔍 Хөнгөлөлтийн хяналт'],['rep.hist','📥 Smart-ын түүх'],['rep.trip','🚐 Явуулын касс']],
+  rep:[['rep.sum','📊 Тойм'],['rep.fc','📈 Өнөөдрийн таамаг (борлуулалтын урьдчилсан тооцоо)'],['rep.hour','⏱ Цагаар харьцуулах'],['rcpt','🧾 Баримтууд — харах, устгах, сэргээх'],['cash','💵 Ээлж, бэлэн мөнгө, Z тайлан, кассчны үйлдэл'],['rep.acc','📋 Борлуулалтын жагсаалт, Smart тайлан, SaleMany, нягтлангийн тохиргоо'],['rep.disc','🔍 Хөнгөлөлтийн хяналт'],['rep.hist','📥 Smart-ын түүх'],['rep.trip','🚐 Явуулын касс']],
   stock:[['stock.bal','📦 Үлдэгдэл, хасах үлдэгдэл, ⏳ насжилт'],['stock.in','⬇ Орлого'],['stock.move','⇄ Шилжүүлэг'],['stock.out','⬆ Зарлага'],['stock.cnt','✓ Тооллого (кассаар)'],
     ['wh','🚚 Агуулах (LPP) — скан, илгээмж, хүргэлт, шошго, бүтээмж'],['whedit','🚚 Агуулах (LPP) — илгээмж засах, цуцлах, хүргэлт устгах'],
     ['rcv_fc','📥 Хүлээн авалт — Food city'],['rcv_dr','📥 Хүлээн авалт — Драгон'],['rcv_ns','📥 Хүлээн авалт — Нийслэл'],['rcv_ht','📥 Хүлээн авалт — Бөөн'],
@@ -1041,7 +1041,7 @@ const TAB_RED={rcpt:'rcpt',cash:'sh'};
 const TABK=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab);
 /* ==== Дэд цэс: үндсэн цэс бүрийн доорх хуудсууд ==== */
 const SUBS={stock:[['bal','📦 Үлдэгдэл'],['age','⏳ Насжилт'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['lpp','🚚 Агуулах (LPP)',()=>can('wh')||can('whedit')],['rcv','📥 Хүлээн авалт',()=>can('wh')||can('whedit')||rcvAnyP()],['zinv','🗂 Тооллого (бүсээр)',()=>can('inv')||can('invadm')],['whset','⚙ LPP тохиргоо',()=>!!(ME&&ME.admin)],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
-  rep:[['sum','📊 Тойм'],['acc','📋 Борлуулалтын жагсаалт'],['rcpt','🧾 Баримтууд'],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
+  rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','📋 Борлуулалтын жагсаалт'],['rcpt','🧾 Баримтууд'],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
 let CURTAB='';
 const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'vivipanel_sub_'+t)}catch(e){return ''}};
 function subMark(t,k){if(CURTAB!==t)return;document.querySelectorAll('#subtabs [data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===k||(t==='stock'&&k==='mov'&&false)))}
@@ -2210,11 +2210,14 @@ function fcDraw(){const box=$('fcKpi');if(!box||!FC.loaded||!FC.ready)return;con
   const cum=new Array(FC_N).fill(0),cy=new Array(FC_N).fill(0),cw=new Array(FC_N).fill(0),pc=new Array(FC_N).fill(0);
   rows.forEach(r=>{const x=today[r.st],y=(FC.prof[yd]||{})[r.st],w=(FC.prof[lw]||{})[r.st],M=fcModel(r.st,t);for(let i=0;i<FC_N;i++){if(x)cum[i]+=x.c[i];if(y)cy[i]+=y.c[i];if(w)cw[i]+=w.c[i];
     pc[i]+=i<=slot?(x?x.c[i]:0):r.S+(r.F-r.S)*(M&&M.curve[slot]<1?(M.curve[i]-M.curve[slot])/(1-M.curve[slot]):1)}});
-  const s0=48,s1=138,Wd=900,Hh=230,Pd=44,mx=Math.max(1,FF*(1+hwT),cy[FC_N-1],cw[FC_N-1]),X=i=>Pd+(i-s0)/(s1-s0)*(Wd-Pd-10),Yv=v=>Hh-22-v/mx*(Hh-44);
+  // тэнхлэг: дэлгүүрүүдийн бодит ажиллах цагаар (борлуулалтын эхний/сүүлийн 10 мин-аас 1 цаг өмнө/30 мин дараа)
+  const fst=a=>{for(let i=0;i<FC_N;i++)if(a[i]>0)return i;return null},lst=a=>{for(let i=FC_N-1;i>0;i--)if(a[i]>a[i-1])return i;return null};
+  const ff=[cy,cw,cum].map(fst).filter(v=>v!=null),ll=[cy,cw,cum].map(lst).filter(v=>v!=null).concat([slot]);
+  const s0=ff.length?Math.max(0,Math.floor((Math.min(...ff)-6)/6)*6):54,s1=Math.min(FC_N-1,ll.length?Math.ceil((Math.max(...ll)+3)/6)*6:132),Wd=900,Hh=230,Pd=44,mx=Math.max(1,FF*(1+hwT),cy[FC_N-1],cw[FC_N-1]),X=i=>Pd+(i-s0)/(s1-s0)*(Wd-Pd-10),Yv=v=>Hh-22-v/mx*(Hh-44);
   const line=(a,i0,i1,col,w,dash)=>'<polyline fill="none" stroke="'+col+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="6 5"':'')+' points="'+Array.from({length:i1-i0+1},(_,k)=>X(i0+k).toFixed(1)+','+Yv(a[i0+k]).toFixed(1)).join(' ')+'"/>';
   $('fcChart').innerHTML='<svg viewBox="0 0 '+Wd+' '+Hh+'" style="width:100%;max-width:'+Wd+'px;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px">'+
     [0,.5,1].map(f=>'<line x1="'+Pd+'" x2="'+(Wd-10)+'" y1="'+Yv(mx*f)+'" y2="'+Yv(mx*f)+'" stroke="#eee"/><text x="4" y="'+(Yv(mx*f)+4)+'" font-size="10" fill="#888">'+Math.round(mx*f/1e5)/10+'M</text>').join('')+
-    Array.from({length:16},(_,k)=>8+k).map(h=>'<text x="'+(X(h*6)-6)+'" y="'+(Hh-6)+'" font-size="10" fill="#888">'+h+'</text>').join('')+
+    Array.from({length:Math.floor(s1/6)-Math.ceil(s0/6)+1},(_,k)=>Math.ceil(s0/6)+k).map(h=>'<text x="'+(X(h*6)-6)+'" y="'+(Hh-6)+'" font-size="10" fill="#888">'+h+'</text>').join('')+
     '<rect x="'+X(s1)+'" y="'+Yv(FF*(1+hwT))+'" width="8" height="'+Math.max(2,Yv(FF*(1-hwT))-Yv(FF*(1+hwT)))+'" fill="#c8102e33"/>'+
     line(cw,s0,s1,'#b0b8c1',1.5)+line(cy,s0,s1,'#1f6feb',2)+line(pc,Math.min(slot,s1),s1,'#c8102e',2,1)+line(cum,s0,Math.max(s0,Math.min(slot,s1)),'#c8102e',3)+
     '<text x="'+(Pd+6)+'" y="14" font-size="11" fill="#c8102e">■ өнөөдөр (тасархай = таамаг)</text><text x="'+(Pd+230)+'" y="14" font-size="11" fill="#1f6feb">■ өчигдөр</text><text x="'+(Pd+340)+'" y="14" font-size="11" fill="#8a96a3">■ өнгөрсөн 7 хоногийн мөн гараг</text></svg>';
