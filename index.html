@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.7">
+<meta name="vivi-ver" content="6.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -128,7 +128,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
 <body>
 <div id="top" class="hide">
   <b>VIVI</b><span class="ver">POS <span class="appver"></span></span><span class="tag" id="tStore"></span><span class="tag" id="tCash"></span><span class="tag" id="tShift"></span>
-  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
+  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="kfBtn" class="tag chatb hide" title="Нягтлан буцаасан / татгалзсан шилжүүлэг (үйлчлүүлэгчид мөнгө буцаах)" style="background:#c1121f;color:#fff">⚠ Kontrola<span id="kfN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
 </div>
 
 <div id="login">
@@ -412,7 +412,7 @@ async function cloudSync(){
 function cloudSoon(){clearTimeout(cloudSoon.h);cloudSoon.h=setTimeout(()=>{fb.err='';cloudSync()},400);cloudStatus()}
 function shiftOut(sh){shiftq=shiftq.filter(q=>q.id!==sh.id);shiftq.push(JSON.parse(JSON.stringify(sh)));store.set('shiftq',shiftq);cloudSoon()}
 function cloudListen(){
-  if(cloudListen.on)return;cloudListen.on=true;movListen();itxListen();devListen();chatListen();cntListen();gdListen();
+  if(cloudListen.on)return;cloudListen.on=true;kfListen();movListen();itxListen();devListen();chatListen();cntListen();gdListen();
   // Явуулын кассын одоогийн аян (самбараас тохируулна)
   fb.db.collection('pos_config').doc('trip').onSnapshot(d=>{const v=d.exists?String(d.data().name||'').trim():'';if(v!==TRIP){TRIP=v;store.set('trip',v);if(S.user)header()}},()=>{});
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
@@ -1687,6 +1687,29 @@ function chatListen(){if(chatListen.u||!(fb.ready&&fb.user))return;const st=curA
     const fresh=chatSeen?L.filter(m=>m.from==='panel'&&!chatSeen.has(m.id)):[];chatSeen=new Set(L.map(m=>m.id));chatMsgs=L;
     if(fresh.length){CHAT.beep();if(!chatOpen())flash('💬 Оффисоос шинэ мессеж: '+(fresh[fresh.length-1].text||'хавсралт').slice(0,60))}
     if(chatOpen()){chatDraw();chatRead()}chatBadge()},e=>{$('chatSt').textContent='Чат: '+(e.code||e)})}
+/* ---- VIVI Kontrola: нягтлан дансаар буцаах хүсэлтийг буцаасан/татгалзсан бол касс дээр мэдэгдэнэ; кассчин дансыг засаад дахин илгээнэ ---- */
+let KF=[];
+function kfListen(){if(kfListen.u||!(fb.ready&&fb.user))return;const st=curAcc();if(!st)return;
+  kfListen.u=fb.db.collection('pos_fin').where('store','==',st).onSnapshot(q=>{const old=new Set(KF.map(f=>f._id+f.st));
+    KF=q.docs.map(d=>({...d.data(),_id:d.id})).filter(f=>f.store===st&&((f.st==='returned'&&!f.queue)||((f.st==='rejected'||f.st==='cancel')&&!f.ackTill))).sort((a,b)=>(a.iso||'')<(b.iso||'')?1:-1);
+    if(KF.some(f=>!old.has(f._id+f.st))&&kfListen.seen){try{CHAT.beep()}catch(e){}flash('⚠ Нягтлан үйлчлүүлэгчийн мөнгө буцаах хүсэлтийг '+(KF[0].st==='returned'?'буцаасан — дансыг засна уу':'татгалзсан')+' («⚠ Kontrola» товч)')}
+    kfListen.seen=true;$('kfBtn').classList.toggle('hide',!KF.length);$('kfN').textContent=KF.length;if($('kfList'))kfDraw()},()=>{})}
+function kfDraw(){const box=$('kfList');if(!box)return;if(!KF.length){box.innerHTML='<div class="small">Засах зүйл алга ✓</div>';return}
+  box.innerHTML=KF.map((f,i)=>{const c=f.cust||{},ret=f.st==='returned';return '<div style="border:1px solid '+(ret?'#f0b429':'#e5a3a8')+';border-radius:10px;padding:10px 12px;margin-bottom:10px;background:'+(ret?'#fffbea':'#fff5f5')+'">'+
+    '<div><span style="font-weight:700">'+esc(f.saleId||'')+'</span> · '+esc(String(f.date||''))+' · <span style="font-weight:700">'+fmt(f.amount||0)+' ₮</span> · '+(f.kind==='exchange'?'солилтын зөрүү':'буцаалт')+'</div>'+
+    '<div class="small">Үйлчлүүлэгч: '+esc([c.name,c.phone].filter(Boolean).join(' · '))+' · одоогийн данс: '+esc([c.bank,c.acct,c.holder].filter(Boolean).join(' · '))+'</div>'+
+    '<div style="margin:6px 0"><span style="font-weight:700">'+(ret?'↩ Нягтлан буцаасан':'✗ Нягтлан татгалзсан')+':</span> '+esc(f.comment||'(тайлбаргүй)')+'</div>'+
+    (ret?'<div class="two" style="grid-template-columns:1fr 1fr"><div><label>Банк *</label><select id="kfB'+i+'">'+MN_BANKS.map(b=>'<option'+(b===c.bank?' selected':'')+'>'+b+'</option>').join('')+'</select></div><div><label>Дансны дугаар *</label><input id="kfA'+i+'" inputmode="numeric" value="'+esc(c.acct||'')+'"></div></div><label>Дансны эзэмшигчийн нэр *</label><input id="kfH'+i+'" value="'+esc(c.holder||'')+'">'+
+      '<div class="rowbtn" style="margin-top:8px"><span class="small" id="kfM'+i+'" style="color:var(--red);flex:1"></span><button class="pri" data-kf="'+i+'">Засаад дахин илгээх</button></div>'
+     :'<div class="small">Үйлчлүүлэгчид мэдэгдэж, шаардлагатай бол оффистой (💬 Чат) холбогдоно уу.</div><div class="rowbtn" style="margin-top:8px"><button data-kfok="'+i+'">Ойлголоо</button></div>')+'</div>'}).join('')}
+function openKf(){openModal('<h2>⚠ Kontrola — үйлчлүүлэгчид мөнгө буцаах</h2><div class="small" style="margin-bottom:8px">Нягтлан шилжүүлэх хүсэлтийг буцаасан эсвэл татгалзсан. Үйлчлүүлэгчтэй холбогдож зөв дансыг асуугаад засна уу — хүсэлт нягтланд дахин очно.</div><div id="kfList"></div><div class="rowbtn"><button id="kfX">Хаах</button></div>');
+  kfDraw();$('kfX').onclick=closeModal;
+  $('kfList').onclick=async e=>{const b=e.target.closest('[data-kf],[data-kfok]');if(!b)return;const i=+(b.dataset.kf||b.dataset.kfok),f=KF[i];if(!f)return;const ref=fb.db.collection('pos_fin').doc(f._id),t=now().toISOString(),who=(S.user&&S.user.name||'')+' (касс '+(S.user&&S.user.reg||'')+')';
+    if(b.dataset.kfok!=null){b.disabled=true;try{await ref.update({ackTill:true,ackBy:who,ackAt:t})}catch(er){b.disabled=false;flash('Хадгалсангүй: '+(er.code||er))}return}
+    const acct=($('kfA'+i).value||'').replace(/[\s-]/g,'').toUpperCase(),holder=$('kfH'+i).value.trim(),bank=$('kfB'+i).value,m=$('kfM'+i);
+    if(!/^(\d{8,20}|MN\d{18})$/.test(acct)){m.textContent='Дансны дугаар буруу — 8–20 оронтой тоо эсвэл MN IBAN';return}if(holder.length<3){m.textContent='Эзэмшигчийн нэрийг бичнэ үү';return}
+    b.disabled=true;try{await ref.update({queue:true,qBy:who,qAt:t,fix:{bank,acct,holder}});flash('✓ Дансыг засаж нягтланд дахин илгээлээ (≤20 мин)')}catch(er){b.disabled=false;m.textContent='Илгээсэнгүй: '+(er.code||er)}}}
+$('kfBtn').onclick=()=>{if(!(fb.ready&&fb.user)){flash('Үүлэнд холбогдсон байх шаардлагатай');return}openKf()};
 const chatOpen=()=>!chatBox.classList.contains('hide');
 function chatBadge(){const n=chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).length;$('chatN').textContent=n;$('chatN').classList.toggle('hide',!n)}
 function chatDraw(){CHAT.draw($('chatThread'),curAcc(),chatMsgs,'till')}
