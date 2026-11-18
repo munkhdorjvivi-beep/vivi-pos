@@ -7853,10 +7853,10 @@ function lbPrint(){
   const tr = rot === 90 ? `transform:translateX(${t.h}mm) rotate(90deg);` : rot === 270 ? `transform:translateY(${t.w}mm) rotate(-90deg);` : '';
   const w = window.open('', '_blank'); if (!w){ alert('Цонх нээгдсэнгүй — хөтчийн popup зөвшөөрнө үү.'); return; }
   w.document.open(); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Шошго · ${esc(t.name)} · ${L.length} ш</title><style>
-    @page{size:${PW}mm ${PH}mm;margin:0} html,body{margin:0;padding:0} .pg{position:relative;width:${PW}mm;height:${PH}mm;overflow:hidden;page-break-after:always;break-after:page}
+    @page{${PW > PH ? '' : `size:${PW}mm ${PH}mm;`}margin:0} html,body{margin:0;padding:0} .pg{position:relative;width:${PW}mm;height:${PH}mm;overflow:hidden;page-break-after:always;break-after:page}
     .pg:last-child{page-break-after:auto;break-after:auto} .in{position:absolute;left:${+t.ox || 0}mm;top:${+t.oy || 0}mm;transform-origin:top left;${tr}}
     .bar{font:14px Arial;padding:8px;background:#ffd;border-bottom:1px solid #cc9} @media print{.bar{display:none}} *{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
-    <div class="bar"><b>${L.length} шошго · ${esc(t.name)} · цаас ${PW}×${PH} мм.</b> Хэвлэх цонхонд: Destination — <b>D520 Printer</b> · More settings → Paper size — <b>${PW}×${PH} мм</b> (${PW < PH ? 'Portrait' : 'Landscape'}) · Margins — <b>None</b> · Scale — <b>Default (100)</b> · <b>Headers and footers — тэмдэглэгээг арилгана</b>. <button onclick="print()">🖨 Хэвлэх</button></div>
+    <div class="bar"><b>${L.length} шошго · ${esc(t.name)} · цаас ${PW}×${PH} мм.</b> Хэвлэх цонхонд: Destination — <b>D520 Printer</b> · More settings → Paper size — <b>${PW}×${PH} мм</b> · Layout — <b>Portrait</b> · Margins — <b>None</b> · Scale — <b>Default (100)</b> · <b>Headers and footers — тэмдэглэгээг арилгана</b>. <button onclick="print()">🖨 Хэвлэх</button></div>
     ${L.map(it => `<div class="pg"><div class="in">${lbLabelHTML(t, it, false)}</div></div>`).join('')}</body></html>`);
   w.document.close(); setTimeout(() => { try{ w.focus(); w.print(); }catch(e){} }, 400);
 }
