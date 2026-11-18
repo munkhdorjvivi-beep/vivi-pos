@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="11.6">
+<meta name="vivi-ver" content="11.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -55,7 +55,10 @@ main{padding:14px 16px;display:grid;gap:12px;max-width:1200px;margin:0 auto}
 .spin{width:34px;height:34px;border-radius:50%;border:4px solid #f3d3d6;border-top-color:var(--red);animation:vspin .75s linear infinite;flex:0 0 auto}@keyframes vspin{to{transform:rotate(360deg)}}
 .dgo.pend{background:var(--red);color:#fff;border-color:var(--red);animation:vpulse 1.4s ease-in-out infinite}@keyframes vpulse{50%{box-shadow:0 0 0 5px rgba(193,18,31,.18)}}
 .slf{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 14px;padding:10px 12px;background:var(--soft);border:1px solid var(--line);border-radius:12px}
-.slf label.f{margin:6px 0 3px}.slf .two{display:flex;gap:6px;align-items:center}.slf .two .inp{min-width:0;flex:1;padding:8px 6px}.slf .nm{font-size:12px;color:#7b8494;min-height:16px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.drng input{font:inherit;min-height:36px;border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fff}
+.slf label.f{margin:6px 0 3px}.cb{position:relative}.cb .inp{padding-right:58px}.cb .cbb{position:absolute;top:5px;bottom:5px;border:0;background:none;cursor:pointer;color:#5b6472;font-size:13px;width:26px;border-radius:6px}.cb .cbb:hover{background:var(--soft)}.cb .ar{right:4px}.cb .xx{right:30px;font-size:16px}.cb .xx.hide{display:none}
+.cbp{position:absolute;z-index:60;left:0;min-width:100%;width:max-content;max-width:480px;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px rgba(21,24,29,.18);max-height:330px;overflow:auto;padding:4px}
+.cbp .o{padding:7px 10px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;gap:14px;font-size:14px;line-height:1.25}.cbp .o:hover,.cbp .o.act{background:#fdecee}.cbp .o b{font-weight:600}.cbp .o small{color:#8a93a0;white-space:nowrap}.cbp .o.dim{color:#9aa3ae}.cbp .more{padding:6px 10px;font-size:12px;color:#8a93a0;border-top:1px solid var(--line);margin-top:4px}
+.slf .two{display:flex;gap:6px;align-items:center}.slf .two .inp{min-width:0;flex:1;padding:8px 6px}.slf .nm{font-size:12px;color:#7b8494;min-height:16px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.drng input{font:inherit;min-height:36px;border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fff}
 .xt th,.xd th{padding:0}.xinfo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:2px 0 6px}.xfb{font:inherit;font-size:11px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);background:none;border:0;padding:8px 8px;cursor:pointer;width:100%;text-align:inherit;white-space:nowrap}
 .xfb span{opacity:.6;margin-left:2px}.xfb:hover{background:#eef}.xfb.on{color:var(--blue);background:#e1edfa}.xfb.on span,.xfb.srt span{opacity:1}
 .xt tfoot td,.xd tfoot td{position:sticky;bottom:0;background:var(--soft);border-top:2px solid var(--ink)}
@@ -186,17 +189,17 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div style="margin-top:6px"><button id="hcX" class="btn">⬇ Excel</button></div></div>
   <div data-rsub="trip" class="card"><h2>Явуулын касс — аянаар</h2><div class="small" style="margin:-4px 0 8px">Дээрх огнооны хугацаанд хийгдсэн Явуулын кассын борлуулалт аян бүрээр. Бүх аяныг харьцуулах бол хугацааг уртаар сонгоно.</div><div class="scroll" id="cTrip" style="max-height:360px;overflow:auto"></div></div>
   <div data-rsub="acc" class="card" id="slCard"><h2>📋 Борлуулалтын жагсаалт</h2>
-    <div class="small" style="margin:-4px 0 8px">Шүүлтийн нөхцөлөө сонгоод <b>Харах</b> — сонгосон хугацааны баримтуудыг сангаас уншина. Бусад шүүлтүүр шууд үйлчилнэ. <b>Excel</b> нь Smart-ын «Борлуулалтын жагсаалт» маягтаар (баримтаар бүлэглэсэн) зөвхөн шүүсэн мөрүүдийг татна.</div>
+    <div class="small" style="margin:-4px 0 8px">Огноогоо сонгоод <b>Харах</b> — сонгосон хугацааны баримтуудыг сангаас уншина. Бусад талбарын ▾ сумыг дарж жагсаалтаас сонгоно (эсвэл бичиж хайна) — шууд үйлчилнэ. <b>Excel</b> нь Smart-ын «Борлуулалтын жагсаалт» маягтаар (баримтаар бүлэглэсэн) зөвхөн шүүсэн мөрүүдийг татна.</div>
     <div class="slf">
       <div><label class="f">Огноо</label><div class="two"><input type="date" id="slA" class="inp"><span>—</span><input type="date" id="slB" class="inp"></div></div>
       <div><label class="f">Байршил</label><select id="slSt" class="inp"><option value="">Бүгд</option></select></div>
-      <div><label class="f">Касс</label><select id="slKs" class="inp"><option value="">Бүгд</option></select></div>
-      <div><label class="f">Харилцагч</label><input id="slPt" class="inp" list="slPtL" placeholder="нэр…"><datalist id="slPtL"></datalist></div>
-      <div><label class="f">Бараа</label><input id="slIt" class="inp" list="slItL" placeholder="код эсвэл нэр…"><datalist id="slItL"></datalist><div class="nm" id="slItN"></div></div>
-      <div><label class="f">Барааны бүлэг</label><input id="slGr" class="inp" list="slGrL" placeholder="бүлэг…"><datalist id="slGrL"></datalist></div>
-      <div><label class="f">Бэлтгэн нийлүүлэгч</label><input id="slSu" class="inp" list="slSuL" placeholder="нэр…"><datalist id="slSuL"></datalist><div class="nm" id="slSuN"></div></div>
+      <div><label class="f">Касс</label><input id="slKs" class="inp" placeholder="Бүгд — кассчин…"></div>
+      <div><label class="f">Харилцагч</label><input id="slPt" class="inp" placeholder="Бүгд — нэр, код…"></div>
+      <div><label class="f">Бараа</label><input id="slIt" class="inp" placeholder="Бүгд — код эсвэл нэр…"><div class="nm" id="slItN"></div></div>
+      <div><label class="f">Барааны бүлэг</label><input id="slGr" class="inp" placeholder="Бүгд — бүлэг…"></div>
+      <div><label class="f">Бэлтгэн нийлүүлэгч</label><input id="slSu" class="inp" placeholder="Бүгд — нийлүүлэгч…"><div class="nm" id="slSuN"></div></div>
       <div><label class="f">Ангилал</label><select id="slCa" class="inp"><option value="">Бүгд</option></select></div>
-      <div><label class="f">Брэнд</label><input id="slBr" class="inp" list="slBrL" placeholder="брэнд…"><datalist id="slBrL"></datalist></div>
+      <div><label class="f">Брэнд</label><input id="slBr" class="inp" placeholder="Бүгд — брэнд…"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><button id="slGo" class="btn pri dgo">Харах</button><button id="slXl" class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)">Excel татах (Smart маягт)</button><button id="slClr" class="btn">Шүүлтүүр цэвэрлэх</button><span id="slMsg" class="small"></span></div>
     <div class="kpi" id="slKpi" style="margin-top:8px"></div><div id="slTbl" class="scroll" style="margin-top:8px;max-height:560px;overflow:auto"></div></div>
@@ -628,26 +631,53 @@ let SL={key:'',lines:[],rows:[]};
 const slBrand=n=>{const w=String(n||'').trim().split(/\s+/)[0]||'';return /^[A-Za-zА-Яа-яЁёӨөҮү]{2,}$/.test(w)?w.toUpperCase():''};
 function slDeptName(l,st){try{const d=smDeptOf(l,st),C=smCfg;if(d&&d.code){const nm=Object.keys(C.deptCodes||{}).find(n=>C.deptCodes[n]===d.code&&smartLoc(n)===st);if(nm)return nm}}catch(e){}return st==='ON'?'Онлайн дэлгүүр':LOC[st]||st||''}
 const slStN=st=>st==='ON'?'Онлайн дэлгүүр':LOC[st]||st||'';
-function slInit(){if($('slA').value)return;$('slA').value=$('slB').value=iso(new Date());
-  $('slSt').innerHTML='<option value="">Бүгд</option>'+['FC','DR','NS','ON','YV'].map(k=>'<option value="'+k+'">'+esc(slStN(k))+'</option>').join('');slPend()}
+/* Жагсаалттай сонголтын талбар (Excel/Smart шиг): ▾ дарахад бүх утга, бичихэд шүүнэ, × цэвэрлэнэ */
+function combo(id,src,onPick){const inp=$(id);if(inp.closest('.cb'))return;const w=document.createElement('div');w.className='cb';inp.parentNode.insertBefore(w,inp);w.appendChild(inp);inp.autocomplete='off';
+  const mk=(c,t,ti)=>{const b=document.createElement('button');b.type='button';b.className='cbb '+c;b.textContent=t;b.title=ti;w.appendChild(b);return b};
+  const xx=mk('xx','×','Цэвэрлэх'),ar=mk('ar','▾','Жагсаалт'),pan=document.createElement('div');pan.className='cbp';pan.hidden=true;w.appendChild(pan);
+  let full=false,act=-1,shown=[];const lo=v=>String(v==null?'':v).toLowerCase(),MAX=400;
+  const sx=()=>xx.classList.toggle('hide',!inp.value);
+  function render(){const q=full?'':lo(inp.value.trim()),all=src()||[];const L=q?all.filter(o=>lo(o.v).includes(q)||lo(o.l).includes(q)):all;shown=L.slice(0,MAX);act=Math.min(act,shown.length-1);
+    pan.innerHTML=(shown.length?shown.map((o,i)=>'<div class="o'+(i===act?' act':'')+(o.d?' dim':'')+'" data-i="'+i+'"><span>'+(o.l&&o.l!==o.v?'<b>'+esc(o.v)+'</b> '+esc(o.l):esc(o.v))+'</span>'+(o.s?'<small>'+esc(o.s)+'</small>':'')+'</div>').join(''):'<div class="more">Олдсонгүй</div>')+(L.length>MAX?'<div class="more">… бас '+(L.length-MAX).toLocaleString('en-US')+' — бичиж хайна уу</div>':'')}
+  const open=f=>{full=!!f;act=-1;render();pan.hidden=false;const a=pan.querySelector('.o');pan.scrollTop=0},close=()=>{pan.hidden=true};
+  const pick=o=>{inp.value=o.v;close();sx();onPick()};
+  ar.onmousedown=e=>{e.preventDefault();if(pan.hidden){open(true);inp.focus()}else close()};
+  xx.onmousedown=e=>{e.preventDefault();inp.value='';sx();close();onPick()};
+  inp.addEventListener('focus',()=>open(!inp.value||true));inp.addEventListener('click',()=>{if(pan.hidden)open(true)});
+  inp.addEventListener('input',()=>{full=false;act=-1;render();pan.hidden=false;sx();clearTimeout(inp._t);inp._t=setTimeout(onPick,300)});
+  inp.addEventListener('keydown',e=>{if(pan.hidden&&e.key==='ArrowDown'){open(true);return}if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();act=Math.max(0,Math.min(shown.length-1,act+(e.key==='ArrowDown'?1:-1)));render();const el=pan.querySelector('.o.act');if(el)el.scrollIntoView({block:'nearest'})}
+    else if(e.key==='Enter'){e.preventDefault();if(act>=0&&shown[act])pick(shown[act]);else{close();onPick()}}else if(e.key==='Escape')close()});
+  pan.onmousedown=e=>{e.preventDefault();const o=e.target.closest('.o');if(o)pick(shown[+o.dataset.i])};
+  inp.addEventListener('blur',()=>setTimeout(close,120));sx();return {refresh:()=>{sx();if(!pan.hidden)render()}}}
+let SLO={cat:null,key:null,o:{}};
+function slCatOpts(){if(!PCAT||SLO.cat===PCAT)return;SLO.cat=PCAT;const g=new Set(),su=new Set(),br=new Set(),ca=new Set();
+  PCAT.forEach(r=>{if(r[6])g.add(r[6]);if(r[5])su.add(r[5]);const b=slBrand(r[2]);if(b)br.add(b);const c=catOf(r[2]).typ;if(c)ca.add(c)});SLO.base={grp:g,sup:su,br,ca}}
+function slOpts(){slCatOpts();const B=SLO.base||{grp:new Set(),sup:new Set(),br:new Set(),ca:new Set()},cnt=f=>{const m=new Map();SL.lines.forEach(x=>{const v=f(x);if(v)m.set(v,(m.get(v)||0)+1)});return m};
+  const ld=!!SL.key,mk=(base,f)=>{const m=cnt(f),all=new Set([...base,...m.keys()]);return [...all].sort((a,b)=>String(a).localeCompare(String(b))).map(v=>({v,s:ld?(m.get(v)?m.get(v).toLocaleString('en-US')+' мөр':'—'):'',d:ld&&!m.get(v)}))};
+  SLO.o.grp=mk(B.grp,x=>x.grp);SLO.o.sup=mk(B.sup,x=>x.sup);SLO.o.br=mk(B.br,x=>x.brand);
+  const pm=cnt(x=>x.part),pn=new Map((PART||[]).map(p=>[String(p[1]),String(p[0])]));[...pm.keys()].forEach(n=>{if(!pn.has(n))pn.set(n,'')});
+  SLO.o.pt=[...pn].sort((a,b)=>a[0].localeCompare(b[0])).map(([n,c])=>({v:n,s:(c?'код '+c:'')+(ld?(c?' · ':'')+(pm.get(n)||0)+' мөр':''),d:ld&&!pm.get(n)}));
+  const km=cnt(x=>x.cashier),kn=new Set([...(users||[]).map(u=>u&&u.name).filter(Boolean),...km.keys()]);
+  SLO.o.ks=[...kn].sort((a,b)=>a.localeCompare(b)).map(v=>{const u=(users||[]).find(x=>x&&x.name===v);return {v,s:[(u&&u.stores||[]).map(st=>slStN(st)).join(', '),ld?(km.get(v)||0)+' мөр':''].filter(Boolean).join(' · '),d:ld&&!km.get(v)}});
+  const im=cnt(x=>x.code),seen=new Set(),it=[];SL.lines.forEach(x=>{if(!seen.has(x.code)){seen.add(x.code);it.push({v:x.code,l:x.name,s:im.get(x.code)+' мөр'})}});
+  if(PCAT)PCAT.forEach(r=>{if(!seen.has(r[0])){seen.add(r[0]);it.push({v:r[0],l:r[2],s:ld?'—':'',d:ld})}});SLO.o.it=it;
+  const cc=$('slCa').value,cm=cnt(x=>x.cat);$('slCa').innerHTML='<option value="">Бүгд</option>'+[...new Set([...B.ca,...cm.keys()])].sort((a,b)=>a.localeCompare(b)).map(v=>'<option value="'+esc(v)+'">'+esc(v)+(ld?' ('+(cm.get(v)||0)+')':'')+'</option>').join('');$('slCa').value=cc}
+function slInit(){if(!$('slA').value){$('slA').value=$('slB').value=iso(new Date());
+  $('slSt').innerHTML='<option value="">Бүгд</option>'+['FC','DR','NS','ON','YV'].map(k=>'<option value="'+k+'">'+esc(slStN(k))+'</option>').join('');slPend();
+  const on=()=>slDraw();[['slPt','pt'],['slKs','ks'],['slIt','it'],['slGr','grp'],['slSu','sup'],['slBr','br']].forEach(([id,k])=>SLO['c_'+id]=combo(id,()=>SLO.o[k],on))}
+  slOpts();if(!PCAT)loadPCat().then(()=>{slOpts()}).catch(()=>{})}
 function slPend(){$('slGo').classList.toggle('pend',$('slA').value+'|'+$('slB').value!==SL.key)}
 async function slLoad(){const A=$('slA').value,B=$('slB').value>=$('slA').value?$('slB').value:$('slA').value;if(!A)return;
   await withBusy('Борлуулалтын жагсаалт ачаалж байна…',async()=>{await loadPCat().catch(()=>{});try{await loadDept()}catch(e){}
     const L=(await db.collection('pos_sales').where('date','>=',A.replace(/-/g,'/')).where('date','<=',B.replace(/-/g,'/')).get()).docs.map(d=>d.data()).filter(x=>(x.type==='sale'||x.type==='return')&&x.date>=A.replace(/-/g,'/')&&x.date<=B.replace(/-/g,'/')).sort((a,b)=>a.iso<b.iso?-1:1);
-    const out=[];L.forEach(sx=>{const pays=[...new Set((sx.payments||[]).map(p=>p.bank||p.form).filter(Boolean))].join(', '),part=[...new Set((sx.payments||[]).map(p=>p.partner).filter(Boolean))].join(', ')||(sx.cust&&sx.cust.name)||'',ret=sx.type==='return';
+    const out=[];L.forEach(sx=>{const pays=[...new Set((sx.payments||[]).map(p=>p.bank||p.form).filter(Boolean))].join(', '),part=[...new Set((sx.payments||[]).map(p=>p.partner).filter(Boolean))].join(', '),ret=sx.type==='return';
       (sx.lines||[]).forEach(l=>{const it=itRow(l.code)||{},name=l.code==='DELIVERY'?'Хүргэлт':(l.name||it.name||''),sup=l.sup||it.sup||'',grp=l.grp||it.grp||'',q=+l.qty||0,uc=costMap.has(l.code)?costMap.get(l.code):null;
         out.push({s:sx,code:l.code,name,sup,grp,brand:slBrand(name),cat:catOf(name).typ,st:sx.store,stN:sx.storeName||slStN(sx.store),ks:(sx.storeName||slStN(sx.store))+' · касс '+(sx.reg||'')+' · '+(sx.cashier||''),cashier:sx.cashier||'',part,pays,
           base:+l.base||0,unit:q?Math.round((+l.sum||0)/q):0,qty:ret?0:q,ret:ret?-q:0,sum:+l.sum||0,cost:uc==null?null:uc*q,dept:slDeptName({code:l.code,sup,grp,name},sx.store)})})});
     SL={key:A+'|'+B,lines:out};slOpts();slDraw();slPend()})}
-function slOpts(){const u=f=>[...new Set(SL.lines.map(f).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  const fill=(id,arr)=>$(id).innerHTML=arr.slice(0,3000).map(v=>'<option value="'+esc(v)+'">').join('');
-  fill('slPtL',u(x=>x.part));fill('slGrL',u(x=>x.grp));fill('slSuL',u(x=>x.sup));fill('slBrL',u(x=>x.brand));
-  const items=new Map();SL.lines.forEach(x=>items.set(x.code,x.name));$('slItL').innerHTML=[...items].slice(0,5000).map(([c,n])=>'<option value="'+esc(c)+'">'+esc(n)+'</option>').join('');
-  const cur=$('slKs').value;$('slKs').innerHTML='<option value="">Бүгд</option>'+u(x=>x.ks).map(v=>'<option'+(v===cur?' selected':'')+'>'+esc(v)+'</option>').join('');
-  const cc=$('slCa').value;$('slCa').innerHTML='<option value="">Бүгд</option>'+u(x=>x.cat).map(v=>'<option'+(v===cc?' selected':'')+'>'+esc(v)+'</option>').join('')}
-function slFilt(){const v=id=>$(id).value.trim().toLowerCase(),st=$('slSt').value,ks=$('slKs').value,pt=v('slPt'),it=v('slIt'),gr=v('slGr'),su=v('slSu'),ca=$('slCa').value,br=v('slBr');
+function slFilt(){const v=id=>$(id).value.trim().toLowerCase(),st=$('slSt').value,ks=v('slKs'),pt=v('slPt'),it=v('slIt'),gr=v('slGr'),su=v('slSu'),ca=$('slCa').value,br=v('slBr');
   const has=(a,b)=>!b||String(a||'').toLowerCase().includes(b);
-  return SL.lines.filter(x=>(!st||x.st===st)&&(!ks||x.ks===ks)&&has(x.part,pt)&&(!it||String(x.code).toLowerCase()===it||has(x.name,it))&&has(x.grp,gr)&&has(x.sup,su)&&(!ca||x.cat===ca)&&has(x.brand,br))}
+  return SL.lines.filter(x=>(!st||x.st===st)&&has(x.cashier,ks)&&has(x.part,pt)&&(!it||String(x.code).toLowerCase()===it||has(x.name,it))&&has(x.grp,gr)&&has(x.sup,su)&&(!ca||x.cat===ca)&&has(x.brand,br))}
 function slDraw(){if(!SL.key){$('slMsg').textContent='Хугацаагаа сонгоод «Харах» дарна уу';return}
   const it=$('slIt').value.trim(),f=SL.lines.find(x=>x.code===it);$('slItN').textContent=f?f.name:'';const su=$('slSu').value.trim();$('slSuN').textContent=su?SL.lines.filter(x=>x.sup&&x.sup.toLowerCase().includes(su.toLowerCase())).length+' мөр':'';
   const F=slFilt();SL.rows=F;const cc=can('cost'),rc=new Set(F.map(x=>x.s.uid||x.s.id)).size,T=k=>F.reduce((a,x)=>a+(+x[k]||0),0);
@@ -681,8 +711,8 @@ $('slGo').onclick=slLoad;
 // хүнд тайлангууд ачаалах үед спиннер
 [['zRun','Z тайлан ачаалж байна…'],['calcStock','Үлдэгдэл тооцоолж байна…'],['fcLoadHist','Түүхэн борлуулалт ачаалж байна…']].forEach(([n,t])=>{const f=window[n];if(typeof f==='function')window[n]=function(...a){return withBusy(t,()=>f.apply(this,a))}});$('slXl').onclick=slXlsx;
 ['slA','slB'].forEach(id=>$(id).onchange=slPend);
-['slSt','slKs','slCa'].forEach(id=>$(id).onchange=slDraw);['slPt','slIt','slGr','slSu','slBr'].forEach(id=>$(id).oninput=()=>{clearTimeout(slDraw.t);slDraw.t=setTimeout(slDraw,250)});
-$('slClr').onclick=()=>{['slSt','slKs','slCa'].forEach(id=>$(id).value='');['slPt','slIt','slGr','slSu','slBr'].forEach(id=>$(id).value='');slDraw()};
+['slSt','slCa'].forEach(id=>$(id).onchange=slDraw);
+$('slClr').onclick=()=>{['slSt','slCa'].forEach(id=>$(id).value='');['slPt','slKs','slIt','slGr','slSu','slBr'].forEach(id=>{$(id).value='';const c=SLO['c_'+id];if(c)c.refresh()});slDraw()};
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
 function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
