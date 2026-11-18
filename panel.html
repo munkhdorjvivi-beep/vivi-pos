@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="11.3">
+<meta name="vivi-ver" content="11.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -214,10 +214,11 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <div class="card" data-csub="sh"><h2>Ээлж, бэлэн мөнгө</h2><div class="scroll" id="cShift" style="max-height:420px;overflow:auto"></div>
     <h2 style="margin-top:14px">Бэлэн мөнгөний гүйлгээ (касст нэмсэн, кассаас гаргасан — банкинд тушаасан, зардал)</h2><div class="scroll" id="cCashOps" style="max-height:360px;overflow:auto"></div></div>
   <div class="card" data-csub="z" hidden><h2>🧾 Z тайлан — ээлж хаалтын архив</h2>
-    <div class="small" style="margin:-4px 0 8px">Касс бүр ээлж хаахдаа хэвлэдэг Z тайлан (ээлж, баримтын тоо, борлуулалт, төлбөрийн хэлбэр, бэлэн мөнгө, тоолсон, зөрүү). Хаасан огноогоор шүүнэ. Мөр бүрийн <b>🖨</b> — кассынх шиг 80 мм баримтаар дахин хэвлэнэ.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="zA" class="inp" style="width:auto"><span>—</span><input type="date" id="zB" class="inp" style="width:auto"><select id="zSt" class="inp" style="width:auto"></select>
+    <div class="small" style="margin:-4px 0 8px">Касс бүр ээлж хаахдаа хэвлэдэг Z тайлан (ээлж, баримтын тоо, борлуулалт, төлбөрийн хэлбэр, бэлэн мөнгө, тоолсон, зөрүү). <b>Хаагаагүй (нээлттэй) ээлж</b> улаанаар — борлуулалтыг нь баримтаас тооцно. Доор нь сонгосон өдрүүдийн <b>бүх борлуулалт ба Z-д орсон дүнгийн тулгалт</b> дэлгүүрээр. Мөр бүрийн <b>🖨</b> — кассынх шиг 80 мм баримтаар дахин хэвлэнэ.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="zA" class="inp" style="width:auto"><span>—</span><input type="date" id="zB" class="inp" style="width:auto"><select id="zSt" class="inp" style="width:auto"></select><select id="zBy" class="inp" style="width:auto"><option value="opened">Нээсэн огноогоор</option><option value="closed">Хаасан огноогоор</option></select>
       <button id="zGo" class="btn pri">Харах</button><button id="zXl" class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)">Excel татах</button><button id="zPrAll" class="btn">🖨 Хүснэгтийг хэвлэх (A4)</button><button id="zPrZ" class="btn">🖨 Шүүсэн бүх Z (80 мм)</button><span id="zMsg" class="small"></span></div>
-    <div class="kpi" id="zKpi" style="margin-top:8px"></div><div id="zTbl" class="scroll" style="margin-top:8px"></div></div>
+    <div class="kpi" id="zKpi" style="margin-top:8px"></div><div id="zTbl" class="scroll" style="margin-top:8px"></div>
+    <h3 style="margin:14px 0 4px;font-size:14px">Тулгалт: баримтын борлуулалт ↔ Z тайлан (дэлгүүрээр)</h3><div id="zRec" class="scroll"></div></div>
   <div class="card" data-csub="aud" hidden><h2>Хяналт: кассчны үйлдэл</h2><div class="scroll" id="cAud"></div></div>
 </section>
 <section class="pnl" data-panel="stock" hidden>
@@ -965,18 +966,29 @@ function csSub(k){document.querySelectorAll('section[data-panel="cash"] [data-cs
 /* ==== 🧾 Z тайлан: хаасан ээлжүүд (pos_shifts), огнооны хүрээгээр; Excel, A4 хүснэгт, 80 мм Z баримт ==== */
 const Z_KIND={deposit:'Банкинд тушаасан',expense:'Жижиг зардал',other:'Бусад гаргалт',change:'Задгай мөнгө нэмсэн',in_other:'Бусад орлого'};let ZL=[],ZP=[];
 function zInit(){if(!$('zA').value){$('zB').value=iso(new Date());$('zA').value=addD(iso(new Date()),-6)}if(!$('zSt').options.length)$('zSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+['FC','DR','NS','ON','YV'].map(k=>'<option value="'+k+'">'+esc((k==='ON'?'Онлайн дэлгүүр':LOC[k]||k))+'</option>').join('');if(!ZL.length)zRun()}
-async function zRun(){const A=$('zA').value,B=$('zB').value,st=$('zSt').value||gSt;if(!A||!B)return;$('zMsg').textContent='Ачаалж байна…';
-  try{const a=new Date(A+'T00:00:00').toISOString(),b=new Date(B+'T23:59:59.999').toISOString();
-    ZL=(await db.collection('pos_shifts').where('closed','>=',a).where('closed','<=',b).get()).docs.map(d=>d.data()).filter(h=>h.closed&&h.closed>=a&&h.closed<=b&&(!st||h.store===st)).sort((x,y)=>x.closed<y.closed?1:-1);
-    ZP=[...new Set(ZL.flatMap(h=>Object.keys(h.pays||{})))].sort();zDraw();$('zMsg').textContent=ZL.length+' ээлж'}
+let ZS=[];
+async function zRun(){const A=$('zA').value,B=$('zB').value,st=$('zSt').value||gSt,by=$('zBy').value||'opened';if(!A||!B)return;$('zMsg').textContent='Ачаалж байна…';
+  try{const a=new Date(A+'T00:00:00').toISOString(),b=new Date(B+'T23:59:59.999').toISOString(),M=new Map();
+    // нээсэн ба хаасан огноогоор хоёуланг нь ачаалж нэгтгэнэ (хаагаагүй ээлж ч орно)
+    (await db.collection('pos_shifts').where('opened','>=',new Date(new Date(a).getTime()-864e5).toISOString()).where('opened','<=',b).get()).docs.forEach(d=>{const h=d.data();M.set(h.id+'|'+(h.closed||''),h)});
+    (await db.collection('pos_shifts').where('closed','>=',a).where('closed','<=',b).get()).docs.forEach(d=>{const h=d.data();M.set(h.id+'|'+(h.closed||''),h)});
+    // хаагдаагүй ээлж: хэрэв ижил id-тай хаасан бичлэг байвал нээлттэйг хасна
+    const closedIds=new Set([...M.values()].filter(h=>h.closed).map(h=>h.id));
+    ZS=(await db.collection('pos_sales').where('date','>=',A.replace(/-/g,'/')).where('date','<=',B.replace(/-/g,'/')).get()).docs.map(d=>d.data()).filter(x=>x.date>=A.replace(/-/g,'/')&&x.date<=B.replace(/-/g,'/')&&(!st||x.store===st));
+    const live=id=>{const L=ZS.filter(x=>x.shift===id),pays={};L.forEach(x=>(x.payments||[]).forEach(p=>{const k=p.form+(p.bank?' · '+p.bank:'');pays[k]=(pays[k]||0)+p.amount}));
+      return {receipts:L.filter(x=>x.type==='sale').length,total:L.reduce((q,x)=>q+(x.total||0),0),pays,cashSales:L.reduce((q,x)=>q+(x.payments||[]).filter(p=>p.form==='Бэлнээр').reduce((y,p)=>y+p.amount,0),0),last:L.map(x=>x.iso).sort().pop()||''}};
+    ZL=[...M.values()].filter(h=>!st||h.store===st).filter(h=>h.closed||!closedIds.has(h.id)).map(h=>h.closed?h:{...h,...live(h.id),open:true})
+      .filter(h=>{const k=by==='closed'?h.closed:h.opened;return h.open?(h.opened<=b&&(h.opened>=a||h.total)):(k>=a&&k<=b)})
+      .sort((x,y)=>(x.open?1:0)-(y.open?1:0)||((y.closed||y.opened)>(x.closed||x.opened)?1:-1));
+    ZP=[...new Set(ZL.flatMap(h=>Object.keys(h.pays||{})))].sort();zDraw();zRec(A,B);$('zMsg').textContent=ZL.length+' ээлж'+(ZL.some(h=>h.open)?' · '+ZL.filter(h=>h.open).length+' хаагаагүй':'')}
   catch(e){$('zMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}}
 const zOps=(h,k)=>(h.ops||[]).filter(o=>o.kind===k).reduce((a,o)=>a+(o.type==='out'?o.amount:o.amount),0);
-function zRow(h){return [lt(h.closed),LOC[h.store]||h.storeName||h.store,h.reg||'',h.id||'',h.opened?lt(h.opened):'',h.openedBy||'',h.closedBy||'',h.receipts||0,Math.round(h.total||0),...ZP.map(k=>(h.pays||{})[k]!=null?Math.round(h.pays[k]):null),
-  Math.round(h.float||0),Math.round(h.cashSales||0),Math.round(h.cashIn||0)||null,Math.round(h.cashOut||0)||null,Math.round(h.deposit||0)||null,Math.round(h.expected||0),Math.round(h.counted||0),Math.round(h.diff||0),h.id]}
-function zDraw(){const head=['Хаасан огноо, цаг','Дэлгүүр','Касс','Ээлж','Нээсэн','Нээсэн кассчин','Хаасан кассчин','Баримтын тоо','Нийт борлуулалт',...ZP,'Эхний бэлэн мөнгө','Бэлэн борлуулалт (буцаалт хассан)','Касст нэмсэн','Кассаас гаргасан','· үүнээс банкинд тушаасан','Кассанд байх ёстой','Тоолсон','Зөрүү',''];
-  const zi=head.length-2;xtable('zTbl','zr',head,ZL.map(zRow),{noSum:[],cell:(r,c)=>c===head.length-1?'<button class="btn" data-zp="'+esc(r[c])+'" title="Z баримт хэвлэх">🖨</button>':c===zi&&r[c]?'<b class="hot">'+nfx(r[c])+'</b>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])});
-  const T=k=>ZL.reduce((a,h)=>a+(+h[k]||0),0),bad=ZL.filter(h=>h.diff).length;
-  $('zKpi').innerHTML=[['Ээлж',ZL.length],['Нийт борлуулалт',money(T('total'))],['Баримт',T('receipts').toLocaleString('en-US')],['Бэлэн борлуулалт',money(T('cashSales'))],['Зөрүүтэй ээлж',bad?'<span class="hot">'+bad+' · '+money(T('diff'))+'</span>':'0']]
+function zRow(h){return [h.open?'⚠ ХААГААГҮЙ':'хаасан',h.open?'':lt(h.closed),LOC[h.store]||h.storeName||h.store,h.reg||'',h.id||'',h.opened?lt(h.opened):'',h.openedBy||'',h.closedBy||'',h.receipts||0,Math.round(h.total||0),...ZP.map(k=>(h.pays||{})[k]!=null?Math.round(h.pays[k]):null),
+  Math.round(h.float||0),Math.round(h.cashSales||0),Math.round(h.cashIn||0)||null,Math.round(h.cashOut||0)||null,Math.round(h.deposit||0)||null,h.open?null:Math.round(h.expected||0),h.open?null:Math.round(h.counted||0),h.open?null:Math.round(h.diff||0),h.open&&h.last?lt(h.last):'',h.id]}
+function zDraw(){const head=['Төлөв','Хаасан огноо, цаг','Дэлгүүр','Касс','Ээлж','Нээсэн','Нээсэн кассчин','Хаасан кассчин','Баримтын тоо','Нийт борлуулалт',...ZP,'Эхний бэлэн мөнгө','Бэлэн борлуулалт (буцаалт хассан)','Касст нэмсэн','Кассаас гаргасан','· үүнээс банкинд тушаасан','Кассанд байх ёстой','Тоолсон','Зөрүү','Сүүлийн баримт (нээлттэй)',''];
+  const zi=head.length-3;xtable('zTbl','zr',head,ZL.map(zRow),{noSum:[],rowAttr:r=>r[0]!=='хаасан'?' style="background:#fff1f1"':'',cell:(r,c)=>c===head.length-1?(r[0]==='хаасан'?'<button class="btn" data-zp="'+esc(r[c])+'" title="Z баримт хэвлэх">🖨</button>':''):c===0&&r[0]!=='хаасан'?'<b class="hot">'+r[0]+'</b>':c===zi&&r[c]?'<b class="hot">'+nfx(r[c])+'</b>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])});
+  const T=k=>ZL.reduce((a,h)=>a+(+h[k]||0),0),bad=ZL.filter(h=>h.diff&&!h.open).length,op=ZL.filter(h=>h.open);
+  $('zKpi').innerHTML=[['Ээлж',ZL.length],['Хаагаагүй ээлж',op.length?'<span class="hot">'+op.length+' · '+money(op.reduce((a,h)=>a+h.total,0))+'</span>':'0'],['Нийт борлуулалт',money(T('total'))],['Баримт',T('receipts').toLocaleString('en-US')],['Бэлэн борлуулалт',money(T('cashSales'))],['Зөрүүтэй ээлж',bad?'<span class="hot">'+bad+' · '+money(T('diff'))+'</span>':'0']]
     .map(k=>'<div class="k"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('')}
 function zBody(h){const tr=(a,b)=>'<tr><td>'+a+'</td><td class="n">'+b+'</td></tr>',f=v=>Math.round(+v||0).toLocaleString('en-US'),byK={};(h.ops||[]).forEach(o=>{byK[o.kind]=(byK[o.kind]||0)+(o.type==='out'?-o.amount:o.amount)});
   return '<table>'+tr('Ээлж',esc(h.id||''))+tr('Баримтын тоо',h.receipts||0)+tr('Нийт борлуулалт',f(h.total))+Object.entries(h.pays||{}).map(([k,v])=>tr(esc(k),f(v))).join('')+
@@ -989,8 +1001,13 @@ function zPrint(list){if(!list.length)return;const w=window.open('','_blank');if
 function zPrintTable(){const T=XT.zr;if(!T)return;const w=window.open('','_blank');if(!w)return alert('Цонх нээгдсэнгүй — popup зөвшөөрнө үү');const head=T.head.slice(0,-1),rows=xtData('zr').L;
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Z тайлан '+$('zA').value+' — '+$('zB').value+'</title><style>@page{size:A4 landscape;margin:8mm}body{font:9px Arial,sans-serif}h1{font-size:13px;margin:0 0 6px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:2px 3px}td.n{text-align:right}th{background:#eee}</style></head><body><h1>Z тайлан — ээлж хаалт · '+$('zA').value+' — '+$('zB').value+'</h1><table><tr>'+head.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr>'+
     rows.map(r=>'<tr>'+r.slice(0,-1).map(v=>'<td'+(typeof v==='number'?' class="n"':'')+'>'+(v==null?'':typeof v==='number'?v.toLocaleString('en-US'):esc(v))+'</td>').join('')+'</tr>').join('')+'</table></body></html>');w.document.close();setTimeout(()=>{try{w.focus();w.print()}catch(e){}},400)}
-$('zGo').onclick=zRun;$('zXl').onclick=()=>{if(!ZL.length)return;xtXlsx('zr','Z_tailan_'+$('zA').value+'_'+$('zB').value,'Z тайлан')};$('zPrAll').onclick=zPrintTable;
-$('zPrZ').onclick=()=>{const ids=new Set(xtData('zr').L.map(r=>r[r.length-1]));zPrint(ZL.filter(h=>ids.has(h.id)))};
+// баримтын борлуулалт (өдрөөр) ↔ Z-д (хаасан ээлжид) орсон дүн; зөрүү = хаагаагүй ээлж эсвэл өөр өдөр хаасан ээлж
+function zRec(A,B){const shut=new Set(ZL.filter(h=>!h.open).map(h=>h.id)),S={};
+  ZS.forEach(x=>{const k=x.store||'?',o=S[k]||(S[k]={all:0,z:0,open:0,other:0,n:0,sh:new Set()});o.all+=x.total||0;o.n++;if(shut.has(x.shift))o.z+=x.total||0;else{const h=ZL.find(y=>y.id===x.shift);if(h&&h.open)o.open+=x.total||0;else{o.other+=x.total||0;o.sh.add(x.shift)}}});
+  xtable('zRec','zrc',['Дэлгүүр','Баримтын борлуулалт ('+A+' — '+B+')','Z-д (хаасан ээлжид)','Хаагаагүй ээлжид','Өөр өдөр хаасан / ээлжгүй','Тайлбар'],
+    Object.entries(S).map(([k,o])=>[k==='ON'?'Онлайн дэлгүүр':LOC[k]||k,Math.round(o.all),Math.round(o.z),Math.round(o.open)||null,Math.round(o.other)||null,o.other?'ээлж: '+[...o.sh].filter(Boolean).slice(0,4).join(', ')+(o.sh.has(undefined)||o.sh.has(null)||o.sh.has('')?' (ээлжгүй баримт)':''):'']),{})}
+$('zGo').onclick=zRun;$('zBy').onchange=zRun;$('zXl').onclick=()=>{if(!ZL.length)return;xtXlsx('zr','Z_tailan_'+$('zA').value+'_'+$('zB').value,'Z тайлан')};$('zPrAll').onclick=zPrintTable;
+$('zPrZ').onclick=()=>{const ids=new Set(xtData('zr').L.map(r=>r[r.length-1]));zPrint(ZL.filter(h=>ids.has(h.id)&&!h.open))};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-zp]');if(!b)return;const h=ZL.find(x=>x.id===b.dataset.zp);if(h)zPrint([h])});
 function showTab(t,push){if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
   document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
