@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="11.9">
+<meta name="vivi-ver" content="12.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -154,7 +154,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <div class="card" id="rqNone"><h2>Хүсэлтүүд — шийдвэр хүлээж байна</h2><div class="small">Шийдвэр хүлээж буй хүсэлт алга.</div></div>
   <div class="card" style="margin-top:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Хүсэлтийн түүх</h2><input type="date" id="rqA" class="inp" style="width:auto"><span>→</span><input type="date" id="rqB" class="inp" style="width:auto"><button id="rqX" class="btn">⬇ Excel</button><select id="rhK" class="inp" style="width:auto"><option value="">Бүх төрөл</option><option value="return">Буцаалт</option><option value="exchange">Солилт</option><option value="paychange">Төлбөр засах</option></select></div><div class="scroll" id="cRqH" style="max-height:360px;overflow:auto;margin-top:8px"></div></div>
   <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Буцаалтын маягт — нягтлан шалгах <span id="rfCnt" class="small"></span></h2><span id="finInfo" class="small"></span><select id="rfFlt" class="inp" style="width:auto"><option value="">Бүгд</option><option value="no">Шалгаагүй</option><option value="yes">Шалгасан</option></select></div>
-  <div class="small" style="margin:4px 0 8px">Касс дээр бөглөсөн буцаалт, солилтын маягт (цаасны оронд). Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Шалгасны дараа «Шалгах» дарна. <b>Дансаар</b> буцаах мөнгө (буцаалт, зөрүүтэй солилт) <b>VIVI Kontrola</b>-гийн «Ажилтны хүсэлт» рүү автоматаар очно (20 минут тутам; солилтыг баталсны дараа) — «Kontrola» баганад төлөв нь харагдана.</div><div class="scroll" id="cRetF" style="max-height:520px;overflow:auto"></div></div>
+  <div class="small" style="margin:4px 0 8px">Касс дээр бөглөсөн буцаалт, солилтын маягт (цаасны оронд). Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Шалгасны дараа «Шалгах» дарна. <b>Дансаар</b> буцаах мөнгө (буцаалт, зөрүүтэй солилт) <b>VIVI Kontrola</b>-гийн «Ажилтны хүсэлт» рүү автоматаар очно (хэдхэн секундэд; солилтыг баталсны дараа) — «Kontrola» баганад төлөв нь харагдана.</div><div class="scroll" id="cRetF" style="max-height:520px;overflow:auto"></div></div>
 </section>
 <section class="pnl" data-panel="chat" hidden>
   <div class="card"><div style="display:grid;grid-template-columns:230px 1fr;gap:12px;min-height:70vh" id="chWrap">
@@ -1045,13 +1045,13 @@ $('rfFlt').onchange=drawRetForms;
 let FIN={},FINCFG={};const FIN_START0='2026-11-19T00:00:00+08:00';
 const finAmt=s=>Math.round(-(s.payments||[]).filter(p=>p.form==='Банкаар'&&(+p.amount||0)<0).reduce((a,p)=>a+(+p.amount||0),0));
 function watchFin(){if(!can('req')&&!can('rcpt')&&!can('rep'))return;db.collection('pos_fin').onSnapshot(q=>{FIN={};q.docs.forEach(d=>FIN[d.id]=d.data());drawRetForms()},()=>{});
-  db.collection('pos_config').doc('fin_bridge').onSnapshot(d=>{FINCFG=d.exists?d.data():{};$('finInfo').textContent=FINCFG.lastRun?'Kontrola гүүр: сүүлд '+lt(FINCFG.lastRun):'Kontrola гүүр: хараахан ажиллаагүй';drawRetForms()},()=>{})}
+  db.collection('pos_config').doc('fin_bridge').onSnapshot(d=>{FINCFG=d.exists?d.data():{};{const L=[FINCFG.lastSync,FINCFG.lastRun].filter(Boolean).sort().pop();$('finInfo').textContent=L?'Kontrola гүүр: шууд · төлөв шалгасан '+lt(L):'Kontrola гүүр: хараахан ажиллаагүй'};drawRetForms()},()=>{})}
 function finSt(s){const a=finAmt(s);if(a<=0)return {t:''};const f=FIN[s.uid]||{},no=f.no?' · '+f.no:'',start=new Date(FINCFG.start||FIN_START0).toISOString();
-  if(f.queue)return {t:f.fix?'засаад дахин илгээх дараалалд':'илгээх дараалалд (≤20 мин)',c:'b'};
+  if(f.queue)return {t:f.fix?'засаад дахин илгээж байна…':'илгээж байна…',c:'b'};
   switch(f.st){case 'wait':return {t:'солилтыг батлахыг хүлээж байна',c:'b'};case 'new':return {t:'Kontrola-д ирсэн'+no,c:'b'};case 'review':return {t:'нягтлан хянаж байна'+no,c:'b'};
     case 'taken':return {t:'төлбөрийн хүсэлт болсон'+no,c:'b'};case 'approved':return {t:'зөвшөөрсөн'+no,c:''};case 'paid':return {t:'✓ шилжүүлсэн'+no+(f.paidAt?' · '+lt(f.paidAt):''),c:''};
     case 'returned':return {t:'↩ буцаасан: '+(f.comment||''),c:'r',b:'fix'};case 'rejected':case 'cancel':return {t:'✗ татгалзсан'+(f.comment?': '+f.comment:''),c:'r'};case 'none':return {t:'—'}}
-  if(!can('req'))return {t:'илгээгээгүй',c:'b'};return (s.iso||'')<start?{t:'автоматаар илгээгээгүй ('+money(a)+')',c:'r',b:'send'}:{t:'дараагийн шалгалтаар илгээгдэнэ (≤20 мин)',c:'b'}}
+  if(!can('req'))return {t:'илгээгээгүй',c:'b'};return (s.iso||'')<start?{t:'автоматаар илгээгээгүй ('+money(a)+')',c:'r',b:'send'}:{t:'илгээж байна…',c:'b'}}
 $('cRetF').addEventListener('click',async e=>{const b=e.target.closest('[data-fin]');if(!b)return;const tr=b.closest('[data-ru]');if(!tr)return;const uid=tr.dataset.ru,s=sales.find(x=>x.uid===uid)||{},by=auth.currentUser.email||'',at=new Date().toISOString();
   if(b.dataset.fin==='send'){if(!confirm('Баримт '+(s.id||'')+' — үйлчлүүлэгчид '+money(finAmt(s))+' шилжүүлэх хүсэлтийг VIVI Kontrola руу илгээх үү?'))return;b.disabled=true;
     try{await db.collection('pos_fin').doc(uid).set({uid,queue:true,qBy:by,qAt:at})}catch(err){b.disabled=false;alert('Илгээсэнгүй: '+(err.code||err))}return}

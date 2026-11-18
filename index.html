@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="6.8">
+<meta name="vivi-ver" content="6.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -1708,7 +1708,7 @@ function openKf(){openModal('<h2>⚠ Kontrola — үйлчлүүлэгчид м�
     if(b.dataset.kfok!=null){b.disabled=true;try{await ref.update({ackTill:true,ackBy:who,ackAt:t})}catch(er){b.disabled=false;flash('Хадгалсангүй: '+(er.code||er))}return}
     const acct=($('kfA'+i).value||'').replace(/[\s-]/g,'').toUpperCase(),holder=$('kfH'+i).value.trim(),bank=$('kfB'+i).value,m=$('kfM'+i);
     if(!/^(\d{8,20}|MN\d{18})$/.test(acct)){m.textContent='Дансны дугаар буруу — 8–20 оронтой тоо эсвэл MN IBAN';return}if(holder.length<3){m.textContent='Эзэмшигчийн нэрийг бичнэ үү';return}
-    b.disabled=true;try{await ref.update({queue:true,qBy:who,qAt:t,fix:{bank,acct,holder}});flash('✓ Дансыг засаж нягтланд дахин илгээлээ (≤20 мин)')}catch(er){b.disabled=false;m.textContent='Илгээсэнгүй: '+(er.code||er)}}}
+    b.disabled=true;try{await ref.update({queue:true,qBy:who,qAt:t,fix:{bank,acct,holder}});flash('✓ Дансыг засаж нягтланд дахин илгээлээ')}catch(er){b.disabled=false;m.textContent='Илгээсэнгүй: '+(er.code||er)}}}
 $('kfBtn').onclick=()=>{if(!(fb.ready&&fb.user)){flash('Үүлэнд холбогдсон байх шаардлагатай');return}openKf()};
 const chatOpen=()=>!chatBox.classList.contains('hide');
 function chatBadge(){const n=chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).length;$('chatN').textContent=n;$('chatN').classList.toggle('hide',!n)}
