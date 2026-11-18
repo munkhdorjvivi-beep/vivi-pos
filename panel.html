@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="11.0">
+<meta name="vivi-ver" content="11.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1992,15 +1992,19 @@ function fcModel(st,t){const days=Object.keys(FC.prof).filter(d=>d<t).sort(),wd=
   const UK={},UI={};if(TB.length)TD0.forEach(d=>{const k=key(d);if(!k)return;const b=bmean(TB,dw(d));if(!b)return;const u=T(d)/b;(UK[k]=UK[k]||[]).push(u);k.split('|').forEach(id=>(UI[id]=UI[id]||[]).push(u))});
   const avg=a=>a.reduce((x,y)=>x+y,0)/a.length,allU=Object.values(UK).flat();
   const upl=d=>{const k=key(d);if(!k)return {u:1,k:''};if(UK[k])return {u:avg(UK[k]),k,seen:1};const ids=k.split('|').filter(id=>UI[id]);if(ids.length)return {u:Math.max(...ids.map(id=>avg(UI[id]))),k,seen:1};return {u:allU.length?avg(allU):1,k,seen:0}};
-  const prior0=(before)=>{const L=TD.filter(d=>d<before&&d>=addD(before,-56)),mean=a=>a.length?a.reduce((x,d)=>x+T(d),0)/a.length:null,bw=dw(before),sameB=d=>dw(d)===bw,typeB=d=>wk(dw(d))===wk(bw);
+  const prior0=(before,SET)=>{const L=(SET||TD).filter(d=>d<before&&d>=addD(before,-56)),mean=a=>a.length?a.reduce((x,d)=>x+T(d),0)/a.length:null,bw=dw(before),sameB=d=>dw(d)===bw,typeB=d=>wk(dw(d))===wk(bw);
     let grp=L.filter(sameB);if(!grp.length)grp=L.filter(typeB);if(!grp.length&&wk(bw)==='f')grp=L.filter(d=>wk(dw(d))==='d');const w1=mean(grp.slice(-4)),last7=L.filter(d=>d>=addD(before,-7)),l7=mean(last7);
     const all=mean(L),gAll=mean(grp),f=all&&gAll?gAll/all:1;
     // 7 хоногийн түвшинг гарагийн бүтцээр засна: сүүлийн 7 хоногийн дундаж × (энэ төрлийн өдрийн дундаж / бүх өдрийн дундаж)
     const lv=l7!=null?l7*(gAll&&all?gAll/all:1):null,a=[w1,lv].filter(v=>v!=null);prior0.last={w1,lv,nG:Math.min(4,grp.length),same:grp.some(sameB)};return a.length?a.reduce((x,y)=>x+y,0)/a.length:null};
-  const prior=before=>{const b=prior0(before),U=upl(before);prior.last=Object.assign(prior.last||{},{u:U.u,pk:U.k,seen:U.seen});return b==null?null:b*U.u};
+  // урамшуулал үргэлжилж байгаа бол (ижил урамшууллын ≥2 өдөр байвал) тэр өдрүүдийг шууд жишээ болгоно; эс бөгөөс суурь × өсөлт
+  const prior=before=>{const k=key(before),R=k?TD0.filter(d=>key(d)===k&&d<before&&d>=addD(before,-56)):[];
+    if(R.length>=2){const b=prior0(before,R);prior.last=Object.assign(prior.last||{},{u:1,pk:k,seen:1,reg:R.length});return b}
+    const b=prior0(before),U=upl(before);prior.last=Object.assign(prior.last||{},{u:U.u,pk:U.k,seen:U.seen,reg:0});return b==null?null:b*U.u};
   const est=(S,p,P)=>{if(P==null)return p>.02?S/p:null;const r=p>0?S/(P*p):1,rs=(p*r+FC_L)/(p+FC_L);return S+(1-p)*P*rs};
   // буцаан шалгалт: өдөр бүрийн өмнөх өдрүүдээс хүлээлт, цаг бүрт алдаа
-  const E=Array.from({length:FC_N},()=>[]);ok.forEach(d=>{const P=prior(d);if(P==null)return;const x=FC.prof[d][st];for(let i=0;i<FC_N;i++){const F=est(x.c[i],curve[i],P);if(F)E[i].push(Math.abs(F/x.tot-1))}});
+  const E=Array.from({length:FC_N},()=>[]);ok.forEach(d=>{const P=prior(d);if(P==null||(key(d)&&!(prior.last||{}).reg))return;// урамшууллын эхний өдрүүдийг (жишээгүй) алдааны тооцоонд оруулахгүй
+    const x=FC.prof[d][st];for(let i=0;i<FC_N;i++){const F=est(x.c[i],curve[i],P);if(F)E[i].push(Math.abs(F/x.tot-1))}});
   const hw=E.map((e,i)=>{if(e.length>=5){const a=e.slice().sort((x,y)=>x-y);return a[Math.min(a.length-1,Math.floor(a.length*.8))]}return .35*(1-curve[i])+.04});
   prior0.last=null;const P=prior(t),det=Object.assign({},prior0.last||{},prior.last||{});return {curve,P,det,prior,upl,hw,est,n:ok.length,nSame:ok.filter(same).length,UK,UI}}
 // тухайн өдөр, дэлгүүрт хүчинтэй түр урамшуулал (дуусах огноотой, идэвхтэй)
@@ -2009,24 +2013,24 @@ function fcDraw(){const box=$('fcKpi');if(!box||!FC.loaded||!FC.ready)return;con
   const today=fcProfile(FC.sales),stores=[...new Set([...Object.keys(today),...Object.values(FC.prof).flatMap(o=>Object.keys(o))])].filter(st=>!gSt||st===gSt).filter(st=>LOC[st]||st==='ON').sort();
   const rows=[];let SS=0,FF=0,PP=0,var2=0,Y=0,L=0;const yd=addD(t,-1),lw=addD(t,-7);
   stores.forEach(st=>{const M=fcModel(st,t),x=today[st],S=x?x.c[slot]:0;if(!M&&!S)return;const p=M?M.curve[slot]:0,F=M?(M.est(S,p,M.P)||S):S,hw=M?M.hw[slot]:.5,y=(FC.prof[yd]||{})[st],yT=((FC.tot||{})[yd]||{})[st]||null,wT=((FC.tot||{})[lw]||{})[st]||null;
-    rows.push({st,S,p,F,lo:F*(1-hw),hi:F*(1+hw),hw,P:M&&M.P,det:M?M.det:{},y:yT,yNow:y?y.c[slot]:null,w:wT,n:M?M.n:0});SS+=S;FF+=F;PP+=(M&&M.P)||0;var2+=Math.pow(F*hw,2);Y+=yT||0;L+=wT||0});
+    rows.push({st,S,p,F,lo:Math.max(S,F*(1-hw)),hi:F*(1+hw),hw,P:M&&M.P,det:M?M.det:{},y:yT,yNow:y?y.c[slot]:null,w:wT,n:M?M.n:0});SS+=S;FF+=F;PP+=(M&&M.P)||0;var2+=Math.pow(F*hw,2);Y+=yT||0;L+=wT||0});
   if(!rows.length){box.innerHTML='';$('fcMsg').textContent='Өгөгдөл алга';return}
-  const hwT=FF?Math.sqrt(var2)/FF:0,nm=st=>st==='ON'?'Онлайн дэлгүүр':LOC[st]||st,pT=FF?SS/FF:0;FC.last={t,slot,F:Math.round(FF),lo:Math.round(FF*(1-hwT)),hi:Math.round(FF*(1+hwT)),S:Math.round(SS),st:Object.fromEntries(rows.map(r=>[r.st,Math.round(r.F)]))};
-  box.innerHTML=[['Өнөөдрийн таамаг · '+(gSt?nm(gSt):'бүх дэлгүүр'),money(FF)+'<div class="small">'+money(FF*(1-hwT))+' – '+money(FF*(1+hwT))+' (±'+Math.round(hwT*100)+'%)</div>',1],
+  const hwT=FF?Math.sqrt(var2)/FF:0,nm=st=>st==='ON'?'Онлайн дэлгүүр':LOC[st]||st,pT=FF?SS/FF:0;FC.last={t,slot,F:Math.round(FF),lo:Math.round(Math.max(SS,FF*(1-hwT))),hi:Math.round(FF*(1+hwT)),S:Math.round(SS),st:Object.fromEntries(rows.map(r=>[r.st,Math.round(r.F)]))};
+  box.innerHTML=[['Өнөөдрийн таамаг · '+(gSt?nm(gSt):'бүх дэлгүүр'),money(FF)+'<div class="small">'+money(Math.max(SS,FF*(1-hwT)))+' – '+money(FF*(1+hwT))+' (±'+Math.round(hwT*100)+'%)</div>',1],
     ['Одоо хүртэл ('+now.toTimeString().slice(0,5)+')',money(SS)+'<div class="small">өдрийн ~'+Math.round(pT*100)+'% нь өнгөрсөн</div>'],
     ['Өглөөний хүлээлт',PP?money(PP)+'<div class="small">хурд: '+pctS(PP&&pT?SS/(PP*pT)-1:null)+'</div>':'—'],
-    ['Өчигдөр ('+WD[new Date(yd+'T12:00:00').getDay()]+')',Y?money(Y)+'<div class="small">таамаг: '+pctS(FF/Y-1)+'</div>':'—'],
-    ['Өнгөрсөн '+WD[new Date(lw+'T12:00:00').getDay()]+' ('+lw.slice(5)+')',L?money(L)+'<div class="small">таамаг: '+pctS(FF/L-1)+'</div>':'—']]
+    ['Өчигдөр ('+WD[new Date(yd+'T12:00:00').getDay()]+')',Y?money(Y)+'<div class="small">'+(rows.every(r=>r.y)?'таамаг: '+pctS(FF/Y-1):'зарим дэлгүүрийн өгөгдөлгүй')+'</div>':'—'],
+    ['Өнгөрсөн '+WD[new Date(lw+'T12:00:00').getDay()]+' ('+lw.slice(5)+')',L?money(L)+'<div class="small">'+(rows.every(r=>r.w)?'таамаг: '+pctS(FF/L-1):'зарим дэлгүүрийн өгөгдөлгүй')+'</div>':'—']]
     .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
   xtable('fcTbl','fct',['Дэлгүүр','Одоо хүртэл','Өдрийн хэдэн % өнгөрсөн (хэвийн)','Таамаг','Доод','Дээд','±%','Өглөөний хүлээлт','· урамшуулал (өсөлт)','· суурь: ижил гарагийн дундаж','· суурь: сүүлийн 7 хоногийн түвшин','Өчигдөр (нийт)','Өчигдөр энэ цаг хүртэл','Өнгөрсөн 7 хоногийн мөн гараг','Цагийн муруйн өдөр (POS)'],
-    rows.map(r=>[nm(r.st),Math.round(r.S),Math.round(r.p*100),Math.round(r.F),Math.round(r.lo),Math.round(r.hi),Math.round(r.hw*100),r.P?Math.round(r.P):null,r.det.pk?fcPromos(t,r.st).map(p=>p.name).join(', ')+' ×'+(r.det.u||1).toFixed(2)+(r.det.seen?'':' (таамаг)'):'—',r.det.w1!=null?Math.round(r.det.w1):null,r.det.lv!=null?Math.round(r.det.lv):null,r.y?Math.round(r.y):null,r.yNow,r.w?Math.round(r.w):null,r.n]),{});
+    rows.map(r=>[nm(r.st),Math.round(r.S),Math.round(r.p*100),Math.round(r.F),Math.round(r.lo),Math.round(r.hi),Math.round(r.hw*100),r.P?Math.round(r.P):null,r.det.pk?fcPromos(t,r.st).map(p=>p.name).join(', ')+(r.det.reg?' — ижил урамшууллын '+r.det.reg+' өдрөөр':' ×'+(r.det.u||1).toFixed(2)+(r.det.seen?'':' (таамаг)')):'—',r.det.w1!=null?Math.round(r.det.w1):null,r.det.lv!=null?Math.round(r.det.lv):null,r.y?Math.round(r.y):null,r.yNow,r.w?Math.round(r.w):null,r.n]),{});
   // ирэх 7 хоног: өглөөний хүлээлт (өнөөдрийг оролцуулаагүй түүхээр) ба өмнөх өдрүүдэд хүлээлтийн алдаа
   const nd=[1,2,3,4,5,6,7].map(k=>addD(t,k)),NR=[];rows.forEach(r=>{const M=fcModel(r.st,t);if(!M)return;const e0=M.hw[0],v=nd.map(d=>M.prior(d));NR.push([nm(r.st),...v.map(x=>x?Math.round(x):null),Math.round(e0*100)])});
   xtable('fcNext','fcn',['Дэлгүүр',...nd.map(d=>d.slice(5)+' '+WD[new Date(d+'T12:00:00').getDay()]),'±% (өмнөх өдрүүдэд хүлээлтийн алдаа)'],NR,{});
   // урамшууллын тайлбар: түүхэнд олсон өсөлт ба ирэх өдрүүдийн урамшуулал
   const PN=id=>((FC.promos||[]).find(p=>p.id===id)||{}).name||id,lines=[];
   rows.forEach(r=>{const M=fcModel(r.st,t);if(!M)return;Object.entries(M.UI).forEach(([id,a])=>lines.push(nm(r.st)+': «'+PN(id)+'» '+a.length+' өдөр, борлуулалт суурийнхаас ×'+(a.reduce((x,y)=>x+y,0)/a.length).toFixed(2)));
-    nd.forEach(d=>{const U=M.upl(d);if(U.k)lines.push(nm(r.st)+' '+d.slice(5)+': «'+U.k.split('|').map(PN).join(', ')+'» ×'+U.u.toFixed(2)+(U.seen?'':' (өмнө нь ажиглагдаагүй — бусад урамшууллын дундаж)'))})});
+    nd.forEach(d=>{const U=M.upl(d);if(!U.k)return;M.prior(d);const g=M.prior.last||{};lines.push(nm(r.st)+' '+d.slice(5)+': «'+U.k.split('|').map(PN).join(', ')+'»'+(g.reg?' — ижил урамшууллын '+g.reg+' өдрөөр':' ×'+U.u.toFixed(2)+(U.seen?'':' (өмнө нь ажиглагдаагүй — бусад урамшууллын дундаж)')))})});
   $('fcPromo').innerHTML=lines.length?'<b>Урамшуулал:</b><br>'+lines.map(esc).join('<br>'):'Түүхэнд болон ирэх 7 хоногт дуусах огноотой урамшуулал алга (байнгын урамшуулал суурь борлуулалтад орсон).';
   // график: өнөөдөр (бодит + таамгийн үргэлжлэл), өчигдөр, өнгөрсөн 7 хоног
   const cum=new Array(FC_N).fill(0),cy=new Array(FC_N).fill(0),cw=new Array(FC_N).fill(0),pc=new Array(FC_N).fill(0);
