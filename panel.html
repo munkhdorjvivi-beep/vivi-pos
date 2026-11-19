@@ -327,7 +327,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 
   <!-- 6. Архив -->
   <div class="card" data-sub="lpp" style="padding:0;overflow:hidden"><iframe data-wh="wh" title="Агуулах (LPP)" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
-  <div class="card" data-sub="rcv" id="trCard"><h2 style="margin:0 0 4px">⇄ Дэлгүүр хооронд шилжүүлэг — хүлээн авах <span id="trCnt" class="small"></span></h2><div class="small" style="margin-bottom:8px">Өөр дэлгүүрээс илгээсэн бараа. Ирсэн барааг уншуулж баталгаажуулна — касс дээрх «Бараа хөдөлгөөн → Ирсэн»-тэй ижил баримт, аль түрүүлж хийснээр хүлээн авагдана. Доор — агуулахын (LPP) илгээмж.</div><div id="trList"></div></div>
+  <div class="card" data-sub="rcv" id="trCard"><h2 style="margin:0 0 4px">⇄ Дэлгүүр хооронд шилжүүлэг — хүлээн авах <span id="trCnt" class="small"></span></h2><div class="small" style="margin-bottom:8px">Өөр дэлгүүрээс илгээсэн бараа. Ирсэн барааг уншуулж баталгаажуулна — касс дээрх «Бараа хөдөлгөөн → Ирсэн»-тэй ижил баримт, аль түрүүлж хийснээр хүлээн авагдана. <b>Доор — 🚚 LPP агуулахаас дэлгүүрт ирсэн илгээмж.</b></div><div id="trList"></div></div>
   <div class="card" data-sub="rcv" style="padding:0;overflow:hidden"><iframe data-wh="rcv" title="Хүлээн авалт" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
   <div class="card" data-sub="zinv" id="pivCard" style="margin-bottom:12px"><h2>📦 POS-ын үлдэгдлээр тооллого (бүсээр)</h2>
     <div class="small" style="margin:-4px 0 8px">1) Энд тооллого үүсгэнэ — тухайн байршлын POS-ын одоогийн үлдэгдэл «систем» болно. 2) Доорх «Тооллого (бүсээр)»-д ажилчид бүсээр скан хийж, дуусаад <b>Хаах</b>. 3) Энд «📊 Үр дүн» → шалгаад <b>«POS-ын үлдэгдэлд тусгах»</b>: зөрүү тооллогын баримт болж архивт хадгалагдана, үлдэгдэл бодит тоо болно.<br>
@@ -1096,7 +1096,7 @@ function drawTrips(){const L=allSales.filter(s=>s.store==='YV'),m=new Map();
 const TAB_RED={rcpt:'rcpt',cash:'sh'};
 const TABK=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab);
 /* ==== Дэд цэс: үндсэн цэс бүрийн доорх хуудсууд ==== */
-const SUBS={stock:[['bal','📦 Үлдэгдэл'],['age','⏳ Насжилт'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['lpp','🚚 Агуулах (LPP)',()=>can('wh')||can('whedit')],['rcv','📥 Хүлээн авалт',()=>can('wh')||can('whedit')||rcvAnyP()],['zinv','🗂 Тооллого (бүсээр)',()=>can('inv')||can('invadm')],['whset','⚙ LPP тохиргоо',()=>!!(ME&&ME.admin)],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
+const SUBS={stock:[['bal','📦 Үлдэгдэл'],['age','⏳ Насжилт'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['lpp','🚚 Агуулах (LPP)',()=>can('wh')||can('whedit')],['rcv','📥 Хүлээн авалт (LPP, шилжүүлэг)',()=>can('wh')||can('whedit')||rcvAnyP()],['zinv','🗂 Тооллого (бүсээр)',()=>can('inv')||can('invadm')],['whset','⚙ LPP тохиргоо',()=>!!(ME&&ME.admin)],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
   rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','📋 Борлуулалтын жагсаалт'],['rcpt','🧾 Баримтууд'],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
 let CURTAB='';
 const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'vivipanel_sub_'+t)}catch(e){return ''}};
