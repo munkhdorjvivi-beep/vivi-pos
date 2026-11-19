@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="12.2">
+<meta name="vivi-ver" content="12.3">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1436,7 +1436,7 @@ const locOpts=(sel,blank)=>(blank?'<option value="">—</option>':'')+Object.ent
 ['oSt','sSt','cSt'].forEach(id=>$(id).innerHTML=locOpts('NS'));$('sSt').insertAdjacentHTML('afterbegin','<option value="ALL">Бүх байршил</option>');$('mFrom').innerHTML=locOpts('FC');$('mTo').innerHTML=locOpts('NS');
 const dtl=d=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return x.toISOString().slice(0,16)};
 $('oAt').value=dtl(new Date());$('aAt').value=dtl(new Date());$('mAt').value=dtl(new Date());
-let openSheet=null,movLines=null,movDocs=[],stockRows=[];
+let openSheet=null,movLines=null,movDocs=[],movAll=[],stockRows=[];
 const syncMov=()=>{const ty=$('mTy').value;$('mWhyW').classList.toggle('hide',ty!=='out');$('mSupW').classList.toggle('hide',ty!=='in');$('mSupL').innerHTML=(catLists.sups||[]).map(x=>'<option value="'+esc(x)+'">').join('');$('mFromW').classList.toggle('hide',ty==='in');$('mToW').classList.toggle('hide',ty==='out');$('mRecvW').classList.toggle('hide',ty==='out'||['AG','DF','FW'].includes($('mTo').value))};$('mTo').addEventListener('change',()=>syncMov());$('mTy').addEventListener('focus',()=>syncMov());$('mTy').onchange=syncMov;syncMov();
 function sheetWith(wb,need){for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});for(let h=0;h<Math.min(30,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim());if(need(row))return {rows:a.slice(h+1),head:row,sheet:n}}}return null}
 $('oFile').onchange=async()=>{const f=$('oFile').files[0];if(!f)return;$('oMsg').textContent='Уншиж байна…';$('oUp').disabled=true;
@@ -1542,6 +1542,9 @@ function movDocPrint(d){const L=JSON.parse(d.lines),P=d.prices?JSON.parse(d.pric
     '<div class="sg"><div>Илгээсэн / хүлээлгэн өгсөн: '+esc((d.by||'').split('@')[0])+'</div><div>Тээвэрлэсэн</div><div>Хүлээн авсан (нэр, гарын үсэг, огноо)</div></div></body></html>';
   let fr=$('mvFrame');if(fr)fr.remove();fr=document.createElement('iframe');fr.id='mvFrame';fr.style.cssText='position:fixed;width:0;height:0;border:0;right:0;bottom:0';document.body.appendChild(fr);
   fr.onload=()=>setTimeout(()=>{fr.contentWindow.focus();fr.contentWindow.print()},300);fr.srcdoc=html}
+$('mList').addEventListener('click',async e=>{const b=e.target.closest('[data-mcan]');if(!b)return;const d=movAll.find(x=>x.uid===b.dataset.mcan);if(!d||d.status!=='sent')return;
+  if(!confirm('Шилжүүлэг '+(d.no||'')+' ('+(LOC[d.from]||d.from)+' → '+(LOC[d.to]||d.to)+', '+(d.qty||0)+' ш)-ийг цуцлах уу?\n\nБараа илгээгчийн үлдэгдэлд буцаж орно, хүлээн авагч руу орохгүй. Бараа бодитоор хүрсэн бол цуцлахгүй — касс дээр хүлээн авна.'))return;
+  b.disabled=true;try{await db.collection('pos_stock_docs').doc(d.uid).update({status:'cancel',cancelBy:auth.currentUser.email||'',cancelAt:new Date().toISOString()});await auditCfg('stock_move_cancel',{no:d.no||'',from:d.from,to:d.to,qty:d.qty||0})}catch(er){b.disabled=false;alert('Цуцалсангүй: '+(er.code||er))}});
 $('mList').addEventListener('click',e=>{const b=e.target.closest('[data-mp]');if(!b)return;const d=movDocs.find(x=>x.uid===b.dataset.mp);if(d)movDocPrint(d)});
 const MT={in:'Орлого',out:'Зарлага',move:'Шилжүүлэг',adj:'Тооллогын зөрүү'};
 
@@ -1560,11 +1563,11 @@ async function movXlsx(rows,name){await xlsx();try{await loadPCat()}catch(e){}co
 $('mXlS').onclick=()=>xtXlsx('movs','khodolgoon_barimt_'+$('mD1').value+'_'+$('mD2').value,'Баримтууд');
 $('mXlL').onclick=async()=>{try{await loadPCat()}catch(e){}const {L}=xtData('movs'),keep=new Set(L.map(r=>r[12])),D=movInRange().filter(m=>keep.has(m.uid));await movXlsx(movLinesRows(D),'khodolgoon_baraagaar_'+$('mD1').value+'_'+$('mD2').value)};
 $('mList').addEventListener('click',async e=>{const b=e.target.closest('[data-mxl]');if(!b)return;const d=movDocs.find(x=>x.uid===b.dataset.mxl);if(!d)return;try{await loadPCat()}catch(x){}await movXlsx(movLinesRows([d]),(d.no||d.uid).replace(/[^\w\-А-яӨөҮү]/g,'_'))});
-function watchMov(){db.collection('pos_stock_docs').onSnapshot(s=>{movDocs=s.docs.map(d=>d.data()).sort((a,b)=>a.at<b.at?1:-1);movReady=true;drawMov()},()=>{})}
-const movInRange=()=>{const a=$('mD1').value,b=$('mD2').value;return movDocs.filter(m=>{const d=lt(m.at).slice(0,10);return (!a||d>=a)&&(!b||d<=b)})};
+function watchMov(){db.collection('pos_stock_docs').onSnapshot(s=>{movAll=s.docs.map(d=>d.data()).sort((a,b)=>a.at<b.at?1:-1);movDocs=movAll.filter(m=>m.status!=='cancel');movReady=true;drawMov()},()=>{})}   // цуцалсан шилжүүлэг үлдэгдэлд огт тооцогдохгүй
+const movInRange=()=>{const a=$('mD1').value,b=$('mD2').value;return movAll.filter(m=>{const d=lt(m.at).slice(0,10);return (!a||d>=a)&&(!b||d<=b)})};
 function drawMov(){const MD=movInRange();
   xtable('mList','movs',['Баримт №','Огноо','Төрөл','Хаанаас','Хаана','Нийлүүлэгч / тайлбар','Төлөв','Илгээсэн','Ирсэн','Зөрүү','Илгээсэн хүн','Хүлээн авсан',''],MD.map(m=>{const lpp=m.src==='lpp',rq=m.recvLines?JSON.parse(m.recvLines).reduce((a,x)=>a+x[1],0):lpp?m.qty:null;
-    return [m.no||'',lt(m.at),MT[m.type]||m.type,LOC[m.from]||'',LOC[m.to]||'',(lpp?m.note:m.supplier?m.supplier+(m.invoice?' · '+m.invoice:''):m.note||m.file||'')+(m.recvNote?' · '+m.recvNote:''),m.status==='sent'?'замд':m.status==='received'||lpp?'хүлээн авсан':'бүртгэсэн',lpp&&m.sentQty!=null?m.sentQty:m.qty,rq,rq==null||(m.type!=='move'&&!lpp)?null:rq-(lpp&&m.sentQty!=null?m.sentQty:m.qty),m.by||'',(m.recvBy||'')+(m.recvAt?' · '+lt(m.recvAt):''),m.uid]}),{cell:(x,c)=>c===12?'<button class="btn" data-mp="'+esc(x[12])+'">Хэвлэх</button> <button class="btn" data-mxl="'+esc(x[12])+'">Excel</button>':c===6?'<span class="chip'+(x[6]==='замд'?' b':'')+'">'+x[6]+'</span>':c===9&&x[9]?'<span class="hot">'+(x[9]>0?'+':'')+x[9]+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])});
+    return [m.no||'',lt(m.at),MT[m.type]||m.type,LOC[m.from]||'',LOC[m.to]||'',(lpp?m.note:m.supplier?m.supplier+(m.invoice?' · '+m.invoice:''):m.note||m.file||'')+(m.recvNote?' · '+m.recvNote:''),m.status==='sent'?'замд':m.status==='cancel'?'цуцалсан':m.status==='received'||lpp?'хүлээн авсан':'бүртгэсэн',lpp&&m.sentQty!=null?m.sentQty:m.qty,rq,rq==null||(m.type!=='move'&&!lpp)?null:rq-(lpp&&m.sentQty!=null?m.sentQty:m.qty),m.by||'',m.status==='cancel'?'цуцалсан: '+(m.cancelBy||'')+(m.cancelAt?' · '+lt(m.cancelAt):''):(m.recvBy||'')+(m.recvAt?' · '+lt(m.recvAt):''),m.uid]}),{cell:(x,c)=>c===12?'<button class="btn" data-mp="'+esc(x[12])+'">Хэвлэх</button> <button class="btn" data-mxl="'+esc(x[12])+'">Excel</button>'+((movAll.find(m=>m.uid===x[12])||{}).status==='sent'&&(movAll.find(m=>m.uid===x[12])||{}).type==='move'&&(can('stock')||can('stock.move'))?' <button class="btn" style="color:var(--red)" data-mcan="'+esc(x[12])+'">Цуцлах</button>':''):c===6?'<span class="chip'+(x[6]==='замд'?' b':x[6]==='цуцалсан'?' r':'')+'">'+x[6]+'</span>':c===9&&x[9]?'<span class="hot">'+(x[9]>0?'+':'')+x[9]+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])});
   const tr=movDocs.filter(m=>m.status==='sent');$('mTransit').innerHTML=tr.length?'<span class="chip b">Замд '+tr.length+' шилжүүлэг · '+tr.reduce((a,m)=>a+m.qty,0)+' ш</span> — хүлээн авагч дэлгүүр касс дээрээ скан хийж баталгаажуулна':''}
 
 /* ==== Агуулах: дэд цэс — нэг дор нэг ажил. Орлого/Шилжүүлэг/Зарлага нэг маягт, төрөл нь цэсээр ==== */
