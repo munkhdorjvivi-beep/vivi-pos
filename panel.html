@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="12.4">
+<meta name="vivi-ver" content="12.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1465,7 +1465,7 @@ async function openChk(){const box=$('oChkR');box.innerHTML='<span class="small"
       if(!nm0&&!inCat&&(/^\d{1,6}$/.test(c)||q>=Math.max(1000,tot*.05))||q>=tot*.3&&D.length>20)F.push({lc,c,q,nm:nm0,tot,inCat})})}
   if(!F.length){box.innerHTML='<span class="chip">✓ Алдаатай мөр олдсонгүй</span>';return}
   box.innerHTML='<div class="small hot" style="margin-bottom:6px">Сэжигтэй мөр '+F.length+' — Excel-ийн «Нийт» мөр байж магадгүй. Чагтлаад хасвал зөвхөн эдгээр мөр эхний үлдэгдлээс устна (бусад бараа хэвээр).</div><table class="t"><thead><tr><th></th><th>Байршил</th><th>Код</th><th>Нэр</th><th class="n">Тоо</th><th class="n">Нийтийн %</th></tr></thead><tbody>'+
-    F.map((x,i)=>'<tr><td><input type="checkbox" data-ochk="'+i+'" checked></td><td>'+esc(LOC[x.lc])+'</td><td class="mono">'+esc(x.c)+'</td><td>'+esc(x.nm||(x.inCat?nmOf(x.c):'— нэргүй —'))+'</td><td class="n">'+x.q.toLocaleString('en-US')+'</td><td class="n">'+Math.round(x.q/x.tot*100)+'%</td></tr>').join('')+
+    F.map((x,i)=>'<tr><td><input type="checkbox" data-ochk="'+i+'" checked></td><td>'+esc(LOC[x.lc])+'</td><td class="mono">'+esc(x.c)+'</td><td>'+esc(x.nm||(x.inCat?((itRow(x.c)||{}).name||''):'— нэргүй —'))+'</td><td class="n">'+x.q.toLocaleString('en-US')+'</td><td class="n">'+Math.round(x.q/x.tot*100)+'%</td></tr>').join('')+
     '</tbody></table><button class="btn pri" id="oChkGo" style="margin-top:8px">Сонгосон мөрийг эхний үлдэгдлээс хасах</button> <span id="oChkM" class="small"></span>';
   $('oChkGo').onclick=async()=>{const sel=F.filter((x,i)=>{const c=document.querySelector('[data-ochk="'+i+'"]');return c&&c.checked});if(!sel.length)return;
     if(!confirm(sel.map(x=>LOC[x.lc]+': код '+x.c+' — '+x.q.toLocaleString('en-US')+' ш').join('\n')+'\n\nЭдгээрийг эхний үлдэгдлээс хасах уу?'))return;$('oChkGo').disabled=true;
@@ -1568,10 +1568,47 @@ function watchMov(){db.collection('pos_stock_docs').onSnapshot(s=>{movAll=s.docs
 const movInRange=()=>{const a=$('mD1').value,b=$('mD2').value;return movAll.filter(m=>{const d=lt(m.at).slice(0,10);return (!a||d>=a)&&(!b||d<=b)})};
 /* ---- Дэлгүүр хооронд шилжүүлгийг самбараас хүлээн авах (rcv_xx эрхтэй хүн өөрийн дэлгүүрийнхийг) ---- */
 const trMine=()=>(can('stock')||can('stock.move')||(ME&&ME.admin))?null:['fc','dr','ns'].filter(k=>can('rcv_'+k)).map(k=>k.toUpperCase());
+const nmOf0=c=>{const r=itRow(c);return r&&r.name||''};
+const trCanEdit=()=>can('stock')||can('stock.move')||!!(ME&&ME.admin);
 function trDraw(){const box=$('trList');if(!box)return;const mine=trMine(),L=movDocs.filter(m=>m.type==='move'&&m.status==='sent'&&(!mine||mine.includes(m.to)));
   $('trCnt').textContent=L.length?'('+L.length+')':'';
-  box.innerHTML=L.length?'<table class="t"><thead><tr><th>№</th><th>Илгээсэн</th><th>Хаанаас → Хаана</th><th class="n">Тоо</th><th>Илгээсэн хүн</th><th>Тайлбар</th><th></th></tr></thead><tbody>'+L.map(m=>'<tr><td class="mono">'+esc(m.no||'')+'</td><td>'+esc(lt(m.at))+'</td><td><b>'+esc(LOC[m.from]||m.from)+'</b> → <b>'+esc(LOC[m.to]||m.to)+'</b></td><td class="n">'+nfx(m.qty||0)+'</td><td>'+esc(m.by||'')+'</td><td class="small">'+esc(m.note||'')+'</td><td><button class="btn pri" data-trr="'+esc(m.uid)+'">Хүлээн авах</button></td></tr>').join('')+'</tbody></table>'
+  box.innerHTML=L.length?'<table class="t"><thead><tr><th>№</th><th>Үүсгэсэн огноо</th><th>Үүсгэсэн хэрэглэгч</th><th>Хаанаас → Хаана</th><th class="n">Тоо</th><th>Тайлбар</th><th></th></tr></thead><tbody>'+L.map(m=>'<tr data-trv="'+esc(m.uid)+'" style="cursor:pointer" title="Дарж барааны жагсаалтыг харах"><td class="mono"><a href="#" onclick="return false">'+esc(m.no||'')+'</a>'+(m.edits&&m.edits.length?' <span class="chip b" title="засварласан">✎</span>':'')+'</td><td>'+esc(lt(m.saved||m.at))+'</td><td>'+esc(m.by||'')+'</td><td><b>'+esc(LOC[m.from]||m.from)+'</b> → <b>'+esc(LOC[m.to]||m.to)+'</b></td><td class="n">'+nfx(m.qty||0)+'</td><td class="small">'+esc(m.note||'')+'</td><td style="white-space:nowrap"><button class="btn" data-trv="'+esc(m.uid)+'">Харах</button> <button class="btn" data-trp="'+esc(m.uid)+'">Хэвлэх</button> <button class="btn" data-trx="'+esc(m.uid)+'">Excel</button> <button class="btn pri" data-trr="'+esc(m.uid)+'">Хүлээн авах</button></td></tr>').join('')+'</tbody></table>'
     :'<div class="small">Хүлээгдэж буй шилжүүлэг алга ✓</div>'}
+/* нэг шилжүүлгийн дэлгэрэнгүй: бараа, хэн/хэзээ, хэвлэх, Excel; эрхтэй хүн засах (байршил, тайлбар, тоо, бараа нэмэх/хасах) эсвэл цуцлах */
+let TV=null;
+function trView(uid,edit){const m=movAll.find(x=>x.uid===uid);if(!m)return;const ce=trCanEdit()&&m.status==='sent'&&m.type==='move';TV={m,edit:!!(edit&&ce),L:JSON.parse(m.lines).map(x=>x.slice()),from:m.from,to:m.to,note:m.note||''};trViewDraw()}
+function trViewDraw(){const T=TV,m=T.m,ce=trCanEdit()&&m.status==='sent'&&m.type==='move',locs=Object.keys(LOC).filter(k=>k!=='ON'),cash=c=>{const r=itRow(c);return r&&r.price||0};
+  const tq=T.L.reduce((a,x)=>a+(+x[1]||0),0),tv=T.L.reduce((a,x)=>a+(+x[1]||0)*cash(x[0]),0),st=m.status==='sent'?'<span class="chip b">замд</span>':m.status==='cancel'?'<span class="chip r">цуцалсан</span>':'<span class="chip">хүлээн авсан</span>';
+  const sel=(id,v)=>'<select id="'+id+'" class="inp" style="width:auto">'+locs.map(k=>'<option value="'+k+'"'+(k===v?' selected':'')+'>'+esc(LOC[k])+'</option>').join('')+'</select>';
+  $('pbox').innerHTML='<h3>Шилжүүлэг '+esc(m.no||'')+' '+st+'</h3>'+
+    '<div class="small" style="line-height:1.7">'+(T.edit?'Хаанаас '+sel('tvF',T.from)+' → Хаана '+sel('tvT',T.to):'<b>'+esc(LOC[m.from]||m.from)+'</b> → <b>'+esc(LOC[m.to]||m.to)+'</b>')+
+    '<br>Үүсгэсэн: <b>'+esc(m.by||'—')+'</b> · '+esc(lt(m.saved||m.at))+(m.recvAt?'<br>Хүлээн авсан: '+esc(m.recvBy||'')+' · '+esc(lt(m.recvAt))+(m.recvNote?' · '+esc(m.recvNote):''):'')+(m.status==='cancel'?'<br>Цуцалсан: '+esc(m.cancelBy||'')+' · '+esc(lt(m.cancelAt)):'')+
+    (m.edits&&m.edits.length?'<br>Засвар: '+m.edits.map(x=>esc(x.by)+' · '+esc(lt(x.at))+' ('+esc(x.what||'')+')').join('; '):'')+'</div>'+
+    (T.edit?'<label class="f">Тайлбар</label><input id="tvN" class="inp" value="'+esc(T.note)+'"><input id="tvS" class="inp" placeholder="Бараа нэмэх: баркод / код уншуулах (3*код)…" style="margin-top:8px" autocomplete="off">':(m.note?'<div class="small">Тайлбар: '+esc(m.note)+'</div>':''))+
+    '<div class="scroll" style="max-height:48vh;overflow:auto;margin-top:8px"><table class="t"><thead><tr><th>#</th><th>Код</th><th>Нэр</th><th class="n">Тоо</th>'+(m.recvLines?'<th class="n">Ирсэн</th>':'')+'<th class="n">Кассын үнэ</th><th class="n">Дүн</th>'+(T.edit?'<th></th>':'')+'</tr></thead><tbody>'+
+    T.L.map((x,i)=>{const rv=m.recvLines?((JSON.parse(m.recvLines).find(y=>y[0]===x[0])||[0,0])[1]):null;return '<tr><td>'+(i+1)+'</td><td class="mono">'+esc(x[0])+'</td><td>'+esc(x[2]||nmOf0(x[0])||'')+'</td><td class="n">'+(T.edit?'<input type="number" min="0" data-tvq="'+i+'" value="'+x[1]+'" class="inp" style="width:80px;text-align:right">':nfx(x[1]))+'</td>'+(m.recvLines?'<td class="n'+(rv!==x[1]?' hot':'')+'">'+rv+'</td>':'')+'<td class="n">'+nfx(cash(x[0]))+'</td><td class="n">'+nfx(cash(x[0])*x[1])+'</td>'+(T.edit?'<td><button class="btn" data-tvd="'+i+'" title="Хасах">×</button></td>':'')+'</tr>'}).join('')+
+    '<tr><td></td><td></td><td><b>Нийт '+T.L.length+' төрөл</b></td><td class="n"><b>'+nfx(tq)+'</b></td>'+(m.recvLines?'<td class="n"><b>'+nfx(m.recvQty||0)+'</b></td>':'')+'<td></td><td class="n"><b>'+nfx(tv)+'</b></td>'+(T.edit?'<td></td>':'')+'</tr></tbody></table></div>'+
+    '<div id="tvM" class="small" style="color:var(--red);min-height:18px;margin-top:4px"></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">'+
+    (T.edit?'<button class="btn" id="tvCx">Болих</button><button class="btn pri" id="tvSave">Засварыг хадгалах</button>'
+      :'<button class="btn" id="tvP">🖨 Хэвлэх</button><button class="btn" id="tvX">Excel</button>'+(ce?'<button class="btn" id="tvE">✎ Засах</button><button class="btn" id="tvDel" style="color:var(--red)">Устгах (цуцлах)</button>':'')+(m.status==='sent'&&m.type==='move'?'<button class="btn pri" id="tvR">Хүлээн авах</button>':'')+'<button class="btn" id="tvC">Хаах</button>')+'</div>';
+  $('pm').classList.remove('hide');
+  if(!T.edit){$('tvC').onclick=()=>{TV=null;pClose()};$('tvP').onclick=()=>movDocPrint(m);$('tvX').onclick=()=>trXl(m.uid);if($('tvR'))$('tvR').onclick=()=>trOpen(m.uid);if($('tvE'))$('tvE').onclick=()=>{T.edit=true;trViewDraw()};
+    if($('tvDel'))$('tvDel').onclick=async()=>{if(!confirm('Шилжүүлэг '+(m.no||'')+'-ийг устгах (цуцлах) уу?\\nБараа илгээгчийн үлдэгдэлд буцаж орно. Баримт архивт «цуцалсан» гэж үлдэнэ.'))return;
+      try{await db.collection('pos_stock_docs').doc(m.uid).update({status:'cancel',cancelBy:auth.currentUser.email||'',cancelAt:new Date().toISOString()});await auditCfg('stock_move_cancel',{no:m.no||'',from:m.from,to:m.to,qty:m.qty||0});TV=null;pClose()}catch(er){$('tvM').textContent='Алдаа: '+(er.code||er)}};return}
+  $('tvCx').onclick=()=>trView(m.uid);
+  $('pbox').querySelectorAll('[data-tvq]').forEach(i=>i.oninput=()=>{T.L[+i.dataset.tvq][1]=Math.max(0,Math.round(+i.value||0))});
+  $('pbox').querySelectorAll('[data-tvd]').forEach(b=>b.onclick=()=>{T.from=$('tvF').value;T.to=$('tvT').value;T.note=$('tvN').value;T.L.splice(+b.dataset.tvd,1);trViewDraw()});
+  $('tvS').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('tvS').value.trim(),n=1;$('tvS').value='';if(!v)return;const mm=/^(\d{1,4})\*(.+)$/.exec(v);if(mm){n=+mm[1];v=mm[2].trim()}
+    try{await loadPCat()}catch(x){}const it=itRow(v),c=it?it.code:v,o=T.L.find(x=>x[0]===c);T.from=$('tvF').value;T.to=$('tvT').value;T.note=$('tvN').value;if(o)o[1]+=n;else T.L.unshift([c,n,it?it.name:'']);trViewDraw();setTimeout(()=>$('tvS').focus(),30)};
+  $('tvSave').onclick=async()=>{const from=$('tvF').value,to=$('tvT').value,note=$('tvN').value.trim(),L=T.L.filter(x=>+x[1]>0);if(from===to)return $('tvM').textContent='Хаанаас, хаана ижил байна';if(!L.length)return $('tvM').textContent='Бараа алга — устгах бол «Устгах (цуцлах)»';
+    const q=L.reduce((a,x)=>a+x[1],0),ch=[from!==m.from||to!==m.to?'байршил':'',note!==(m.note||'')?'тайлбар':'',JSON.stringify(L)!==m.lines?'бараа '+(m.qty||0)+'→'+q+' ш':''].filter(Boolean).join(', ');if(!ch){trView(m.uid);return}
+    if(!confirm('Засварыг хадгалах уу? ('+ch+')'))return;$('tvSave').disabled=true;
+    try{const cur=await db.collection('pos_stock_docs').doc(m.uid).get();if(!cur.exists||cur.data().status!=='sent'){$('tvM').textContent='Энэ шилжүүлгийг аль хэдийн хүлээн авсан/цуцалсан байна';return}
+      await db.collection('pos_stock_docs').doc(m.uid).update({from,to,note,lines:JSON.stringify(L),count:L.length,qty:q,edits:(cur.data().edits||[]).concat([{by:auth.currentUser.email||'',at:new Date().toISOString(),what:ch,old:{from:m.from,to:m.to,qty:m.qty||0}}])});
+      await auditCfg('stock_move_edit',{no:m.no||'',what:ch});setTimeout(()=>trView(m.uid),400)}catch(er){$('tvSave').disabled=false;$('tvM').textContent='Хадгалсангүй: '+(er.code||er)}}}
+async function trXl(uid){const d=movAll.find(x=>x.uid===uid);if(!d)return;try{await loadPCat()}catch(x){}await movXlsx(movLinesRows([d]),(d.no||d.uid).replace(/[^\w\-А-яӨөҮү]/g,'_'))}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-trp],[data-trx],[data-trv]');if(!b||e.target.closest('[data-trr]'))return;const d=b.dataset;
+  if(d.trp){e.stopPropagation();const m=movAll.find(x=>x.uid===d.trp);if(m)movDocPrint(m);return}if(d.trx){e.stopPropagation();trXl(d.trx);return}if(d.trv&&!e.target.closest('button:not([data-trv])'))trView(d.trv)},true);
 let TR=null;
 function trOpen(uid){const m=movDocs.find(x=>x.uid===uid);if(!m||m.status!=='sent')return;TR={m,exp:JSON.parse(m.lines),got:new Map()};
   $('pbox').innerHTML='<h3>Хүлээн авах — '+esc(LOC[m.from]||m.from)+' → '+esc(LOC[m.to]||m.to)+' · '+esc(m.no||'')+'</h3><div class="small">'+esc(lt(m.at))+' · '+esc(m.by||'')+(m.note?' · '+esc(m.note):'')+'. Ирсэн бараа бүрийг уншуулна (олноор нь: 3*код). Зөрвөл улаанаар харагдана.</div>'+
@@ -1593,7 +1630,7 @@ function trOpen(uid){const m=movDocs.find(x=>x.uid===uid);if(!m||m.status!=='sen
       try{await auditCfg('stock_move_recv',{no:TR.m.no||'',from:TR.m.from,to:TR.m.to,qty:gq,diff})}catch(x){}TR=null;pClose()}catch(er){$('trOk').disabled=false;$('trM').textContent='Хадгалсангүй: '+(er.code||er)}}}
 function trTbl(){if(!TR)return;const keys=[...new Set([...TR.exp.map(x=>x[0]),...TR.got.keys()])],ex=c=>TR.exp.find(x=>x[0]===c);let ts=0,tg=0;
   $('trTbl').innerHTML='<table class="t"><thead><tr><th>Код</th><th>Нэр</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th><th class="n">Зөрүү</th></tr></thead><tbody>'+keys.map(c=>{const e=ex(c),s=e?e[1]:0,g=(TR.got.get(c)||[0,0])[1],d=g-s;ts+=s;tg+=g;
-    return '<tr'+(d?' style="background:'+(d<0?'#fff5f5':'#fffbea')+'"':'')+'><td class="mono">'+esc(c)+'</td><td>'+esc((e&&e[2])||(TR.got.get(c)||[])[2]||nmOf(c)||'')+'</td><td class="n">'+s+'</td><td class="n"><b>'+g+'</b></td><td class="n'+(d?' hot':'')+'">'+(d?(d>0?'+':'')+d:'')+'</td></tr>'}).join('')+
+    return '<tr'+(d?' style="background:'+(d<0?'#fff5f5':'#fffbea')+'"':'')+'><td class="mono">'+esc(c)+'</td><td>'+esc((e&&e[2])||(TR.got.get(c)||[])[2]||nmOf0(c)||'')+'</td><td class="n">'+s+'</td><td class="n"><b>'+g+'</b></td><td class="n'+(d?' hot':'')+'">'+(d?(d>0?'+':'')+d:'')+'</td></tr>'}).join('')+
     '<tr><td></td><td><b>Нийт</b></td><td class="n"><b>'+ts+'</b></td><td class="n"><b>'+tg+'</b></td><td class="n'+(tg-ts?' hot':'')+'"><b>'+(tg-ts?(tg-ts>0?'+':'')+(tg-ts):'✓')+'</b></td></tr></tbody></table>'}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-trr]');if(b)trOpen(b.dataset.trr)});
 function drawMov(){const MD=movInRange();trDraw();
