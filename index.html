@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.1">
+<meta name="vivi-ver" content="7.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -871,10 +871,12 @@ const LOCN=k=>STORES[k]||STK_NAMES[k]||k||'—';
 let MOV=[],movq=store.get('movq',[]);
 function movStop(){(movListen.u||[]).forEach(f=>{try{f()}catch(e){}});movListen.u=[];movListen.on=false;MOV=MOV.filter(m=>movq.includes(m))}
 function movListen(){if(movListen.on||!(fb.ready&&fb.user))return;const st=curAcc()||device.store;if(!st)return;movListen.on=true;movListen.st=st;movListen.u=[];const A={},B={};
-  const upd=()=>{MOV=Object.values(Object.assign({},A,B)).sort((a,b)=>(a.at||'')<(b.at||'')?1:-1);const n=MOV.filter(m=>m.to===st&&m.status==='sent').length;const e=$('movCnt');if(e)e.textContent=n?'('+n+')':'';const e2=$('movCnt2');if(e2){e2.textContent=n?n:'';e2.className=n?'nbadge':''}};
+  const upd=()=>{MOV=Object.values(Object.assign({},A,B)).sort((a,b)=>(a.at||'')<(b.at||'')?1:-1);const n=MOV.filter(m=>m.to===st&&m.status==='sent').length,no=movToSend(st).length;const e=$('movCnt');if(e)e.textContent=n?'('+n+')':'';const eo=$('movCntO');if(eo)eo.textContent=no?'('+no+')':'';const e2=$('movCnt2');if(e2){e2.textContent=n+no?n+no:'';e2.className=n+no?'nbadge':''}};
   movListen.u.push(fb.db.collection('pos_stock_docs').where('to','==',st).onSnapshot(s=>{Object.keys(A).forEach(k=>delete A[k]);s.docs.forEach(d=>{const x=d.data();A[x.uid||d.id]=x});upd()},()=>{movListen.on=false}));
   movListen.u.push(fb.db.collection('pos_stock_docs').where('from','==',st).onSnapshot(s=>{Object.keys(B).forEach(k=>delete B[k]);s.docs.forEach(d=>{const x=d.data();B[x.uid||d.id]=x});upd()},()=>{movListen.on=false}));}
 const lnQty=L=>L.reduce((a,x)=>a+x[1],0);
+// оффис зөрүү шийдвэрлэхдээ энэ дэлгүүрээс өөр дэлгүүр рүү бараа явуулахаар шилжүүлэг үүсгэсэн — бараагаа олж, баримтыг хэвлээд жолоочид өгнө
+const movToSend=st=>MOV.filter(m=>m.from===st&&m.type==='move'&&m.status==='sent'&&m.src==='diff');
 // Скан жагсаалт: Enter дарах бүрт +1; баркод эсвэл кодоор
 function scanBox(st,exp){
   const ex=exp?new Map(exp.map(x=>[x[0],x])):null;
@@ -900,10 +902,10 @@ function addDelivery(){if(S.exch)return;const Z=dlvZones(),ex=S.cart.find(l=>l.c
     else{S.cart.push({code:'DELIVERY',bc:'',name:nm,zone:z.n,base:z.p,price:z.p,sup:'',grp:'Хүргэлт',model:'',size:'',qty:1,disc:0,d5:false,noPromo:true});S.sel=S.cart.length-1}
     closeModal();render()})}
 function openMov(tab){
-  if(!S.user)return;if(movListen.on&&movListen.st!==S.user.store)movStop();movListen();tab=tab||'in';const own=S.user.store;
-  const tabs=[['in','Ирсэн — хүлээн авах'],...(['FC','DR','NS'].includes(own)?[['lpp','Агуулахаас (LPP)']]:[]),['send','Шилжүүлэг илгээх'],['sup','Нийлүүлэгчээс орлого'],['hist','Түүх']];
-  const head='<h2>Барааны хөдөлгөөн · '+esc(LOCN(own))+'</h2><div class="tabs">'+tabs.map(t=>'<button data-t="'+t[0]+'" class="'+(t[0]===tab?'on':'')+'">'+t[1]+(t[0]==='in'?' <span id="movCnt"></span>':'')+'</button>').join('')+'</div>';
-  const bindTabs=()=>{$('mbox').classList.add('wide');$('mbox').querySelectorAll('.tabs [data-t]').forEach(b=>b.onclick=()=>openMov(b.dataset.t));const n=MOV.filter(m=>m.to===own&&m.status==='sent').length;if($('movCnt'))$('movCnt').textContent=n?'('+n+')':''};
+  if(!S.user)return;if(movListen.on&&movListen.st!==S.user.store)movStop();movListen();const own=S.user.store;tab=tab||(movToSend(own).length&&!MOV.some(m=>m.to===own&&m.status==='sent')?'out':'in');
+  const tabs=[['in','Ирсэн — хүлээн авах'],...(movToSend(own).length||tab==='out'?[['out','📤 Илгээх ёстой']]:[]),...(['FC','DR','NS'].includes(own)?[['lpp','Агуулахаас (LPP)']]:[]),['send','Шилжүүлэг илгээх'],['sup','Нийлүүлэгчээс орлого'],['hist','Түүх']];
+  const head='<h2>Барааны хөдөлгөөн · '+esc(LOCN(own))+'</h2><div class="tabs">'+tabs.map(t=>'<button data-t="'+t[0]+'" class="'+(t[0]===tab?'on':'')+'">'+t[1]+(t[0]==='in'?' <span id="movCnt"></span>':t[0]==='out'?' <span id="movCntO"></span>':'')+'</button>').join('')+'</div>';
+  const bindTabs=()=>{$('mbox').classList.add('wide');$('mbox').querySelectorAll('.tabs [data-t]').forEach(b=>b.onclick=()=>openMov(b.dataset.t));const n=MOV.filter(m=>m.to===own&&m.status==='sent').length;if($('movCnt'))$('movCnt').textContent=n?'('+n+')':'';const no=movToSend(own).length;if($('movCntO'))$('movCntO').textContent=no?'('+no+')':''};
   // Агуулахын (LPP) илгээмжийг касс дээрээс хүлээн авах — самбарын «Хүлээн авалт»-тай ижил хуудас (зөвхөн энэ дэлгүүрийнх)
   if(tab==='lpp'){if(!(fb.ready&&fb.user&&navigator.onLine)){openModal(head+'<div class="small" style="color:var(--red);margin:12px 0">Интернэт / үүлэнд холбогдсон байх шаардлагатай</div><div class="rowbtn"><button id="mvc">Хаах</button></div>');bindTabs();$('mvc').onclick=closeModal;return}
     openModal(head+'<div class="small" style="margin:4px 0 6px">Агуулахаас ирсэн илгээмж: сонгоод (эсвэл «Бүгдийг сонгох») хайрцгийн барааг уншуулна → «Тулгалт дуусгах». Ирээгүй илгээмж «Замд» үлдэнэ.</div><iframe src="wh.html?embed=1&tab=rcv&t='+Date.now()+'" title="LPP хүлээн авалт" style="width:100%;height:68vh;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe><div class="rowbtn"><button id="mvc">Хаах</button></div>');
@@ -912,6 +914,10 @@ function openMov(tab){
     openModal(head+(fb.user?'':'<div class="small" style="color:var(--red)">Үүлэнд холбогдоогүй — ирсэн шилжүүлэг харагдахгүй</div>')+'<div class="list"><table><thead><tr><th>Илгээсэн</th><th>Хаанаас</th><th>Тайлбар</th><th class="n">Тоо</th></tr></thead><tbody id="mil">'+
       (L.map(m=>'<tr data-u="'+m.uid+'" style="cursor:pointer"><td>'+esc(lt2(m.at))+'<div class="small">'+esc(m.by||'')+'</div></td><td>'+esc(LOCN(m.from))+'</td><td class="small">'+esc(m.note||m.file||'')+'</td><td class="n"><b>'+m.qty+'</b></td></tr>').join('')||'<tr><td colspan="4" class="empty">Хүлээн авах шилжүүлэг алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="mvc">Хаах</button></div>');
     bindTabs();$('mvc').onclick=closeModal;$('mil').onclick=e=>{const tr=e.target.closest('tr[data-u]');if(tr)movRecv(MOV.find(m=>m.uid===tr.dataset.u))};return}
+  if(tab==='out'){const L=movToSend(own);
+    openModal(head+'<div class="small" style="margin:4px 0 6px">Хүлээн авалтын зөрүүг шийдвэрлэхэд оффис эдгээр барааг <b>'+esc(LOCN(own))+'</b>-аас явуулахаар шийдсэн. Барааг олж, баримтыг хэвлээд бараатай хамт жолоочид өгнө үү. Хүлээн авагч дэлгүүр «Хүлээн авах» хийхэд энд алга болно.</div><div class="list"><table><thead><tr><th>Огноо</th><th>Хаашаа</th><th>Бараа</th><th class="n">Тоо</th><th></th></tr></thead><tbody id="mol">'+
+      (L.map(m=>'<tr><td>'+esc(lt2(m.at))+'<div class="small">'+esc(m.no||'')+'</div></td><td><b>'+esc(LOCN(m.to))+'</b></td><td class="small">'+JSON.parse(m.lines).map(x=>esc(x[0])+' '+esc(x[2]||'')+' × '+x[1]).join('<br>')+'<div>'+esc(m.note||'')+'</div></td><td class="n"><b>'+m.qty+'</b></td><td><button data-mp="'+esc(m.uid)+'">🖨 Хэвлэх</button></td></tr>').join('')||'<tr><td colspan="5" class="empty">Илгээх бараа алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button id="mvc">Хаах</button></div>');
+    bindTabs();$('mvc').onclick=closeModal;$('mol').onclick=e=>{const b=e.target.closest('[data-mp]');if(b){const m=MOV.find(x=>x.uid===b.dataset.mp);if(m)movPrint(m,'ШИЛЖҮҮЛГИЙН БАРИМТ')}};return}
   if(tab==='hist'){const L=MOV.slice(0,200);
     openModal(head+'<div class="list" style="max-height:60vh"><table><thead><tr><th>Огноо</th><th>Төрөл</th><th>Хаанаас → хаана</th><th>Төлөв</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th></tr></thead><tbody>'+
       (L.map(m=>{const rq=m.recvLines?lnQty(JSON.parse(m.recvLines)):null;return '<tr><td>'+esc(lt2(m.at))+'</td><td>'+({move:'Шилжүүлэг',in:'Орлого',out:'Зарлага',adj:'Тооллогын зөрүү'}[m.type]||m.type)+(m.supplier?'<div class="small">'+esc(m.supplier)+(m.invoice?' · '+esc(m.invoice):'')+'</div>':'')+'</td><td>'+esc(LOCN(m.from))+' → '+esc(LOCN(m.to))+'</td><td>'+(m.status==='sent'?'<span class="badge b30">замд</span>':m.status==='received'?'<span class="badge">хүлээн авсан</span>':'<span class="badge">бүртгэсэн</span>')+'</td><td class="n">'+m.qty+'</td><td class="n">'+(rq==null?'':rq+(rq!==m.qty&&m.type==='move'?' <b style="color:var(--red)">('+(rq-m.qty>0?'+':'')+(rq-m.qty)+')</b>':''))+'</td></tr>'}).join('')||'<tr><td colspan="6" class="empty">Хөдөлгөөн алга</td></tr>')+'</tbody></table></div><div class="rowbtn"><button class="pri" id="mvc">Хаах</button></div>');
