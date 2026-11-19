@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="12.9">
+<meta name="vivi-ver" content="13.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -735,9 +735,9 @@ $('slClr').onclick=()=>{['slSt','slCa'].forEach(id=>$(id).value='');['slPt','slK
    Шийдвэр: pos_diff/{L_<илгээмж> | M_<шилжүүлэг>}.res = JSON {мөр: [{act,qty,resp,note,by,at,doc,task,pair}]} */
 const DF_FIN=['pair','wh','loss','accept','ret','sender','recounted','dbl','same'],DF_RESP={wh:'Агуулах',tr:'Тээвэр / жолооч',st:'Дэлгүүр'};
 const DF_ACT={pair:'Өөр дэлгүүрийнхтэй тааруулж шилжүүлсэн',recount:'Дахин тоолуулж байна',recounted:'Тооллогоор шийдсэн',wh:'Агуулахад үлдсэн → дахин илгээх',loss:'Хохирол',accept:'Агуулахаас ирсэн — хүлээн авсан',ret:'Буцаасан',sender:'Илгээгчийн үлдэгдлийг зассан',dbl:'Давхар тоолсон — илүүг хассан',same:'Нэг дэлгүүрийн өөр илгээмжтэй тэнцүүлсэн',resent:'Агуулахаас дахин илгээж ирсэн',waiting:'Агуулахаас дахин илгээсэн — замд'};
-let DF={from:'2026-11-18',ships:[],res:{},tasks:{},on:false,view:'open',st:'',ty:'',a:'',b:'',sel:'',ck:{},lf:'open',lim:150,lossA:'',lossB:''};
+let DF={U:{},from:'2026-11-18',ships:[],res:{},tasks:{},on:false,view:'open',st:'',ty:'',a:'',b:'',sel:'',ck:{},lf:'open',lim:150,lossA:'',lossB:''};
 const dfCan=()=>can('stock.diff')||!!(ME&&ME.admin),dfWh=()=>can('wh')||can('whedit'),dfView=()=>dfCan()||dfWh()||can('stock.bal');
-function watchDiff(){if(DF.on||!dfView())return;DF.on=true;lppFrom().then(f=>{DF.from=f||DF.from;dfSoon()});
+function watchDiff(){if(DF.on||!dfView())return;DF.on=true;db.collection('wh_users').get().then(q=>{DF.U={};q.docs.forEach(d=>{const x=d.data();DF.U[d.id]=x.name||x.email||d.id});dfSoon()}).catch(()=>{});lppFrom().then(f=>{DF.from=f||DF.from;dfSoon()});
   db.collection('wh_ship').where('status','in',['sent','recv','diff','closed']).onSnapshot(s=>{DF.ships=s.docs.map(d=>({id:d.id,...d.data()}));dfSoon()},e=>console.warn('diff ships',e));
   db.collection('pos_diff').onSnapshot(s=>{DF.res={};s.docs.forEach(d=>DF.res[d.id]=d.data());dfSoon()},e=>console.warn('pos_diff',e));
   db.collection('pos_counts').where('kind','==','diff').onSnapshot(s=>{DF.tasks={};s.docs.forEach(d=>DF.tasks[d.id]=d.data());dfSoon()},()=>{})}
@@ -746,9 +746,12 @@ function dfSoon(){clearTimeout(dfSoon.t);dfSoon.t=setTimeout(()=>{dfBadge();if(!
 function dfItems(){const out=[],R=k=>{try{return JSON.parse((DF.res[k]||{}).res||'{}')}catch(e){return {}}},RS={};
   // агуулахаас дахин илгээсэн илгээмж (resendOf): самбараас эсвэл агуулахын програмаас «Олдсон — дахин илгээнэ»
   DF.ships.forEach(x=>{if(!x.resendOf)return;const G=lppDec(x.r);Object.entries(lppDec(x.l)).forEach(([e,q])=>{q=+q||0;if(q<=0)return;((RS[x.resendOf]=RS[x.resendOf]||{})[e]=RS[x.resendOf][e]||[]).push({id:x.id,no:x.no||x.id,q,st:x.status,g:Math.max(0,+G[e]||0),at:x.sentAt||x.createdAt||''})})});
+  // замд / тоолж дуусаагүй илгээмж — зөвхөн «Бүх илгээмж»-д, давхар тоолсон эсэхийг шалгахад
+  DF.ships.forEach(sh=>{if(sh.status!=='sent'||!LPP_LOC[sh.store]||iso(new Date(sh.sentAt||sh.createdAt||0))<DF.from)return;const L=lppDec(sh.l),G=lppDec(sh.r);
+    out.push({transit:true,L,G,sent:Object.values(L).reduce((a,q)=>a+Math.max(0,+q||0),0),recv:Object.values(G).reduce((a,q)=>a+Math.max(0,+q||0),0),key:'L_'+sh.id,src:'lpp',srcId:sh.id,re:!!sh.resendOf,no:sh.no||sh.id,from:'LPP',to:LPP_LOC[sh.store],at:sh.sentAt||sh.createdAt,recvBy:'',deliv:sh.dname||'',lines:[]})});
   DF.ships.forEach(sh=>{if(!sh.recvAt||iso(new Date(sh.recvAt))<DF.from)return;const to=LPP_LOC[sh.store];if(!to)return;const L=lppDec(sh.l),G=lppDec(sh.r),I=lppDec(sh.i),W=lppDec(sh.res),key='L_'+sh.id,res=R(key);
     const ks=[...new Set([...Object.keys(L),...Object.keys(G)])],lines=[];ks.forEach(e=>{const s=Math.max(0,+L[e]||0),g=Math.max(0,+G[e]||0);if(s===g)return;const it=itRow(e);const ln=dfLine(e,it?it.code:e,(I[e]||{}).n||(it&&it.name)||'',s,g,res[e],(RS[sh.id]||{})[e]);ln.whr=W[e];lines.push(ln)});
-    out.push({L,sent:Object.values(L).reduce((a,q)=>a+Math.max(0,+q||0),0),recv:Object.values(G).reduce((a,q)=>a+Math.max(0,+q||0),0),key,src:'lpp',srcId:sh.id,re:!!sh.resendOf,no:sh.no||sh.id,from:'LPP',to,at:sh.recvAt,recvBy:sh.recvBy||'',deliv:sh.dname||sh.deliv||'',lines})});
+    out.push({L,sent:Object.values(L).reduce((a,q)=>a+Math.max(0,+q||0),0),recv:Object.values(G).reduce((a,q)=>a+Math.max(0,+q||0),0),G,key,src:'lpp',srcId:sh.id,re:!!sh.resendOf,no:sh.no||sh.id,from:'LPP',to,at:sh.recvAt,recvBy:DF.U[sh.recvBy]||sh.recvBy||'',deliv:sh.dname||sh.deliv||'',lines})});
   movAll.forEach(m=>{if(m.type!=='move'||m.status!=='received'||iso(new Date(m.recvAt||0))<DF.from)return;const L=new Map(JSON.parse(m.lines).map(x=>[x[0],x])),G=new Map(JSON.parse(m.recvLines||m.lines).map(x=>[x[0],x])),key='M_'+m.uid,res=R(key),lines=[];
     [...new Set([...L.keys(),...G.keys()])].forEach(c=>{const s=(L.get(c)||[0,0])[1],g=(G.get(c)||[0,0])[1];if(s===g)return;lines.push(dfLine(c,c,(L.get(c)||G.get(c)||[])[2]||((itRow(c)||{}).name)||'',s,g,res[c]))});
     out.push({sent:[...L.values()].reduce((a,x)=>a+x[1],0),recv:[...G.values()].reduce((a,x)=>a+x[1],0),key,src:'move',srcId:m.uid,no:m.no||m.uid,from:m.from,to:m.to,at:m.recvAt,recvBy:m.recvBy||'',deliv:'',note:m.recvNote||'',lines})});
@@ -759,7 +762,7 @@ function dfLine(k,code,name,sent,recv,acts,rs){acts=acts||[];rs=rs||[];const d=r
   const rsRecv=d<0?rs.filter(x=>x.st!=='sent').reduce((a,x)=>a+x.q,0):0,rsWait=d<0?rs.filter(x=>x.st==='sent').reduce((a,x)=>a+x.q,0):0,need=Math.max(0,Math.abs(d)-done-rsRecv);
   return {k,code,name,sent,recv,d,acts,rs,rsRecv,wait:Math.min(need,rsWait),left:Math.max(0,need-rsWait)}}
 function dfBadge(){if(!dfView())return;const I=dfItems(),open=I.reduce((a,D)=>a+D.open,0),old=I.filter(D=>D.open&&D.days>=3).reduce((a,D)=>a+D.open,0);DF.open=open;DF.old=old;
-  const sn=$('sn_stock_diff');if(sn){sn.textContent=open?' '+open:'';sn.classList.toggle('hide',!open)}stkBan()}
+  stkBan()}
 // таарах мөр: нэг дэлгүүрт дутуу ↔ өөр дэлгүүрт илүү (ижил код)
 function dfPairs(I,D,l){const want=l.d<0?1:-1,R=[];I.forEach(X=>{if(X.to===D.to)return;X.lines.forEach(y=>{if(y.code===l.code&&Math.sign(y.d)===want&&y.left>0)R.push({X,y})})});return R}
 // ---- жагсаалт (огноогоор) + сонгосон баримтын дэлгэрэнгүй, бөөнөөр шийдвэрлэх ----
@@ -769,19 +772,24 @@ function dfDraw(){if(!$('dfTbl'))return;const I=dfItems(),ce=dfCan(),wh=dfWh();
   const fo=F.reduce((a,D)=>a+D.open,0);
   $('dfSum').innerHTML='<span class="chip'+(DF.open?' r':'')+'">Нийт нээлттэй мөр: '+(DF.open||0)+'</span>'+(DF.old?' <span class="chip r">3+ хоног: '+DF.old+'</span>':'')+' <span class="small">Сонгосон хугацаанд: '+F.length+' баримт, '+fo+' нээлттэй мөр · '+(ce?'та шийдвэрлэх эрхтэй':wh?'агуулах: дутуу бараа агуулахад үлдсэн бол «дахин илгээх»':'зөвхөн харах')+'</span>';
   const head=['Хүлээн авсан','Баримт','Төрөл','Хаанаас','Хаана','Илгээсэн','Ирсэн','Дутуу','Илүү','Нээлттэй мөр','Хоног','Төлөв','Анхааруулга'];
-  const rows=F.map(D=>{const w=dfWarn(I,D),r=[lt(D.at),D.no,D.src==='lpp'?(D.re?'LPP · дахин илгээсэн':'LPP'):'Шилжүүлэг',D.src==='lpp'?'LPP агуулах':(LOC[D.from]||D.from),LOC[D.to]||D.to,D.sent,D.recv,D.short||null,D.over||null,D.open||null,D.open?D.days:null,!D.lines.length?'✓ зөрүүгүй':D.open?(D.days>=3?'⚠ хугацаа хэтэрсэн':'нээлттэй'):'✓ шийдвэрлэсэн',w.length?'⚠ '+w.map(x=>x.short).join('; '):''];r.key=D.key;r.red=D.open&&D.days>=3;return r});
+  const rows=F.map(D=>{const w=dfWarn(I,D),r=[(D.transit?'илгээсэн ':'')+lt(D.at),D.no,D.src==='lpp'?(D.re?'LPP · дахин илгээсэн':'LPP'):'Шилжүүлэг',D.src==='lpp'?'LPP агуулах':(LOC[D.from]||D.from),LOC[D.to]||D.to,D.sent,D.recv,D.short||null,D.over||null,D.open||null,D.open?D.days:null,D.transit?'🚚 замд'+(D.recv?' · тоолж дуусаагүй':''):!D.lines.length?'✓ зөрүүгүй':D.open?(D.days>=3?'⚠ хугацаа хэтэрсэн':'нээлттэй'):'✓ шийдвэрлэсэн',w.length?'⚠ '+w.map(x=>x.short).join('; '):''];r.key=D.key;r.red=D.open&&D.days>=3;return r});
   xtable('dfTbl','dfships',head,rows,{noSum:[10],limit:300,rowAttr:r=>' class="pr" data-dfo="'+esc(r.key)+'" style="cursor:pointer'+(r.key===DF.sel?';background:#fff4d6;font-weight:600':r.red?';background:#fde4e6':'')+'"'});
   if(!I.some(D=>D.key===DF.sel))DF.sel=F.length===1?F[0].key:'';dfDet(I,ce,wh)}
 // анхааруулга: нэг дэлгүүрийн ойрын өөр илгээмжинд ижил код байсан (давхар тоолсон / илгээмж хооронд андуурсан)
-function dfWarn(I,D){if(D.src!=='lpp'||!D.L)return [];const out=[];
+function dfWarn(I,D){if(D.src!=='lpp'||!D.L||D.transit)return [];const out=[];
   I.forEach(X=>{if(X===D||X.src!=='lpp'||X.to!==D.to||!X.L||Math.abs(new Date(X.at)-new Date(D.at))>10*864e5)return;
     const ov=D.lines.filter(l=>l.d>0&&l.left>0&&X.L[l.k]!=null);
+    if(X.transit){if(!ov.length)return;const own=ov.filter(l=>(+X.L[l.k]||0)-(+X.G[l.k]||0)>0),dup=ov.filter(l=>(+X.L[l.k]||0)-(+X.G[l.k]||0)<=0);
+      out.push({X,ov:dup,net:[],own,short:X.no+' замд ('+ov.length+' код)',txt:'<b>'+esc(X.no)+'</b> илгээмжийн хүлээн авалт <b>дуусаагүй</b> байна (илгээсэн '+nfx(X.sent)+', одоогоор тоолсон '+nfx(X.recv)+'). Энд илүү гарсан '+ov.length+' мөрийн:'+
+        (own.length?'<br>• <b>'+own.length+'</b> мөр нь '+esc(X.no)+'-ийн бараа, тэнд хараахан тоологдоогүй → <b>'+esc(X.no)+'-ийн бараа энд тоологдсон</b>. Эдгээрийг одоо битгий шийдвэрлэ. '+esc(X.no)+'-ийн бүх хайрцаг дэлгүүрт ирсэн бол тэр илгээмжийг <b>дахин уншуулалгүйгээр</b> шууд «Тулгалт дуусгах»-аар хаа (энэ бараа аль хэдийн энд тоологдсон) — тэнд дутуу гарахад систем ⇄ тэнцүүлэхийг санал болгоно.':'')+
+        (dup.length?'<br>• <b>'+dup.length+'</b> мөр нь '+esc(X.no)+'-д аль хэдийн бүрэн тоологдсон → <b>2 удаа тоолсон</b> байж болзошгүй.':'')});return}
     const net=[];D.lines.forEach(l=>{if(!l.left)return;const y=X.lines.find(y=>y.k===l.k&&Math.sign(y.d)===-Math.sign(l.d)&&y.left>0);if(y)net.push([l,y])});
-    const nOver=D.lines.filter(l=>l.d>0&&l.left>0).length,big=ov.length>=Math.max(3,nOver*0.3);if(!big&&!net.length)return;
+    if(D.transit)return;const nOver=D.lines.filter(l=>l.d>0&&l.left>0).length,big=ov.length>=Math.max(3,nOver*0.3);if(!big&&!net.length)return;
     out.push({X,ov,net,short:X.no+' ('+(net.length||ov.length)+' код)',
       txt:net.length?'<b>'+net.length+'</b> бараа энд '+(net[0][0].d<0?'дутуу':'илүү')+', харин <b>'+esc(X.no)+'</b> илгээмжинд '+(net[0][0].d<0?'илүү':'дутуу')+' гарсан ('+esc(lt(X.at))+'). Хоёулаа '+esc(LOC[D.to]||D.to)+'-д ирсэн → бараа дэлгүүрт байгаа, зүгээр л илгээмж андуурч тоолсон.'+(big&&ov.length>net.length?' Мөн илүүгийн '+ov.length+' код тэр илгээмжинд байсан — давхар тоолсон байж болзошгүй.':'')
         :'Илүү гарсан <b>'+nOver+'</b> мөрийн <b>'+ov.length+'</b> нь <b>'+esc(X.no)+'</b> илгээмжинд бас байсан ('+(X.lines.length?'тэнд дутуу '+X.short+', илүү '+X.over:'тэнд зөрүүгүй хүлээн авсан')+', '+esc(lt(X.at))+'). Нэг барааг <b>2 удаа тоолсон</b> байж болзошгүй.'})});return out}
 function dfDet(I,ce,wh){const box=$('dfList'),D=I.find(x=>x.key===DF.sel);if(!D){box.innerHTML='<div class="small" style="padding:8px">↑ Жагсаалтаас баримт дээр дарж дэлгэрэнгүй, шийдвэрийг харна.</div>';return}
+  if(D.transit){box.innerHTML='<div class="card" id="dfDetC" style="margin:10px 0;padding:10px 12px;border-left:4px solid #3b82f6"><b style="font-size:16px">🚚 LPP '+esc(D.no)+'</b> · → <b>'+esc(LOC[D.to]||D.to)+'</b> · '+esc(D.deliv)+' <button class="btn" style="min-height:28px;float:right" data-dfo="">✕ Хаах</button><div class="small">Илгээсэн '+esc(lt(D.at))+' · '+nfx(D.sent)+' ш · <b>хүлээн авалт дуусаагүй</b>'+(D.recv?' — одоогоор '+nfx(D.recv)+' ш тоолсон':' — тоолоогүй (замд)')+'</div><div class="small" style="margin-top:6px">Дэлгүүр «📥 Хүлээн авалт» (эсвэл касс → «Агуулахаас (LPP)») дээр энэ илгээмжийг сонгоод үлдсэн хайрцгийг тоолж, «Тулгалт дуусгах» дарна. Хэрэв түүний бараа өөр илгээмжид андуурч тоологдсон бол (тэр илгээмжийн анхааруулгыг харна уу) дахин уншуулалгүйгээр шууд хаана. Дуусмагц зөрүү энд гарна.</div></div>';return}
   const ck=DF.ck[D.key]||(DF.ck[D.key]=new Set()),lf=DF.lf,W=dfWarn(I,D);[...ck].forEach(k=>{const l=D.lines.find(x=>x.k===k);if(!l||!l.left)ck.delete(k)});
   const L=D.lines.map((l,i)=>({l,i})).filter(({l})=>lf==='all'||(lf==='short'?l.d<0&&l.left:lf==='over'?l.d>0&&l.left:l.left>0||l.wait>0));
   const S=D.lines.filter(l=>ck.has(l.k)&&l.left>0),sh=S.filter(l=>l.d<0),ov=S.filter(l=>l.d>0),pa=S.filter(l=>dfPairs(I,D,l).length),q=A=>A.reduce((a,l)=>a+l.left,0);
@@ -799,7 +807,7 @@ function dfDet(I,ce,wh){const box=$('dfList'),D=I.find(x=>x.key===DF.sel);if(!D)
       '<div class="small" style="text-align:right">'+(D.open?'<span class="chip'+(D.days>=3?' r':' b')+'">'+D.open+' мөр нээлттэй · '+D.days+' хоног</span>':D.lines.length?'<span class="chip">✓ шийдвэрлэсэн</span>':'<span class="chip">✓ зөрүүгүй</span>')+' <button class="btn" style="min-height:28px" data-dfo="">✕ Хаах</button></div></div>'+
     W.map(w=>'<div style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#fff4d6">⚠ '+w.txt+'<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">'+
       (w.net.length&&ce?'<button class="btn pri" style="min-height:30px" data-dfnet="'+esc(w.X.key)+'">⇄ '+esc(w.X.no)+'-ийн эсрэг зөрүүтэй тэнцүүлэх ('+w.net.length+' мөр)</button>':'')+
-      (w.ov.length?'<button class="btn" style="min-height:30px" data-dfsel="'+esc(w.X.key)+'">☑ Эдгээр '+w.ov.length+' мөрийг сонгох</button>':'')+'<button class="btn" style="min-height:30px" data-dfo="'+esc(w.X.key)+'">👁 '+esc(w.X.no)+'-ийг харах</button></div></div>').join('')+
+      (w.ov.length?'<button class="btn" style="min-height:30px" data-dfsel="'+esc(w.X.key)+'">☑ '+(w.X.transit?'2 удаа тоолсон байж болзошгүй ':'Эдгээр ')+w.ov.length+' мөрийг сонгох</button>':'')+'<button class="btn" style="min-height:30px" data-dfo="'+esc(w.X.key)+'">👁 '+esc(w.X.no)+'-ийг харах</button></div></div>').join('')+
     (D.lines.length?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px"><div class="dfchips">'+[['open','Нээлттэй'],['short','Дутуу'],['over','Илүү'],['all','Бүгд']].map(([k,t])=>'<button data-dflf="'+k+'" aria-pressed="'+(lf===k)+'">'+t+'</button>').join('')+'</div>'+
       (opn.length?'<label class="small" style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-dfckall="1" '+(L.length&&L.every(({l})=>!l.left||ck.has(l.k))&&ck.size?'checked':'')+'> Харагдаж буй нээлттэй мөрүүдийг бүгдийг сонгох</label>':'')+'</div>'+bulk+
       '<table class="t" data-xe="1" style="margin-top:6px"><thead><tr><th style="width:26px"></th><th>Код</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th><th class="n">Зөрүү</th><th>Шийдвэр</th></tr></thead><tbody>'+
@@ -1315,8 +1323,13 @@ const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'
 function subMark(t,k){if(CURTAB!==t)return;document.querySelectorAll('#subtabs [data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===k||(t==='stock'&&k==='mov'&&false)))}
 const SUBK={stock:{bal:'stock.bal',age:'stock.bal',in:'stock.in',move:'stock.move',out:'stock.out',cnt:'stock.cnt',arc:'stock.arc',open:'stock.open'},rep:{sum:'rep.sum',rcpt:'rcpt',sh:'cash',z:'cash',aud:'cash',fc:'rep.fc',hour:'rep.hour',acc:'rep.acc',disc:'rep.disc',hist:'rep.hist',trip:'rep.trip'}};
 const subOk=(t,x)=>x[2]?x[2]():(SUBK[t]&&SUBK[t][x[0]]?can(SUBK[t][x[0]]):true);
+/* Анхааруулгын тоо: дэд цэс бүр өөрийн тоотой, үндсэн цэс = харагдах дэд цэсүүдийн нийлбэр. badge('stock','diff',12) */
+const BADGE={};function badge(t,s,n){n=Math.max(0,+n||0);if(BADGE[t+':'+s]===n)return;BADGE[t+':'+s]=n;clearTimeout(badge.t);badge.t=setTimeout(badgeDraw,30)}
+function badgeDraw(){Object.keys(SUBS).forEach(t=>{const vis=(SUBS[t]||[]).filter(x=>{try{return subOk(t,x)}catch(e){return false}}).map(x=>x[0]);let sum=0;
+  vis.forEach(k=>{const n=BADGE[t+':'+k]||0;sum+=n;const e=$('sn_'+t+'_'+k);if(e){e.textContent=n||'';e.classList.toggle('hide',!n)}});
+  const b=document.querySelector('#tabs [data-tab="'+t+'"]');if(!b)return;let tn=b.querySelector('.tn');if(!tn){tn=document.createElement('span');tn.className='tn hide';b.appendChild(tn)}tn.textContent=sum||'';tn.classList.toggle('hide',!sum)})}
 function drawSubtabs(t){const L=(SUBS[t]||[]).filter(x=>subOk(t,x)),el=$('subtabs');el.classList.toggle('hide',!L.length);if(!L.length){el.innerHTML='';return}
-  let cur=subGet(t);if(!L.some(x=>x[0]===cur))cur=L[0][0];el.innerHTML=L.map(([k,l])=>'<button data-st="'+k+'"'+(k===cur?' class="on"':'')+'>'+l+'<span class="sn hide" id="sn_'+t+'_'+k+'"></span></button>').join('');
+  let cur=subGet(t);if(!L.some(x=>x[0]===cur))cur=L[0][0];el.innerHTML=L.map(([k,l])=>'<button data-st="'+k+'"'+(k===cur?' class="on"':'')+'>'+l+'<span class="sn hide" id="sn_'+t+'_'+k+'"></span></button>').join('');badgeDraw();
   if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0);else if(t==='cash')csSub(cur)}
 function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='fc')setTimeout(fcShow,0);if(k==='z')setTimeout(zInit,0);if(k==='acc')setTimeout(slInit,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
 $('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);else if(CURTAB==='cash')csSub(k);window.scrollTo(0,0)};
@@ -1783,7 +1796,7 @@ const trMine=()=>(can('stock')||can('stock.move')||(ME&&ME.admin))?null:['fc','d
 const nmOf0=c=>{const r=itRow(c);return r&&r.name||''};
 const trCanEdit=()=>can('stock')||can('stock.move')||!!(ME&&ME.admin);
 function trDraw(){const box=$('trList');if(!box)return;const mine=trMine(),L=movDocs.filter(m=>m.type==='move'&&m.status==='sent'&&(!mine||mine.includes(m.to)));
-  $('trCnt').textContent=L.length?'('+L.length+')':'';
+  $('trCnt').textContent=L.length?'('+L.length+')':'';badge('stock','rcv',mine?L.length:0);
   box.innerHTML=L.length?'<table class="t"><thead><tr><th>№</th><th>Үүсгэсэн огноо</th><th>Үүсгэсэн хэрэглэгч</th><th>Хаанаас → Хаана</th><th class="n">Тоо</th><th>Тайлбар</th><th></th></tr></thead><tbody>'+L.map(m=>'<tr data-trv="'+esc(m.uid)+'" style="cursor:pointer" title="Дарж барааны жагсаалтыг харах"><td class="mono"><a href="#" onclick="return false">'+esc(m.no||'')+'</a>'+(m.edits&&m.edits.length?' <span class="chip b" title="засварласан">✎</span>':'')+'</td><td>'+esc(lt(m.saved||m.at))+'</td><td>'+esc(m.by||'')+'</td><td><b>'+esc(LOC[m.from]||m.from)+'</b> → <b>'+esc(LOC[m.to]||m.to)+'</b></td><td class="n">'+nfx(m.qty||0)+'</td><td class="small">'+esc(m.note||'')+'</td><td style="white-space:nowrap"><button class="btn" data-trv="'+esc(m.uid)+'">Харах</button> <button class="btn" data-trp="'+esc(m.uid)+'">Хэвлэх</button> <button class="btn" data-trx="'+esc(m.uid)+'">Excel</button> <button class="btn pri" data-trr="'+esc(m.uid)+'">Хүлээн авах</button></td></tr>').join('')+'</tbody></table>'
     :'<div class="small">Хүлээгдэж буй шилжүүлэг алга ✓</div>'}
 /* нэг шилжүүлгийн дэлгэрэнгүй: бараа, хэн/хэзээ, хэвлэх, Excel; эрхтэй хүн засах (байршил, тайлбар, тоо, бараа нэмэх/хасах) эсвэл цуцлах */
@@ -2359,7 +2372,7 @@ function cntAct(t){const r=t.res||{},rows=cntRows(r),f=v=>v==null||v===''?'':Num
 let NEGMETA=null;
 function watchNegMeta(){db.collection('pos_stock_view').doc('meta').onSnapshot(d=>{NEGMETA=d.exists?d.data():null;stkBan()},()=>{})}
 function stkBan(){const cnt=(typeof CNTS!=='undefined'?CNTS:[]).filter(t=>t.status==='counted'&&(!gSt||t.store===gSt)).length,neg=NEGMETA&&NEGMETA.neg||{},nk=Object.keys(neg).filter(k=>!gSt||k===gSt||STOCK_SRC[gSt]===k);
-  const dfo=(typeof DF!=='undefined'&&DF.open)||0,dfold=(typeof DF!=='undefined'&&DF.old)||0,tn=cnt+(dfCan()?dfo:0);$('tnStk').textContent=tn||'';$('tnStk').classList.toggle('hide',!tn);
+  const dfo=(typeof DF!=='undefined'&&DF.open)||0,dfold=(typeof DF!=='undefined'&&DF.old)||0;badge('stock','cnt',cnt);badge('stock','diff',dfCan()||dfWh()?dfo:0);
   const parts=[];if(cnt)parts.push('📋 '+cnt+' тооллого тоологдсон — үр дүн харах');if(dfo&&dfView())parts.push('⚠ Хүлээн авалтын зөрүү: '+dfo+' мөр'+(dfold?' (3+ хоног: '+dfold+')':''));if(nk.length)parts.push('⚠ Хасах үлдэгдэл: '+nk.map(k=>(LOC[k]||k)+' '+neg[k]).join(', ')+' ('+lt(NEGMETA.version)+'-ийн байдлаар)');
   $('stBan').classList.toggle('hide',!parts.length||!(can('stock.bal')||dfView()));$('stBan').textContent=parts.join(' · ')+' ›'}
 $('stBan').onclick=()=>{showTab('stock',true);stSub('bal');const st=gSt&&LOC[STOCK_SRC[gSt]||gSt]?(STOCK_SRC[gSt]||gSt):'ALL';if($('sSt')){$('sSt').value=st;calcStock().then(()=>{const c=$('cntTasks');if(c)(document.querySelector('#negCard:not(.hide)')||c).scrollIntoView({behavior:'smooth'})})}};
