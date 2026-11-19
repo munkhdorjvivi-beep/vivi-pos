@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="13.2">
+<meta name="vivi-ver" content="13.3">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -345,7 +345,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="small">Хүлээн авсан огноо</span><input type="date" id="dfA" class="inp" style="width:auto"> — <input type="date" id="dfB" class="inp" style="width:auto">
       <select id="dfSt" class="inp" style="width:auto"></select><select id="dfTy" class="inp" style="width:auto"><option value="">LPP + шилжүүлэг</option><option value="lpp">🚚 LPP</option><option value="move">⇄ Шилжүүлэг</option></select>
       <div class="dfchips"><button data-dfv="open" aria-pressed="true">Нээлттэй</button><button data-dfv="done" aria-pressed="false">Шийдвэрлэсэн</button><button data-dfv="all" aria-pressed="false">Зөрүүтэй бүгд</button><button data-dfv="ships" aria-pressed="false">Бүх илгээмж (зөрүүгүй ч)</button></div></div>
-    <div id="dfSum" style="margin:6px 0"></div>
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><div id="dfSum" style="margin:6px 0"></div><button class="btn" id="dfShX">Excel</button></div>
     <div id="dfTbl"></div>
     <div id="dfList"></div>
     <details style="margin-top:14px" id="dfMg"><summary><b>🧮 Илгээмжүүдийг нэгтгэж тулгах</b> — дэлгүүр барааг андуурч өөр илгээмжид, эсвэл давхар тоолсон үед</summary>
@@ -930,7 +930,7 @@ async function dfBal(){const box=$('dfBal');box.innerHTML='<span class="small">�
     L.map(g=>'<tr><td><b>'+esc(g.k)+'</b></td><td class="n">'+g.n+'</td><td class="n">'+nfx(g.sent)+'</td><td class="n">'+(g.transit?nfx(g.transit):'')+'</td><td class="n">'+nfx(g.recv)+'</td><td class="n">'+(g.short||'')+'</td><td class="n">'+(g.over||'')+'</td><td class="small">'+esc(rk(g.res))+'</td><td class="n'+(g.open?' hot':'')+'">'+(g.open||'')+'</td><td>'+(g.open?'<span class="chip r">дуусаагүй '+g.open+'</span>':g.transit?'<span class="chip b">замд байна</span>':'<span class="chip">✓ тэнцсэн</span>')+'</td></tr>').join('')+'</tbody></table><div class="small" style="margin-top:6px">Илгээсэн (хүлээн авсан илгээмжүүд) = хүлээн авсан + дутуу − илүү. Дутуу/илүү ширхэг бүр шийдвэртэй бол «тэнцсэн».</div>':'<div class="small">LPP илгээмж алга.</div>'}
 function dfInit(){watchDiff();if(!$('dfA').value){$('dfA').value=DF.a=DF.from;$('dfB').value=DF.b=iso(new Date())}if(!$('dfLA').value){const d=new Date();$('dfLB').value=iso(d);d.setDate(1);$('dfLA').value=iso(d)}
   $('dfSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+['FC','DR','NS'].map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('');$('dfSt').value=DF.st;dfDraw();dfLossDraw()}
-$('dfA').onchange=()=>{DF.a=$('dfA').value;dfDraw()};$('dfB').onchange=()=>{DF.b=$('dfB').value;dfDraw()};$('dfSt').onchange=()=>{DF.st=$('dfSt').value;dfDraw()};$('dfTy').onchange=()=>{DF.ty=$('dfTy').value;dfDraw()};$('dfLGo').onclick=dfLossDraw;$('dfLX').onclick=()=>{dfLossDraw();xtXlsx('dfloss','Hohirol_'+$('dfLA').value+'_'+$('dfLB').value,'Хохирол')};$('dfBalGo').onclick=dfBal;$('dfMgSt').onchange=()=>{MG.sel=null;MG.use=null;dfMgList()};$('dfMgR').addEventListener('change',e=>{const u=e.target.closest('[data-dfmu]');if(!u)return;u.checked?MG.use.add(u.dataset.dfmu):MG.use.delete(u.dataset.dfmu);dfMgCalc(true)});$('dfMgR').addEventListener('click',e=>{const o=e.target.closest('[data-dfmone]');if(!o)return;MG.use=new Set([o.dataset.dfmone]);dfMgCalc(true)});$('dfMgC').onclick=dfMgCalc;$('dfMg').addEventListener('toggle',()=>{if($('dfMg').open)dfMgList()});
+$('dfA').onchange=()=>{DF.a=$('dfA').value;dfDraw()};$('dfB').onchange=()=>{DF.b=$('dfB').value;dfDraw()};$('dfSt').onchange=()=>{DF.st=$('dfSt').value;dfDraw()};$('dfTy').onchange=()=>{DF.ty=$('dfTy').value;dfDraw()};$('dfLGo').onclick=dfLossDraw;$('dfLX').onclick=()=>{dfLossDraw();xtXlsx('dfloss','Hohirol_'+$('dfLA').value+'_'+$('dfLB').value,'Хохирол')};$('dfBalGo').onclick=dfBal;$('dfShX').onclick=()=>{dfDraw();xtXlsx('dfships','LPP_huleen_avalt_'+(DF.a||'')+'_'+(DF.b||''),'Хүлээн авалт')};$('dfMgSt').onchange=()=>{MG.sel=null;MG.use=null;dfMgList()};$('dfMgR').addEventListener('change',e=>{const u=e.target.closest('[data-dfmu]');if(!u)return;u.checked?MG.use.add(u.dataset.dfmu):MG.use.delete(u.dataset.dfmu);dfMgCalc(true)});$('dfMgR').addEventListener('click',e=>{const o=e.target.closest('[data-dfmone]');if(!o)return;MG.use=new Set([o.dataset.dfmone]);dfMgCalc(true)});$('dfMgC').onclick=dfMgCalc;$('dfMg').addEventListener('toggle',()=>{if($('dfMg').open)dfMgList()});
 document.addEventListener('change',e=>{const c=e.target.closest&&e.target.closest('[data-dfck],[data-dfckall]');if(!c)return;const ck=DF.ck[DF.sel]||(DF.ck[DF.sel]=new Set());
   if(c.dataset.dfck){c.checked?ck.add(c.dataset.dfck):ck.delete(c.dataset.dfck)}else{const D=dfItems().find(x=>x.key===DF.sel);if(D)D.lines.filter(l=>l.left>0&&(DF.lf==='all'||DF.lf==='open'||(DF.lf==='short'?l.d<0:l.d>0))).forEach(l=>c.checked?ck.add(l.k):ck.delete(l.k))}dfDraw()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-dfa]');if(b){if(b.dataset.dfa==='wh'||dfCan())dfDo(b);return}
