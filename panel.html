@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="13.6">
+<meta name="vivi-ver" content="13.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -787,7 +787,7 @@ function dfRange(D){const d=iso(new Date(D.at));return (!DF.a||d>=DF.a)&&(!DF.b|
 function dfDraw(){if(!$('dfTbl'))return;const I=dfItems(),ce=dfCan(),wh=dfWh();
   const F=I.filter(D=>dfRange(D)&&(!DF.st||D.to===DF.st)&&(!DF.ty||D.src===DF.ty)&&(DF.view==='ships'||D.lines.length)&&(DF.view==='open'?D.open>0:DF.view==='done'?!D.open:true));
   const fo=F.reduce((a,D)=>a+D.open,0);
-  $('dfSum').innerHTML='<span class="chip'+(DF.open?' r':'')+'">Нийт нээлттэй мөр: '+(DF.open||0)+'</span>'+(DF.old?' <span class="chip r">3+ хоног: '+DF.old+'</span>':'')+' <span class="small">Сонгосон хугацаанд: '+F.length+' баримт, '+fo+' нээлттэй мөр · '+(ce?'та шийдвэрлэх эрхтэй':wh?'агуулах: дутуу бараа агуулахад үлдсэн бол «дахин илгээх»':'зөвхөн харах')+'</span>';
+  $('dfSum').innerHTML='<span class="chip'+(DF.open?' r':'')+'">Нийт нээлттэй мөр: '+(DF.open||0)+'</span>'+(DF.old?' <span class="chip r">3+ хоног: '+DF.old+'</span>':'')+' '+(fo<(DF.open||0)?'<span class="chip r">⚠ '+((DF.open||0)-fo)+' нээлттэй мөр шүүлтүүрт (дэлгүүр/огноо/төрөл) орохгүй байна</span> <button class="btn" style="min-height:28px" data-dfrst="1">Шүүлтүүр арилгах</button> ':'')+'<span class="small">Сонгосон хугацаанд: '+F.length+' баримт, '+fo+' нээлттэй мөр · '+(ce?'та шийдвэрлэх эрхтэй':wh?'агуулах: дутуу бараа агуулахад үлдсэн бол «дахин илгээх»':'зөвхөн харах')+'</span>';
   const head=['Хүлээн авсан','Баримт','Төрөл','Хаанаас','Хаана','Илгээсэн','Ирсэн','Дутуу','Илүү','Нээлттэй мөр','Хоног','Төлөв','Анхааруулга'];
   const rows=F.map(D=>{const w=dfWarn(I,D),r=[(D.transit?'илгээсэн ':'')+lt(D.at),D.no,D.src==='lpp'?(D.re?'LPP · дахин илгээсэн':'LPP'):'Шилжүүлэг',D.src==='lpp'?'LPP агуулах':(LOC[D.from]||D.from),LOC[D.to]||D.to,D.sent,D.recv,D.short||null,D.over||null,D.open||null,D.open?D.days:null,D.transit?'🚚 замд'+(D.recv?' · тоолж дуусаагүй':''):!D.lines.length?'✓ зөрүүгүй':D.open?(D.days>=3?'⚠ хугацаа хэтэрсэн':'нээлттэй'):'✓ шийдвэрлэсэн',w.length?'⚠ '+w.map(x=>x.short).join('; '):''];r.key=D.key;r.red=D.open&&D.days>=3;return r});
   xtable('dfTbl','dfships',head,rows,{noSum:[10],limit:300,rowAttr:r=>' class="pr" data-dfo="'+esc(r.key)+'" style="cursor:pointer'+(r.key===DF.sel?';background:#fff4d6;font-weight:600':r.red?';background:#fde4e6':'')+'"'});
@@ -952,6 +952,7 @@ document.addEventListener('change',e=>{const c=e.target.closest&&e.target.closes
 document.addEventListener('click',e=>{const b=e.target.closest('[data-dfa]');if(b){if(b.dataset.dfa==='wh'||dfCan())dfDo(b);return}
   const o=e.target.closest('[data-dfo]');if(o&&!e.target.closest('.xfb')){DF.sel=o.dataset.dfo;DF.lf='open';DF.lim=150;dfDraw();if(DF.sel)setTimeout(()=>{const c=$('dfDetC');if(c)c.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
   const bk=e.target.closest('[data-dfb]');if(bk){if(bk.dataset.dfb==='wh'||dfCan())dfBulk(bk.dataset.dfb);return}
+  if(e.target.closest('[data-dfrst]')){DF.st='';DF.ty='';$('dfSt').value='';$('dfTy').value='';$('dfA').value=DF.a=DF.from;$('dfB').value=DF.b=iso(new Date());dfDraw();return}
   if(e.target.closest('[data-dfckn]')){(DF.ck[DF.sel]||new Set()).clear();dfDraw();return}
   const lf=e.target.closest('[data-dflf]');if(lf){DF.lf=lf.dataset.dflf;dfDraw();return}
   if(e.target.closest('[data-dfmore]')){DF.lim=1e6;dfDraw();return}
