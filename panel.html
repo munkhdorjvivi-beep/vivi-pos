@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="12.1">
+<meta name="vivi-ver" content="12.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -352,6 +352,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       <label class="inl" style="margin-top:6px"><input type="checkbox" id="aPos" checked> Манай POS-оор аль хэдийн хийсэн борлуулалтыг хасах (Smart-д ороогүй тул — тухайн дэлгүүрийн POS-ын эхний борлуулалтаас хойш)</label></div></div>
     <div class="step"><div class="sn">2</div><div style="flex:1"><b>Шалгах</b><div id="aPrev" class="small" style="margin-top:4px">Файл сонгоно уу</div></div></div>
     <div class="step"><div class="sn">3</div><div style="flex:1"><button id="aUp" class="btn pri" disabled>Бүх байршлын эхний үлдэгдэл хадгалах</button> <span id="aoMsg" class="small"></span><div id="oNow" class="small" style="margin-top:6px"></div></div></div>
+    <div class="step"><div class="sn">🔍</div><div style="flex:1"><button id="oChk" class="btn">Эхний үлдэгдлийн алдаатай мөр шалгах</button> <span class="small">Excel-ийн доод «Нийт» мөр бараа болж орсон эсэх — нэргүй, каталогт байхгүй, богино тоон код эсвэл хэт их тоо</span><div id="oChkR" style="margin-top:8px"></div></div></div>
     <details style="margin-top:12px"><summary class="small">Нэг байршлаар оруулах (гараар багана сонгох)</summary>
       <div class="frm" style="margin-top:6px"><div><label class="f">Дэлгүүр / агуулах</label><select id="oSt" class="inp"></select></div><div><label class="f">Хэдий үеийн үлдэгдэл</label><input type="datetime-local" id="oAt" class="inp"></div><div><label class="f">Үлдэгдлийн файл («Код» баганатай)</label><input type="file" id="oFile" accept=".xlsx,.xls"></div></div>
       <label class="f">Тоо хэмжээний багана (хэд хэдийг сонговол нийлбэрийг авна)</label><div id="oCol" class="chk" style="max-height:130px"></div><button id="oUp" class="btn" disabled style="margin-top:8px">Эхний үлдэгдэл хадгалах</button><div id="oMsg" class="small" style="margin-top:6px"></div>
@@ -1456,6 +1457,23 @@ $('oUp').onclick=async()=>{
   try{await db.collection('pos_stock_open').doc(st).set({store:st,asOf:at.toISOString(),d,count:items.length,qty:items.reduce((a,x)=>a+x[1],0),column:cis.map(i=>S.head[i]).join(' + '),file:$('oFile').files[0].name,by:auth.currentUser.email||'',saved:new Date().toISOString()});
     await auditCfg('stock_open',{store:st,asOf:at.toISOString(),count:items.length,column:cis.map(i=>S.head[i]).join(' + ')});$('oMsg').innerHTML='<span class="chip">Хадгаллаа</span> '+LOC[st]+': '+items.length.toLocaleString('en-US')+' бараа, '+items.reduce((a,x)=>a+x[1],0).toLocaleString('en-US')+' ширхэг';showOpen()}
   catch(e){$('oUp').disabled=false;$('oMsg').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'}};
+/* Эхний үлдэгдэлд Excel-ийн «Нийт» мөр (жишээ нь код 8667 = мөрийн тоо, тоо = бүх барааны нийлбэр) андуурч орсныг илрүүлж хасна */
+async function openChk(){const box=$('oChkR');box.innerHTML='<span class="small">Шалгаж байна…</span>';await loadPCat().catch(()=>{});const F=[];
+  for(const lc of Object.keys(LOC)){const d=await db.collection('pos_stock_open').doc(lc).get();if(!d.exists)continue;const O=d.data(),D=JSON.parse(O.d||'[]'),tot=D.reduce((a,x)=>a+(+x[1]||0),0);
+    D.forEach(x=>{const c=String(x[0]),q=+x[1]||0,nm0=String(x[2]||'').trim(),inCat=!!itRow(c);
+      if(!nm0&&!inCat&&(/^\d{1,6}$/.test(c)||q>=Math.max(1000,tot*.05))||q>=tot*.3&&D.length>20)F.push({lc,c,q,nm:nm0,tot,inCat})})}
+  if(!F.length){box.innerHTML='<span class="chip">✓ Алдаатай мөр олдсонгүй</span>';return}
+  box.innerHTML='<div class="small hot" style="margin-bottom:6px">Сэжигтэй мөр '+F.length+' — Excel-ийн «Нийт» мөр байж магадгүй. Чагтлаад хасвал зөвхөн эдгээр мөр эхний үлдэгдлээс устна (бусад бараа хэвээр).</div><table class="t"><thead><tr><th></th><th>Байршил</th><th>Код</th><th>Нэр</th><th class="n">Тоо</th><th class="n">Нийтийн %</th></tr></thead><tbody>'+
+    F.map((x,i)=>'<tr><td><input type="checkbox" data-ochk="'+i+'" checked></td><td>'+esc(LOC[x.lc])+'</td><td class="mono">'+esc(x.c)+'</td><td>'+esc(x.nm||(x.inCat?nmOf(x.c):'— нэргүй —'))+'</td><td class="n">'+x.q.toLocaleString('en-US')+'</td><td class="n">'+Math.round(x.q/x.tot*100)+'%</td></tr>').join('')+
+    '</tbody></table><button class="btn pri" id="oChkGo" style="margin-top:8px">Сонгосон мөрийг эхний үлдэгдлээс хасах</button> <span id="oChkM" class="small"></span>';
+  $('oChkGo').onclick=async()=>{const sel=F.filter((x,i)=>{const c=document.querySelector('[data-ochk="'+i+'"]');return c&&c.checked});if(!sel.length)return;
+    if(!confirm(sel.map(x=>LOC[x.lc]+': код '+x.c+' — '+x.q.toLocaleString('en-US')+' ш').join('\n')+'\n\nЭдгээрийг эхний үлдэгдлээс хасах уу?'))return;$('oChkGo').disabled=true;
+    try{const by=auth.currentUser.email||'',at=new Date().toISOString();for(const lc of [...new Set(sel.map(x=>x.lc))]){const ref=db.collection('pos_stock_open').doc(lc),d=await ref.get(),O=d.data(),rm=new Set(sel.filter(x=>x.lc===lc).map(x=>x.c));
+        const D=JSON.parse(O.d||'[]').filter(x=>!rm.has(String(x[0])));await ref.update({d:JSON.stringify(D),count:D.length,qty:D.reduce((a,x)=>a+(+x[1]||0),0),fixes:(O.fixes||[]).concat(sel.filter(x=>x.lc===lc).map(x=>({code:x.c,qty:x.q,by,at})))});
+        await auditCfg('stock_open_fix',{store:lc,removed:[...rm].join(',')})}
+      $('oChkM').innerHTML='<span class="chip">Засагдлаа</span> Кассууд руу үлдэгдэл илгээж байна…';showOpen();negSrc=null;await publishStock(true);$('oChkM').innerHTML='<span class="chip">Засагдлаа</span> эхний үлдэгдэл шинэчлэгдэж, кассуудад илгээгдлээ';
+    }catch(e){$('oChkGo').disabled=false;$('oChkM').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}}}
+$('oChk').onclick=openChk;
 async function showOpen(){const L=[];for(const k of Object.keys(LOC)){const d=await db.collection('pos_stock_open').doc(k).get();if(d.exists){const m=d.data();L.push(LOC[k]+': '+lt(m.asOf)+' · '+(m.count||0).toLocaleString('en-US')+' бараа')}}$('oNow').textContent=L.length?'Хадгалсан эхний үлдэгдэл — '+L.join(' · '):'Эхний үлдэгдэл хадгалаагүй байна.'}
 $('mFile').onchange=async()=>{const f=$('mFile').files[0];if(!f)return;movLines=null;$('mUp').disabled=true;$('mPrev').textContent='Уншиж байна…';
   try{await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});let S=null;
@@ -2942,7 +2960,7 @@ const COST_H=['нэгж өртөг','нэгжийн өртөг','өртөг','ө
 const CODE_H=['код','барааны код','баар код','баркод','бар код','barcode','ean','kod'];
 const PRICE_H=['худалдах үнэ','үнэ','кассын үнэ'];
 // Smart-ын файлын төгсгөлийн «нийт» мөрийг алгасна: нэр баганатай файлд нэргүй мөр = нийлбэр мөр
-const isTotalRow=(r,ni)=>ni>=0&&(r[ni]==null||String(r[ni]).trim()==='');
+const isTotalRow=(r,ni)=>(ni>=0&&(r[ni]==null||String(r[ni]).trim()===''))||(ni<0&&typeof r[0]==='number'&&r[0]>0&&r[0]<1e6&&(r[1]==null||String(r[1]).trim()===''));
 function colL(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
 function stockCostOf(wb){
   for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
