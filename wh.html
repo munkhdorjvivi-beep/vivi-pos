@@ -1225,7 +1225,9 @@ window.VIVIFB = (() => {
       if (!u) return onSignedOut();
       try {
         POSME = null;
-        if (String(u.email || '').toLowerCase() !== OWNER){ const pu = await RAW.doc('pos_panel_users/' + String(u.email || '').toLowerCase()).get();
+        const tl = /^kasa-(fc|dr|ns)@vivi-pos-test\.mn$/.exec(String(u.email || '').toLowerCase());
+        if (tl) POSME = {name: 'Касс · ' + {fc: 'Food city', dr: 'Драгон', ns: 'Нийслэл'}[tl[1]], perms: ['rcv_' + tl[1]], active: true, till: true};
+        else if (String(u.email || '').toLowerCase() !== OWNER){ const pu = await RAW.doc('pos_panel_users/' + String(u.email || '').toLowerCase()).get();
           if (!pu.exists || pu.data().active !== true) throw new Error('no-access'); POSME = pu.data(); }
         staff = true;
         db.doc('users/' + u.uid).set({ name: u.displayName || u.email, email: u.email, lastSeen: new Date().toISOString() }, { merge: true }).catch(() => {});
