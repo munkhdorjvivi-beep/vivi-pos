@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="12.8">
+<meta name="vivi-ver" content="12.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -98,6 +98,7 @@ details summary{cursor:pointer}
 .chk label,.inl{display:flex;gap:8px;align-items:center;font-size:14px;margin:2px 0}
 tr.pr:hover td{background:var(--soft);cursor:pointer}
 @media (max-width:640px){.frm{grid-template-columns:1fr}}
+.dfchips{display:inline-flex;gap:4px;flex-wrap:wrap}.dfchips button{border:1px solid #d5dae0;background:#fff;border-radius:16px;padding:4px 12px;cursor:pointer;font:inherit;font-size:13px}.dfchips button[aria-pressed="true"]{background:#1f2937;color:#fff;border-color:#1f2937}
 </style>
 </head>
 <body>
@@ -340,9 +341,12 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
   <div class="card" data-sub="zinv" style="padding:0;overflow:hidden"><iframe data-wh="inv" title="Тооллого (бүсээр)" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
   <div class="card" data-sub="whset" style="padding:0;overflow:hidden"><iframe data-wh="set" title="Агуулах (LPP) тохиргоо" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
   <div class="card" data-sub="diff" id="dfCard"><h2 style="margin:0 0 4px">⚠ Хүлээн авалтын зөрүү — шийдвэрлэх</h2>
-    <div class="small" style="margin-bottom:8px">LPP илгээмж, дэлгүүр хоорондын шилжүүлгийг хүлээн авахад гарсан дутуу/илүү бараа. Мөр бүрийг нэг товчоор шийдвэрлэнэ — систем шилжүүлэг, тооллогын даалгавар, засварын баримтыг өөрөө үүсгэнэ. Дараалал: 🔁 өөр дэлгүүрийнхтэй таарах уу → 📋 дэлгүүрт дахин тоолуулах → 🏬 агуулах/илгээгч шалгах → ✖ хохирол. 3 хоногоос удвал улаан.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="filter chips"><button data-dfv="open" aria-pressed="true">Нээлттэй</button><button data-dfv="done" aria-pressed="false">Шийдвэрлэсэн</button><button data-dfv="all" aria-pressed="false">Бүгд</button></div>
-      <select id="dfSt" class="inp" style="width:auto"></select><select id="dfTy" class="inp" style="width:auto"><option value="">LPP + шилжүүлэг</option><option value="lpp">🚚 LPP</option><option value="move">⇄ Шилжүүлэг</option></select><span id="dfSum"></span></div>
+    <div class="small" style="margin-bottom:8px">LPP илгээмж, дэлгүүр хоорондын шилжүүлгийг хүлээн авахад гарсан дутуу/илүү бараа. Жагсаалтаас баримт сонгоод мөр бүрийг, эсвэл олон мөрийг сонгож нэг дор шийдвэрлэнэ — систем шилжүүлэг, тооллогын даалгавар, засварын баримтыг өөрөө үүсгэнэ. Дараалал: 🔁 өөр дэлгүүрийнхтэй таарах уу → 📋 дэлгүүрт дахин тоолуулах → 🏬 агуулах/илгээгч шалгах → ✖ хохирол. 3 хоногоос удвал улаан.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="small">Хүлээн авсан огноо</span><input type="date" id="dfA" class="inp" style="width:auto"> — <input type="date" id="dfB" class="inp" style="width:auto">
+      <select id="dfSt" class="inp" style="width:auto"></select><select id="dfTy" class="inp" style="width:auto"><option value="">LPP + шилжүүлэг</option><option value="lpp">🚚 LPP</option><option value="move">⇄ Шилжүүлэг</option></select>
+      <div class="dfchips"><button data-dfv="open" aria-pressed="true">Нээлттэй</button><button data-dfv="done" aria-pressed="false">Шийдвэрлэсэн</button><button data-dfv="all" aria-pressed="false">Зөрүүтэй бүгд</button><button data-dfv="ships" aria-pressed="false">Бүх илгээмж (зөрүүгүй ч)</button></div></div>
+    <div id="dfSum" style="margin:6px 0"></div>
+    <div id="dfTbl"></div>
     <div id="dfList"></div>
     <details style="margin-top:14px"><summary><b>✖ Хохирлын бүртгэл</b> — огноогоор, хариуцагчтай (Excel)</summary><div style="display:flex;gap:6px;align-items:center;margin:8px 0"><input type="date" id="dfLA" class="inp" style="width:auto"> — <input type="date" id="dfLB" class="inp" style="width:auto"><button class="btn" id="dfLGo">Харах</button><button class="btn" id="dfLX">Excel</button></div><div id="dfLoss"></div></details>
     <details style="margin-top:10px"><summary><b>⚖ Тээврийн (LPP хүргэлт) тэнцэл</b> — юу ч алга болоогүй эсэх</summary><div style="margin:8px 0"><button class="btn" id="dfBalGo">Тооцоолох</button></div><div id="dfBal"></div></details></div>
@@ -729,9 +733,9 @@ $('slClr').onclick=()=>{['slSt','slCa'].forEach(id=>$(id).value='');['slPt','slK
    Эх сурвалж: LPP илгээмж (wh_ship, тулгалт зөрүүтэй) + дэлгүүр хоорондын шилжүүлэг (хүлээн авсан тоо ≠ илгээсэн).
    Мөр бүрийг нэг товчоор шийдвэрлэнэ; систем өөрөө баримт үүсгэнэ (шилжүүлэг / тооллогын даалгавар / тооллогын зөрүү), хохирлыг хариуцагчтай бүртгэнэ.
    Шийдвэр: pos_diff/{L_<илгээмж> | M_<шилжүүлэг>}.res = JSON {мөр: [{act,qty,resp,note,by,at,doc,task,pair}]} */
-const DF_FIN=['pair','wh','loss','accept','ret','sender','recounted'],DF_RESP={wh:'Агуулах',tr:'Тээвэр / жолооч',st:'Дэлгүүр'};
-const DF_ACT={pair:'Өөр дэлгүүрийнхтэй тааруулж шилжүүлсэн',recount:'Дахин тоолуулж байна',recounted:'Тооллогоор шийдсэн',wh:'Агуулахад үлдсэн → дахин илгээх',loss:'Хохирол',accept:'Агуулахаас ирсэн — хүлээн авсан',ret:'Буцаасан',sender:'Илгээгчийн үлдэгдлийг зассан',resent:'Агуулахаас дахин илгээж ирсэн',waiting:'Агуулахаас дахин илгээсэн — замд'};
-let DF={from:'2026-11-18',ships:[],res:{},tasks:{},on:false,view:'open',st:'',ty:'',lossA:'',lossB:''};
+const DF_FIN=['pair','wh','loss','accept','ret','sender','recounted','dbl','same'],DF_RESP={wh:'Агуулах',tr:'Тээвэр / жолооч',st:'Дэлгүүр'};
+const DF_ACT={pair:'Өөр дэлгүүрийнхтэй тааруулж шилжүүлсэн',recount:'Дахин тоолуулж байна',recounted:'Тооллогоор шийдсэн',wh:'Агуулахад үлдсэн → дахин илгээх',loss:'Хохирол',accept:'Агуулахаас ирсэн — хүлээн авсан',ret:'Буцаасан',sender:'Илгээгчийн үлдэгдлийг зассан',dbl:'Давхар тоолсон — илүүг хассан',same:'Нэг дэлгүүрийн өөр илгээмжтэй тэнцүүлсэн',resent:'Агуулахаас дахин илгээж ирсэн',waiting:'Агуулахаас дахин илгээсэн — замд'};
+let DF={from:'2026-11-18',ships:[],res:{},tasks:{},on:false,view:'open',st:'',ty:'',a:'',b:'',sel:'',ck:{},lf:'open',lim:150,lossA:'',lossB:''};
 const dfCan=()=>can('stock.diff')||!!(ME&&ME.admin),dfWh=()=>can('wh')||can('whedit'),dfView=()=>dfCan()||dfWh()||can('stock.bal');
 function watchDiff(){if(DF.on||!dfView())return;DF.on=true;lppFrom().then(f=>{DF.from=f||DF.from;dfSoon()});
   db.collection('wh_ship').where('status','in',['sent','recv','diff','closed']).onSnapshot(s=>{DF.ships=s.docs.map(d=>({id:d.id,...d.data()}));dfSoon()},e=>console.warn('diff ships',e));
@@ -742,13 +746,13 @@ function dfSoon(){clearTimeout(dfSoon.t);dfSoon.t=setTimeout(()=>{dfBadge();if(!
 function dfItems(){const out=[],R=k=>{try{return JSON.parse((DF.res[k]||{}).res||'{}')}catch(e){return {}}},RS={};
   // агуулахаас дахин илгээсэн илгээмж (resendOf): самбараас эсвэл агуулахын програмаас «Олдсон — дахин илгээнэ»
   DF.ships.forEach(x=>{if(!x.resendOf)return;const G=lppDec(x.r);Object.entries(lppDec(x.l)).forEach(([e,q])=>{q=+q||0;if(q<=0)return;((RS[x.resendOf]=RS[x.resendOf]||{})[e]=RS[x.resendOf][e]||[]).push({id:x.id,no:x.no||x.id,q,st:x.status,g:Math.max(0,+G[e]||0),at:x.sentAt||x.createdAt||''})})});
-  DF.ships.forEach(sh=>{if(!sh.recvAt||iso(new Date(sh.recvAt))<DF.from||(sh.cmp&&sh.cmp.ok))return;const to=LPP_LOC[sh.store];if(!to)return;const L=lppDec(sh.l),G=lppDec(sh.r),I=lppDec(sh.i),W=lppDec(sh.res),key='L_'+sh.id,res=R(key);
+  DF.ships.forEach(sh=>{if(!sh.recvAt||iso(new Date(sh.recvAt))<DF.from)return;const to=LPP_LOC[sh.store];if(!to)return;const L=lppDec(sh.l),G=lppDec(sh.r),I=lppDec(sh.i),W=lppDec(sh.res),key='L_'+sh.id,res=R(key);
     const ks=[...new Set([...Object.keys(L),...Object.keys(G)])],lines=[];ks.forEach(e=>{const s=Math.max(0,+L[e]||0),g=Math.max(0,+G[e]||0);if(s===g)return;const it=itRow(e);const ln=dfLine(e,it?it.code:e,(I[e]||{}).n||(it&&it.name)||'',s,g,res[e],(RS[sh.id]||{})[e]);ln.whr=W[e];lines.push(ln)});
-    if(lines.length)out.push({key,src:'lpp',srcId:sh.id,re:!!sh.resendOf,no:sh.no||sh.id,from:'LPP',to,at:sh.recvAt,recvBy:sh.recvBy||'',deliv:sh.dname||sh.deliv||'',lines})});
-  movAll.forEach(m=>{if(m.type!=='move'||m.status!=='received'||!m.recvLines||iso(new Date(m.recvAt||0))<DF.from)return;const L=new Map(JSON.parse(m.lines).map(x=>[x[0],x])),G=new Map(JSON.parse(m.recvLines).map(x=>[x[0],x])),key='M_'+m.uid,res=R(key),lines=[];
+    out.push({L,sent:Object.values(L).reduce((a,q)=>a+Math.max(0,+q||0),0),recv:Object.values(G).reduce((a,q)=>a+Math.max(0,+q||0),0),key,src:'lpp',srcId:sh.id,re:!!sh.resendOf,no:sh.no||sh.id,from:'LPP',to,at:sh.recvAt,recvBy:sh.recvBy||'',deliv:sh.dname||sh.deliv||'',lines})});
+  movAll.forEach(m=>{if(m.type!=='move'||m.status!=='received'||iso(new Date(m.recvAt||0))<DF.from)return;const L=new Map(JSON.parse(m.lines).map(x=>[x[0],x])),G=new Map(JSON.parse(m.recvLines||m.lines).map(x=>[x[0],x])),key='M_'+m.uid,res=R(key),lines=[];
     [...new Set([...L.keys(),...G.keys()])].forEach(c=>{const s=(L.get(c)||[0,0])[1],g=(G.get(c)||[0,0])[1];if(s===g)return;lines.push(dfLine(c,c,(L.get(c)||G.get(c)||[])[2]||((itRow(c)||{}).name)||'',s,g,res[c]))});
-    if(lines.length)out.push({key,src:'move',srcId:m.uid,no:m.no||m.uid,from:m.from,to:m.to,at:m.recvAt,recvBy:m.recvBy||'',deliv:'',note:m.recvNote||'',lines})});
-  out.forEach(D=>{D.open=D.lines.filter(l=>l.left>0||l.wait>0).length;D.days=Math.floor((Date.now()-new Date(D.at))/864e5)});
+    out.push({sent:[...L.values()].reduce((a,x)=>a+x[1],0),recv:[...G.values()].reduce((a,x)=>a+x[1],0),key,src:'move',srcId:m.uid,no:m.no||m.uid,from:m.from,to:m.to,at:m.recvAt,recvBy:m.recvBy||'',deliv:'',note:m.recvNote||'',lines})});
+  out.forEach(D=>{D.short=D.lines.reduce((a,l)=>a+(l.d<0?-l.d:0),0);D.over=D.lines.reduce((a,l)=>a+(l.d>0?l.d:0),0);D.open=D.lines.filter(l=>l.left>0||l.wait>0).length;D.days=Math.floor((Date.now()-new Date(D.at))/864e5)});
   return out.sort((a,b)=>(b.open>0)-(a.open>0)||(a.at<b.at?1:-1))}
 function dfLine(k,code,name,sent,recv,acts,rs){acts=acts||[];rs=rs||[];const d=recv-sent,done=acts.filter(a=>DF_FIN.includes(a.act)&&!(a.act==='wh'&&a.ship)).reduce((a,x)=>a+(+x.qty||0),0);
   // дахин илгээсэн: дэлгүүр хүлээн авсан бол энэ мөр шийдэгдэнэ (дутуу гарвал тэр илгээмжийн зөрүү болж тусад нь шийдвэрлэнэ); замд байвал хүлээгдэж байна
@@ -758,16 +762,89 @@ function dfBadge(){if(!dfView())return;const I=dfItems(),open=I.reduce((a,D)=>a+
   const sn=$('sn_stock_diff');if(sn){sn.textContent=open?' '+open:'';sn.classList.toggle('hide',!open)}stkBan()}
 // таарах мөр: нэг дэлгүүрт дутуу ↔ өөр дэлгүүрт илүү (ижил код)
 function dfPairs(I,D,l){const want=l.d<0?1:-1,R=[];I.forEach(X=>{if(X.to===D.to)return;X.lines.forEach(y=>{if(y.code===l.code&&Math.sign(y.d)===want&&y.left>0)R.push({X,y})})});return R}
-function dfDraw(){const box=$('dfList');if(!box)return;const I=dfItems(),ce=dfCan(),wh=dfWh();
-  const F=I.filter(D=>(DF.view==='all'||(DF.view==='open'?D.open>0:D.open===0))&&(!DF.st||D.to===DF.st)&&(!DF.ty||D.src===DF.ty));
-  $('dfSum').innerHTML='<span class="chip'+(DF.open?' r':'')+'">Нээлттэй мөр: '+(DF.open||0)+'</span>'+(DF.old?' <span class="chip r">3+ хоног: '+DF.old+'</span>':'')+' <span class="small">'+(ce?'Та шийдвэрлэх эрхтэй.':wh?'Агуулах: дутуу бараа агуулахад үлдсэн бол «дахин илгээх» дарна.':'Зөвхөн харах.')+'</span>';
-  if(!F.length){box.innerHTML='<div class="small" style="padding:10px">'+(DF.view==='open'?'✓ Шийдвэрлэх зөрүү алга.':'Мөр алга.')+'</div>';return}
-  box.innerHTML=F.map(D=>'<div class="card" style="margin:8px 0;padding:10px 12px;border-left:4px solid '+(D.open?(D.days>=3?'var(--red)':'#e08a00'):'#2f9e44')+'">'+
-    '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b>'+(D.src==='lpp'?'🚚 LPP':'⇄ Шилжүүлэг')+' '+esc(D.no)+'</b>'+(D.re?' <span class="chip b">дахин илгээсэн</span>':'')+' · '+esc(D.src==='lpp'?'LPP агуулах':(LOC[D.from]||D.from))+' → <b>'+esc(LOC[D.to]||D.to)+'</b>'+(D.deliv?' · '+esc(D.deliv):'')+
-      '<div class="small">Хүлээн авсан: '+esc(D.recvBy||'—')+' · '+esc(lt(D.at))+(D.note?' · «'+esc(D.note)+'»':'')+'</div></div>'+
-      '<div class="small" style="text-align:right">'+(D.open?'<span class="chip'+(D.days>=3?' r':' b')+'">'+D.open+' мөр нээлттэй · '+D.days+' хоног</span>':'<span class="chip">✓ шийдвэрлэсэн</span>')+'</div></div>'+
-    '<table class="t" data-xe="1" style="margin-top:6px"><thead><tr><th>Код</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th><th class="n">Зөрүү</th><th>Шийдвэр</th></tr></thead><tbody>'+
-    D.lines.map((l,i)=>'<tr><td class="mono">'+esc(l.code)+'</td><td>'+esc(l.name)+'</td><td class="n">'+l.sent+'</td><td class="n">'+l.recv+'</td><td class="n"><b class="'+(l.d<0?'hot':'')+'">'+(l.d>0?'+':'')+l.d+'</b><div class="small">'+(l.d<0?'дутуу':'илүү')+'</div></td><td>'+dfActs(I,D,l,i,ce,wh)+'</td></tr>').join('')+'</tbody></table></div>').join('')}
+// ---- жагсаалт (огноогоор) + сонгосон баримтын дэлгэрэнгүй, бөөнөөр шийдвэрлэх ----
+function dfRange(D){const d=iso(new Date(D.at));return (!DF.a||d>=DF.a)&&(!DF.b||d<=DF.b)}
+function dfDraw(){if(!$('dfTbl'))return;const I=dfItems(),ce=dfCan(),wh=dfWh();
+  const F=I.filter(D=>dfRange(D)&&(!DF.st||D.to===DF.st)&&(!DF.ty||D.src===DF.ty)&&(DF.view==='ships'||D.lines.length)&&(DF.view==='open'?D.open>0:DF.view==='done'?!D.open:true));
+  const fo=F.reduce((a,D)=>a+D.open,0);
+  $('dfSum').innerHTML='<span class="chip'+(DF.open?' r':'')+'">Нийт нээлттэй мөр: '+(DF.open||0)+'</span>'+(DF.old?' <span class="chip r">3+ хоног: '+DF.old+'</span>':'')+' <span class="small">Сонгосон хугацаанд: '+F.length+' баримт, '+fo+' нээлттэй мөр · '+(ce?'та шийдвэрлэх эрхтэй':wh?'агуулах: дутуу бараа агуулахад үлдсэн бол «дахин илгээх»':'зөвхөн харах')+'</span>';
+  const head=['Хүлээн авсан','Баримт','Төрөл','Хаанаас','Хаана','Илгээсэн','Ирсэн','Дутуу','Илүү','Нээлттэй мөр','Хоног','Төлөв','Анхааруулга'];
+  const rows=F.map(D=>{const w=dfWarn(I,D),r=[lt(D.at),D.no,D.src==='lpp'?(D.re?'LPP · дахин илгээсэн':'LPP'):'Шилжүүлэг',D.src==='lpp'?'LPP агуулах':(LOC[D.from]||D.from),LOC[D.to]||D.to,D.sent,D.recv,D.short||null,D.over||null,D.open||null,D.open?D.days:null,!D.lines.length?'✓ зөрүүгүй':D.open?(D.days>=3?'⚠ хугацаа хэтэрсэн':'нээлттэй'):'✓ шийдвэрлэсэн',w.length?'⚠ '+w.map(x=>x.short).join('; '):''];r.key=D.key;r.red=D.open&&D.days>=3;return r});
+  xtable('dfTbl','dfships',head,rows,{noSum:[10],limit:300,rowAttr:r=>' class="pr" data-dfo="'+esc(r.key)+'" style="cursor:pointer'+(r.key===DF.sel?';background:#fff4d6;font-weight:600':r.red?';background:#fde4e6':'')+'"'});
+  if(!I.some(D=>D.key===DF.sel))DF.sel=F.length===1?F[0].key:'';dfDet(I,ce,wh)}
+// анхааруулга: нэг дэлгүүрийн ойрын өөр илгээмжинд ижил код байсан (давхар тоолсон / илгээмж хооронд андуурсан)
+function dfWarn(I,D){if(D.src!=='lpp'||!D.L)return [];const out=[];
+  I.forEach(X=>{if(X===D||X.src!=='lpp'||X.to!==D.to||!X.L||Math.abs(new Date(X.at)-new Date(D.at))>10*864e5)return;
+    const ov=D.lines.filter(l=>l.d>0&&l.left>0&&X.L[l.k]!=null);
+    const net=[];D.lines.forEach(l=>{if(!l.left)return;const y=X.lines.find(y=>y.k===l.k&&Math.sign(y.d)===-Math.sign(l.d)&&y.left>0);if(y)net.push([l,y])});
+    const nOver=D.lines.filter(l=>l.d>0&&l.left>0).length,big=ov.length>=Math.max(3,nOver*0.3);if(!big&&!net.length)return;
+    out.push({X,ov,net,short:X.no+' ('+(net.length||ov.length)+' код)',
+      txt:net.length?'<b>'+net.length+'</b> бараа энд '+(net[0][0].d<0?'дутуу':'илүү')+', харин <b>'+esc(X.no)+'</b> илгээмжинд '+(net[0][0].d<0?'илүү':'дутуу')+' гарсан ('+esc(lt(X.at))+'). Хоёулаа '+esc(LOC[D.to]||D.to)+'-д ирсэн → бараа дэлгүүрт байгаа, зүгээр л илгээмж андуурч тоолсон.'+(big&&ov.length>net.length?' Мөн илүүгийн '+ov.length+' код тэр илгээмжинд байсан — давхар тоолсон байж болзошгүй.':'')
+        :'Илүү гарсан <b>'+nOver+'</b> мөрийн <b>'+ov.length+'</b> нь <b>'+esc(X.no)+'</b> илгээмжинд бас байсан ('+(X.lines.length?'тэнд дутуу '+X.short+', илүү '+X.over:'тэнд зөрүүгүй хүлээн авсан')+', '+esc(lt(X.at))+'). Нэг барааг <b>2 удаа тоолсон</b> байж болзошгүй.'})});return out}
+function dfDet(I,ce,wh){const box=$('dfList'),D=I.find(x=>x.key===DF.sel);if(!D){box.innerHTML='<div class="small" style="padding:8px">↑ Жагсаалтаас баримт дээр дарж дэлгэрэнгүй, шийдвэрийг харна.</div>';return}
+  const ck=DF.ck[D.key]||(DF.ck[D.key]=new Set()),lf=DF.lf,W=dfWarn(I,D);[...ck].forEach(k=>{const l=D.lines.find(x=>x.k===k);if(!l||!l.left)ck.delete(k)});
+  const L=D.lines.map((l,i)=>({l,i})).filter(({l})=>lf==='all'||(lf==='short'?l.d<0&&l.left:lf==='over'?l.d>0&&l.left:l.left>0||l.wait>0));
+  const S=D.lines.filter(l=>ck.has(l.k)&&l.left>0),sh=S.filter(l=>l.d<0),ov=S.filter(l=>l.d>0),pa=S.filter(l=>dfPairs(I,D,l).length),q=A=>A.reduce((a,l)=>a+l.left,0);
+  const bb=(a,t,n,cls)=>n?'<button class="btn'+(cls?' '+cls:'')+'" style="min-height:30px;padding:2px 10px" data-dfb="'+a+'">'+t+' ('+n+')</button>':'';
+  let bulk='';if(S.length){const lpp=D.src==='lpp';
+    if(ce){bulk=bb('pair','🔁 Өөр дэлгүүртэй тааруулж шилжүүлэх',pa.length,'pri')+bb('recount','📋 Нэг даалгавраар дахин тоолуулах',S.length);
+      if(lpp)bulk+=bb('dbl','✂ Давхар тоолсон — илүүг хасах',ov.length)+bb('accept','✓ Илүүг хүлээн авах',ov.length)+bb('ret','↩ Илүүг LPP руу буцаах',ov.length)+bb('wh','🏬 Дутууг агуулахаас дахин илгээх',sh.length)+bb('loss','✖ Дутууг хохирол',sh.length);
+      else bulk+=bb('sender','↩ Илгээгчийн үлдэгдлийг засах',S.length)+bb('ret','↩ Илүүг илгээгч рүү буцаах',ov.length)+bb('loss','✖ Дутууг хохирол',sh.length)}
+    else if(wh&&lpp)bulk=bb('wh','🏬 Дутууг агуулахаас дахин илгээх',sh.length);
+    bulk='<div style="position:sticky;top:0;z-index:2;background:#fff;border:1px solid #e3e6ea;border-radius:8px;padding:6px 8px;margin:6px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><b>Сонгосон '+S.length+' мөр</b> <span class="small">(дутуу '+q(sh)+' ш, илүү '+q(ov)+' ш)</span>'+(bulk||'<span class="small">энэ сонголтод таны эрхээр хийх үйлдэл алга</span>')+'<button class="btn" style="min-height:30px" data-dfckn="1">✕ Сонголт арилгах</button></div>'}
+  const opn=D.lines.filter(l=>l.left>0);
+  box.innerHTML='<div class="card" id="dfDetC" style="margin:10px 0;padding:10px 12px;border-left:4px solid '+(D.open?(D.days>=3?'var(--red)':'#e08a00'):'#2f9e44')+'">'+
+    '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="font-size:16px">'+(D.src==='lpp'?'🚚 LPP':'⇄ Шилжүүлэг')+' '+esc(D.no)+'</b>'+(D.re?' <span class="chip b">дахин илгээсэн</span>':'')+' · '+esc(D.src==='lpp'?'LPP агуулах':(LOC[D.from]||D.from))+' → <b>'+esc(LOC[D.to]||D.to)+'</b>'+(D.deliv?' · '+esc(D.deliv):'')+
+      '<div class="small">Хүлээн авсан: '+esc(D.recvBy||'—')+' · '+esc(lt(D.at))+(D.note?' · «'+esc(D.note)+'»':'')+' · илгээсэн '+nfx(D.sent)+', ирсэн '+nfx(D.recv)+', дутуу '+D.short+', илүү '+D.over+'</div></div>'+
+      '<div class="small" style="text-align:right">'+(D.open?'<span class="chip'+(D.days>=3?' r':' b')+'">'+D.open+' мөр нээлттэй · '+D.days+' хоног</span>':D.lines.length?'<span class="chip">✓ шийдвэрлэсэн</span>':'<span class="chip">✓ зөрүүгүй</span>')+' <button class="btn" style="min-height:28px" data-dfo="">✕ Хаах</button></div></div>'+
+    W.map(w=>'<div style="margin:8px 0;padding:8px 10px;border-radius:8px;background:#fff4d6">⚠ '+w.txt+'<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">'+
+      (w.net.length&&ce?'<button class="btn pri" style="min-height:30px" data-dfnet="'+esc(w.X.key)+'">⇄ '+esc(w.X.no)+'-ийн эсрэг зөрүүтэй тэнцүүлэх ('+w.net.length+' мөр)</button>':'')+
+      (w.ov.length?'<button class="btn" style="min-height:30px" data-dfsel="'+esc(w.X.key)+'">☑ Эдгээр '+w.ov.length+' мөрийг сонгох</button>':'')+'<button class="btn" style="min-height:30px" data-dfo="'+esc(w.X.key)+'">👁 '+esc(w.X.no)+'-ийг харах</button></div></div>').join('')+
+    (D.lines.length?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px"><div class="dfchips">'+[['open','Нээлттэй'],['short','Дутуу'],['over','Илүү'],['all','Бүгд']].map(([k,t])=>'<button data-dflf="'+k+'" aria-pressed="'+(lf===k)+'">'+t+'</button>').join('')+'</div>'+
+      (opn.length?'<label class="small" style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-dfckall="1" '+(L.length&&L.every(({l})=>!l.left||ck.has(l.k))&&ck.size?'checked':'')+'> Харагдаж буй нээлттэй мөрүүдийг бүгдийг сонгох</label>':'')+'</div>'+bulk+
+      '<table class="t" data-xe="1" style="margin-top:6px"><thead><tr><th style="width:26px"></th><th>Код</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th><th class="n">Зөрүү</th><th>Шийдвэр</th></tr></thead><tbody>'+
+      L.slice(0,DF.lim).map(({l,i})=>'<tr'+(ck.has(l.k)?' style="background:#eef5ff"':'')+'><td>'+(l.left?'<input type="checkbox" data-dfck="'+esc(l.k)+'"'+(ck.has(l.k)?' checked':'')+'>':'')+'</td><td class="mono">'+esc(l.code)+'</td><td>'+esc(l.name)+'</td><td class="n">'+l.sent+'</td><td class="n">'+l.recv+'</td><td class="n"><b class="'+(l.d<0?'hot':'')+'">'+(l.d>0?'+':'')+l.d+'</b><div class="small">'+(l.d<0?'дутуу':'илүү')+'</div></td><td>'+dfActs(I,D,l,i,ce,wh)+'</td></tr>').join('')+'</tbody></table>'+
+      (L.length>DF.lim?'<div class="small" style="margin:6px 0">'+DF.lim+' / '+L.length+' мөр харагдаж байна <button class="btn" data-dfmore="1">Бүгдийг харуулах</button> (бөөнөөр сонгоход бүх мөр орно)</div>':'')+(!L.length?'<div class="small" style="padding:8px">Энэ шүүлтүүрт мөр алга.</div>':''):'<div class="small" style="padding:8px">Энэ баримт зөрүүгүй хүлээн авагдсан.</div>')+'</div>'}
+async function dfSaveMany(D,arr){if(!arr.length)return;const ref=db.collection('pos_diff').doc(D.key),cur=await ref.get(),res=cur.exists?JSON.parse(cur.data().res||'{}'):{};arr.forEach(([k,a])=>(res[k]=res[k]||[]).push(a));const last=arr[arr.length-1][1];
+  await ref.set({key:D.key,src:D.src,srcId:D.srcId,no:D.no,from:D.from,to:D.to,at:D.at,res:JSON.stringify(res),updated:last.at,updatedBy:last.by},{merge:true})}
+async function dfBulk(act){const I=dfItems(),D=I.find(x=>x.key===DF.sel);if(!D)return;const ck=DF.ck[D.key]||new Set(),by=auth.currentUser.email||'',at=new Date().toISOString(),where=LOC[D.to]||D.to,lpp=D.src==='lpp';
+  const S=D.lines.filter(l=>ck.has(l.k)&&l.left>0),sh=S.filter(l=>l.d<0),ov=S.filter(l=>l.d>0),q=A=>A.reduce((a,l)=>a+l.left,0),done=()=>{ck.clear();dfDraw()};
+  try{
+  if(act==='pair'){const G=new Map(),P=[];S.forEach(l=>{const p=dfPairs(I,D,l)[0];if(!p)return;const n=Math.min(l.left,p.y.left),from=l.d<0?p.X.to:D.to,to=l.d<0?D.to:p.X.to,k=from+'>'+to;(G.get(k)||G.set(k,{from,to,L:[]}).get(k)).L.push({l,p,n})});
+    if(!G.size)return;if(!confirm([...G.values()].map(g=>(LOC[g.from]||g.from)+' → '+(LOC[g.to]||g.to)+': '+g.L.reduce((a,x)=>a+x.n,0)+' ш ('+g.L.length+' бараа)').join('\n')+'\n\nШилжүүлэг үүсгэх үү? Илгээх дэлгүүрийн касс дээр «📤 Илгээх ёстой» гарна.'))return;
+    const mine=[],other=new Map();for(const g of G.values()){const doc=await dfDoc('move',g.from,g.to,g.L.map(x=>[x.l.code,x.n,x.l.name]),'Зөрүү тааруулалт: '+D.no,D);
+      g.L.forEach(x=>{mine.push([x.l.k,{act:'pair',qty:x.n,by,at,doc:doc.uid,docNo:doc.no,pair:x.p.X.key}]);(other.get(x.p.X.key)||other.set(x.p.X.key,{X:x.p.X,a:[]}).get(x.p.X.key)).a.push([x.p.y.k,{act:'pair',qty:x.n,by,at,doc:doc.uid,docNo:doc.no,pair:D.key}])})}
+    await dfSaveMany(D,mine);for(const o of other.values())await dfSaveMany(o.X,o.a);return done()}
+  if(act==='recount'){if(!confirm(where+'-д '+S.length+' барааг нэг тооллогын даалгавраар дахин тоолуулах уу? Касс дээр нэг даалгавар очно.'))return;
+    const t={...cntTaskDoc(D.to,S[0].code,S.map(l=>l.code),'Хүлээн авалтын зөрүү: '+D.no+' — '+S.length+' бараа (дутуу '+q(sh)+', илүү '+q(ov)+'). Тавиур, агуулах, хайрцгийг шалгаж тоолно уу','diff'),title:'Зөрүү '+D.no+' · '+S.length+' бараа',diff:D.key+'|*'};
+    await db.collection('pos_counts').doc(t.uid).set(t);await dfSaveMany(D,S.map(l=>[l.k,{act:'recount',qty:0,by,at,task:t.uid}]));return done()}
+  if(act==='dbl'){if(!ov.length||!confirm(where+': '+ov.length+' барааны илүү '+q(ov)+' ширхэгийг «давхар тоолсон» гэж үзээд дэлгүүрийн үлдэгдлээс хасах уу?\nНэг засварын баримт (ЗӨ) үүснэ. Бодит байгаа эсэхэд эргэлзэж байвал эхлээд «📋 дахин тоолуулах».'))return;
+    const doc=await dfDoc('adj','',D.to,ov.map(l=>[l.code,-l.left,l.name]),'Давхар тоолсон илүүг хассан: '+D.no,D);await dfSaveMany(D,ov.map(l=>[l.k,{act:'dbl',qty:l.left,by,at,doc:doc.uid,docNo:doc.no}]));return done()}
+  if(act==='accept'){if(!ov.length||!confirm(ov.length+' барааны илүү '+q(ov)+' ш-ийг '+where+'-д үлдээх (хүлээн авах) уу? Үлдэгдэл өөрчлөгдөхгүй — аль хэдийн орсон.'))return;await dfSaveMany(D,ov.map(l=>[l.k,{act:'accept',qty:l.left,by,at}]));return done()}
+  if(act==='ret'){if(!ov.length)return;if(lpp){if(!confirm(ov.length+' барааны илүү '+q(ov)+' ш-ийг LPP агуулах руу буцааж өгөх үү? Нэг зарлагын баримт (ЗР) үүснэ.'))return;const doc=await dfDoc('out',D.to,'',ov.map(l=>[l.code,l.left,l.name]),'LPP агуулах руу буцаасан (зөрүү '+D.no+')',D);await dfSaveMany(D,ov.map(l=>[l.k,{act:'ret',qty:l.left,by,at,doc:doc.uid,docNo:doc.no}]))}
+    else{if(!confirm(ov.length+' барааг '+(LOC[D.from]||D.from)+' руу буцааж шилжүүлэх үү?'))return;const doc=await dfDoc('move',D.to,D.from,ov.map(l=>[l.code,l.left,l.name]),'Зөрүү буцаалт: '+D.no,D);await dfSaveMany(D,ov.map(l=>[l.k,{act:'ret',qty:l.left,by,at,doc:doc.uid,docNo:doc.no}]))}return done()}
+  if(act==='sender'){if(!confirm((LOC[D.from]||D.from)+'-ийн үлдэгдлийг засах уу?\nДутуу '+q(sh)+' ш → илгээгчид үлдсэн (буцааж нэмнэ); илүү '+q(ov)+' ш → илгээгч илүү явуулсан (хасна). Нэг засварын баримт.'))return;
+    const doc=await dfDoc('adj','',D.from,S.map(l=>[l.code,l.d<0?l.left:-l.left,l.name]),'Шилжүүлгийн зөрүү '+D.no+' — илгээгчийн үлдэгдэл',D);await dfSaveMany(D,S.map(l=>[l.k,{act:'sender',qty:l.left,by,at,doc:doc.uid,docNo:doc.no}]));return done()}
+  if(act==='wh'){const sh0=DF.ships.find(x=>x.id===D.srcId);if(!sh0||!sh.length)return;if(!confirm(sh.length+' барааны '+q(sh)+' ш агуулахад үлдсэн — нэг «дахин илгээх» илгээмж үүсгэх үү?\nАгуулах дараагийн ачаанд хийж, '+where+' LPP хүлээн авалтаар уншуулж авна. Хүлээн авах хүртэл мөрүүд нээлттэй үлдэнэ.'))return;
+    const n=DF.ships.filter(x=>x.resendOf===sh0.id).length,ref=db.collection('wh_ship').doc(),no=(sh0.no||sh0.id)+'-R'+(n?n+1:''),Lm={},Im={},Rs={};let tq=0;
+    sh.forEach(l=>{const raw=Object.keys(sh0.l||{}).find(x=>Object.keys(lppDec({[x]:1}))[0]===l.k);if(!raw)return;Lm[raw]=l.left;Im[raw]=(sh0.i||{})[raw]||{n:l.name};Rs['res.'+raw]={how:'resend',note:'самбар: '+by.split('@')[0],at,by};tq+=l.left});if(!tq)return;
+    await ref.set({deliv:sh0.deliv||'',dname:sh0.dname||'',store:sh0.store,no,status:'sent',createdAt:at,by,sentAt:at,sentBy:by,notifyStore:false,resendOf:sh0.id,tq,rq:0,l:Lm,i:Im,r:{},note:'Зөрүү '+(sh0.no||'')+': агуулахад үлдсэн'});
+    try{await db.collection('wh_ship').doc(sh0.id).update(Rs)}catch(e){console.warn('res',e)}await dfSaveMany(D,sh.map(l=>[l.k,{act:'wh',qty:l.left,by,at,ship:ref.id,docNo:no}]));return done()}
+  if(act==='loss'){if(sh.length)dfLossMany(D,sh,done);return}
+  }catch(e){alert('Алдаа: '+(e.code||e.message||e))}}
+function dfLossMany(D,sh,done){const tot=sh.reduce((a,l)=>a+l.left,0),cash=sh.reduce((a,l)=>a+((itRow(l.code)||{}).price||0)*l.left,0);
+  $('pbox').innerHTML='<h3>✖ Хохирол бүртгэх — '+sh.length+' бараа, '+tot+' ш</h3><div class="small">'+esc(D.no)+' · '+esc(LOC[D.to]||D.to)+' · кассын үнээр '+nfx(cash)+' ₮</div>'+
+    '<label class="f">Хариуцагч</label><select id="dfR" class="inp"><option value="">— сонгох —</option>'+Object.entries(DF_RESP).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>'+
+    '<label class="f">Тайлбар (заавал) — юу болсон, хэн шалгасан</label><input id="dfN" class="inp" placeholder="ж: хайрцаг ломбо тасарсан ирсэн, жолооч Б.Бат"><div id="dfM" class="small hot" style="min-height:18px"></div>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="dfX">Болих</button><button class="btn pri" id="dfOk">Хохирол батлах</button></div>';
+  $('pm').classList.remove('hide');$('dfX').onclick=pClose;
+  $('dfOk').onclick=async()=>{const r=$('dfR').value,n=$('dfN').value.trim();if(!r)return $('dfM').textContent='Хариуцагчийг сонгоно уу';if(n.length<4)return $('dfM').textContent='Тайлбар бичнэ үү';$('dfOk').disabled=true;const by=auth.currentUser.email||'',at=new Date().toISOString();
+    try{await dfSaveMany(D,sh.map(l=>[l.k,{act:'loss',qty:l.left,resp:r,note:n,by,at,cost:costMap.has(l.code)?costMap.get(l.code):null,cash:(itRow(l.code)||{}).price||0,code:l.code,name:l.name,store:D.to}]));pClose();done()}catch(e){$('dfOk').disabled=false;$('dfM').textContent='Алдаа: '+(e.code||e)}}}
+// нэг дэлгүүрийн 2 илгээмж хооронд: нэгд илүү, нөгөөд дутуу (ижил код) → бараа дэлгүүрт байгаа, баримт хэрэггүй
+async function dfNet(xk){const I=dfItems(),D=I.find(x=>x.key===DF.sel),w=D&&dfWarn(I,D).find(w=>w.X.key===xk);if(!w||!w.net.length)return;const by=auth.currentUser.email||'',at=new Date().toISOString();
+  if(!confirm(w.net.length+' бараа: '+D.no+' ба '+w.X.no+' хоёр илгээмжийн нэгд илүү, нөгөөд дутуу гарсан. Хоёулаа '+(LOC[D.to]||D.to)+'-д ирсэн тул нийтдээ зөрүүгүй — тэнцүүлж хаах уу? (үлдэгдэл өөрчлөгдөхгүй)'))return;
+  const a=[],b=[];w.net.forEach(([l,y])=>{const n=Math.min(l.left,y.left);a.push([l.k,{act:'same',qty:n,by,at,pair:w.X.key,docNo:w.X.no}]);b.push([y.k,{act:'same',qty:n,by,at,pair:D.key,docNo:D.no}])});
+  try{await dfSaveMany(D,a);await dfSaveMany(w.X,b)}catch(e){alert('Алдаа: '+(e.code||e))}}
 function dfActs(I,D,l,i,ce,wh){const done=l.acts.map(a=>'<div class="small">✓ '+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':'')+(a.resp?' · хариуцагч: '+esc(DF_RESP[a.resp]||a.resp):'')+(a.note?' · '+esc(a.note):'')+(a.docNo?' · '+esc(a.docNo):'')+' <span style="color:#8a93a0">('+esc(String(a.by||'').split('@')[0])+', '+esc(lt(a.at))+')</span></div>').join('');
   const RT={resend:'Олдсон — дахин илгээнэ',lost:'Олдсонгүй (акт)',keep:'Илүү — дэлгүүрт үлдээнэ',back:'Илүү — агуулах руу буцаана',other:'Бусад'};
   const rsH=(l.d<0?l.rs:[]).map(x=>x.st==='sent'?'<div class="small" style="color:#b35c00">🚚 Агуулахаас дахин илгээсэн '+x.q+' ш · <b>'+esc(x.no)+'</b> — '+esc(LOC[D.to]||D.to)+' хүлээн аваагүй ('+esc(lt(x.at))+')</div>':'<div class="small">✓ Агуулахаас дахин илгээсэн '+x.q+' ш · '+esc(x.no)+' — дэлгүүр хүлээн авсан'+(x.g<x.q?' <b class="hot">(тэнд '+(x.q-x.g)+' ш дахин дутуу — тэр илгээмжээр шийдвэрлэнэ)</b>':'')+'</div>').join('')+
@@ -839,10 +916,19 @@ async function dfBal(){const box=$('dfBal');box.innerHTML='<span class="small">�
   const L=[...G.values()].sort((a,b)=>a.last<b.last?1:-1),rk=r=>Object.entries(r).map(([k,v])=>(k[0]==='−'?'дутуу ':'илүү ')+(DF_ACT[k.slice(1)]||k.slice(1)).toLowerCase()+' '+v).join('; ');
   box.innerHTML=L.length?'<table class="t"><thead><tr><th>Хүргэлт (ачаа)</th><th class="n">Илгээмж</th><th class="n">Илгээсэн</th><th class="n">Замд</th><th class="n">Хүлээн авсан</th><th class="n">Дутуу</th><th class="n">Илүү</th><th>Шийдвэр</th><th class="n">Нээлттэй</th><th>Тэнцэл</th></tr></thead><tbody>'+
     L.map(g=>'<tr><td><b>'+esc(g.k)+'</b></td><td class="n">'+g.n+'</td><td class="n">'+nfx(g.sent)+'</td><td class="n">'+(g.transit?nfx(g.transit):'')+'</td><td class="n">'+nfx(g.recv)+'</td><td class="n">'+(g.short||'')+'</td><td class="n">'+(g.over||'')+'</td><td class="small">'+esc(rk(g.res))+'</td><td class="n'+(g.open?' hot':'')+'">'+(g.open||'')+'</td><td>'+(g.open?'<span class="chip r">дуусаагүй '+g.open+'</span>':g.transit?'<span class="chip b">замд байна</span>':'<span class="chip">✓ тэнцсэн</span>')+'</td></tr>').join('')+'</tbody></table><div class="small" style="margin-top:6px">Илгээсэн (хүлээн авсан илгээмжүүд) = хүлээн авсан + дутуу − илүү. Дутуу/илүү ширхэг бүр шийдвэртэй бол «тэнцсэн».</div>':'<div class="small">LPP илгээмж алга.</div>'}
-function dfInit(){watchDiff();if(!$('dfLA').value){const d=new Date();$('dfLB').value=iso(d);d.setDate(1);$('dfLA').value=iso(d)}
+function dfInit(){watchDiff();if(!$('dfA').value){$('dfA').value=DF.a=DF.from;$('dfB').value=DF.b=iso(new Date())}if(!$('dfLA').value){const d=new Date();$('dfLB').value=iso(d);d.setDate(1);$('dfLA').value=iso(d)}
   $('dfSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+['FC','DR','NS'].map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('');$('dfSt').value=DF.st;dfDraw();dfLossDraw()}
-$('dfSt').onchange=()=>{DF.st=$('dfSt').value;dfDraw()};$('dfTy').onchange=()=>{DF.ty=$('dfTy').value;dfDraw()};$('dfLGo').onclick=dfLossDraw;$('dfLX').onclick=()=>{dfLossDraw();xtXlsx('dfloss','Hohirol_'+$('dfLA').value+'_'+$('dfLB').value,'Хохирол')};$('dfBalGo').onclick=dfBal;
-document.addEventListener('click',e=>{const b=e.target.closest('[data-dfa]');if(b){if(b.dataset.dfa==='wh'||dfCan())dfDo(b);return}const v=e.target.closest('[data-dfv]');if(v){DF.view=v.dataset.dfv;document.querySelectorAll('[data-dfv]').forEach(x=>x.setAttribute('aria-pressed',x===v));dfDraw()}});
+$('dfA').onchange=()=>{DF.a=$('dfA').value;dfDraw()};$('dfB').onchange=()=>{DF.b=$('dfB').value;dfDraw()};$('dfSt').onchange=()=>{DF.st=$('dfSt').value;dfDraw()};$('dfTy').onchange=()=>{DF.ty=$('dfTy').value;dfDraw()};$('dfLGo').onclick=dfLossDraw;$('dfLX').onclick=()=>{dfLossDraw();xtXlsx('dfloss','Hohirol_'+$('dfLA').value+'_'+$('dfLB').value,'Хохирол')};$('dfBalGo').onclick=dfBal;
+document.addEventListener('change',e=>{const c=e.target.closest&&e.target.closest('[data-dfck],[data-dfckall]');if(!c)return;const ck=DF.ck[DF.sel]||(DF.ck[DF.sel]=new Set());
+  if(c.dataset.dfck){c.checked?ck.add(c.dataset.dfck):ck.delete(c.dataset.dfck)}else{const D=dfItems().find(x=>x.key===DF.sel);if(D)D.lines.filter(l=>l.left>0&&(DF.lf==='all'||DF.lf==='open'||(DF.lf==='short'?l.d<0:l.d>0))).forEach(l=>c.checked?ck.add(l.k):ck.delete(l.k))}dfDraw()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-dfa]');if(b){if(b.dataset.dfa==='wh'||dfCan())dfDo(b);return}
+  const o=e.target.closest('[data-dfo]');if(o&&!e.target.closest('.xfb')){DF.sel=o.dataset.dfo;DF.lf='open';DF.lim=150;dfDraw();if(DF.sel)setTimeout(()=>{const c=$('dfDetC');if(c)c.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
+  const bk=e.target.closest('[data-dfb]');if(bk){if(bk.dataset.dfb==='wh'||dfCan())dfBulk(bk.dataset.dfb);return}
+  if(e.target.closest('[data-dfckn]')){(DF.ck[DF.sel]||new Set()).clear();dfDraw();return}
+  const lf=e.target.closest('[data-dflf]');if(lf){DF.lf=lf.dataset.dflf;dfDraw();return}
+  if(e.target.closest('[data-dfmore]')){DF.lim=1e6;dfDraw();return}
+  const ns=e.target.closest('[data-dfnet]');if(ns){dfNet(ns.dataset.dfnet);return}
+  const sl=e.target.closest('[data-dfsel]');if(sl){const I=dfItems(),D=I.find(x=>x.key===DF.sel),w=D&&dfWarn(I,D).find(w=>w.X.key===sl.dataset.dfsel);if(w){const ck=DF.ck[D.key]||(DF.ck[D.key]=new Set());w.ov.forEach(l=>ck.add(l.k));DF.lf='over';dfDraw()}return}const v=e.target.closest('[data-dfv]');if(v){DF.view=v.dataset.dfv;document.querySelectorAll('[data-dfv]').forEach(x=>x.setAttribute('aria-pressed',x===v));dfDraw()}});
 
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}

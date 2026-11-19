@@ -6833,6 +6833,17 @@ async function rcmFinish(){ await rcmFlush(); const L0 = rcmShips().filter(s => 
     $('#rc-msg').textContent = (bad ? `Дууслаа — ${bad} илгээмж зөрүүтэй, агуулахад мэдэгдлээ.` : 'Хаагдсан илгээмжүүд зөрүүгүй — баярлалаа.') + (left.length ? ` · Замд үлдсэн: ${left.map(x => x.no).join(', ')}` : '');
     renderRcv(); };
   $('#rc-cmp').scrollIntoView({behavior: 'smooth', block: 'start'}); }
+function rcmAskPart(part){ return new Promise(done => { const el = $('#rc-cmp'), card = $('#rc-count');
+    el.innerHTML = `<div class="banner bad" style="margin-bottom:8px"><b>⚠ Эдгээр илгээмжийг өмнө нь хэсэгчлэн тоолсон байна:</b> ${part.map(s => `<b>${esc(s.no)}</b> — ${fmt(s.rq || 0)} ш`).join(', ')}.<br>
+      Тэр барааг <b>дахин уншуулбал 2 удаа тоологдож</b>, бүх илгээмж илүү гарна. Аль нь вэ?</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary" id="rcp-go">▶ Үргэлжлүүлэх — өмнө тоолсон хайрцгийг <u>дахин уншуулахгүй</u>, зөвхөн үлдсэнийг</button>
+      <button class="btn" id="rcp-zero" style="color:var(--bad)">↺ Тэглээд бүгдийг шинээр тоолох</button><button class="btn" id="rcp-no">Болих</button></div>`;
+    if (card) card.hidden = false; el.scrollIntoView({behavior: 'smooth', block: 'start'});
+    $('#rcp-no').onclick = () => { el.innerHTML = ''; done(false); };
+    $('#rcp-go').onclick = () => { el.innerHTML = ''; done(true); };
+    $('#rcp-zero').onclick = async () => { if (!confirm('Өмнө тоолсон ' + fmt(part.reduce((a, s) => a + (s.rq || 0), 0)) + ' ширхэгийг устгаад шинээр тоолох уу?')) return;
+      try{ for (const s of part){ await db.doc('ship/' + s.id).update({r: {}, rq: 0}); s.r = {}; s.rq = 0; } whLog('rcZero', {ships: part.map(s => s.id), n: part.reduce((a, s) => a + (s.rq || 0), 0)}); }catch(err){ whErr(err); done(false); return; }
+      el.innerHTML = ''; done(true); }; }); }
 // ---------- store receiving (blind count) ----------
 function myRcvStores(){ return whCfg().stores.map(s => s.key).filter(k => isOwner || (window.ALLOWX || {})['rcv_' + k]); }
 function renderRcv(){
@@ -6956,7 +6967,9 @@ $('#rc-mall').addEventListener('click', () => { const L = WS.ships.filter(s => s
   if (!st){ alert('Эхлээд аль дэлгүүрийнхийг тоолохоо — нэг илгээмжийг сонгоно уу.'); return; }
   L.filter(s => s.store === st).forEach(s => WS.rcSel.add(s.id)); renderRcv(); });
 $('#rc-mgo').addEventListener('click', async () => { const ids = [...WS.rcSel].filter(id => (WS.ships.find(x => x.id === id) || {}).status === 'sent'); if (ids.length < 2) return;
-  await rcFlush(); WS.rc = {ship: '', multi: ids, pend: {}, pendM: Object.fromEntries(ids.map(id => [id, {}])), last: []}; $('#rc-msg').textContent = '';
+  await rcFlush(); const part = ids.map(id => WS.ships.find(x => x.id === id)).filter(s => s && (s.rq || 0) > 0);
+  if (part.length && !(await rcmAskPart(part))) return;
+  WS.rc = {ship: '', multi: ids, pend: {}, pendM: Object.fromEntries(ids.map(id => [id, {}])), last: []}; $('#rc-msg').textContent = '';
   try{ localStorage.setItem('vivi-rcm', JSON.stringify(ids)); }catch(x){} renderRcvCount(); const el = $('#rc-count'); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); $('#rc-input').focus(); });
 $('#wh-end').addEventListener('click', endSession);
 $('#wh-arch-d').addEventListener('change', renderArch);
