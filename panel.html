@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="12.5">
+<meta name="vivi-ver" content="12.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1644,7 +1644,7 @@ const MOVT={in:['⬇ Орлого — нийлүүлэгчээс ирсэн ба
   out:['⬆ Зарлага — гэмтэл, алдагдал, нийлүүлэгчид буцаалт','Байршлаас гарсан (зарагдаагүй) барааг шалтгаантай нь бүртгэнэ. Гэмтэлтэй барааг «Шилжүүлэг»-ээр «Гэмтэлтэй бараа» агуулах руу шилжүүлж болно.','Тайлбар','Зарлага хадгалах']};
 function stSub(k){{const L=SUBS.stock.filter(x=>subOk('stock',x));if(!L.some(x=>x[0]===k)&&L.length)k=L[0][0]}
   const mv=['in','move','out'].includes(k);if(k==='open')setTimeout(clDraw,0);if(k==='zinv')setTimeout(pivFill,0);
-  {const fr=document.querySelector('section[data-panel="stock"] .card[data-sub="'+k+'"] iframe[data-wh]');if(fr&&!fr.src)fr.src='wh.html?embed=1&tab='+fr.dataset.wh}
+  {const fr=document.querySelector('section[data-panel="stock"] .card[data-sub="'+k+'"] iframe[data-wh]');if(fr&&!fr.src)fr.src='wh.html?embed=1&tab='+fr.dataset.wh+'&t='+Date.now()}
   document.querySelectorAll('#stNav [data-sub]').forEach(b=>b.classList.toggle('on',b.dataset.sub===k));subMark('stock',k);
   document.querySelectorAll('section[data-panel="stock"] .card[data-sub]').forEach(c=>c.hidden=c.dataset.sub!==(mv?'mov':k));
   if(mv){if($('mTy').value!==k&&movLines&&movLines.length&&!confirm('Уншуулсан жагсаалтыг цэвэрлээд «'+MOVT[k][0]+'» руу шилжих үү?')){stSub($('mTy').value);return}

@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.0">
+<meta name="vivi-ver" content="7.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -906,7 +906,7 @@ function openMov(tab){
   const bindTabs=()=>{$('mbox').classList.add('wide');$('mbox').querySelectorAll('.tabs [data-t]').forEach(b=>b.onclick=()=>openMov(b.dataset.t));const n=MOV.filter(m=>m.to===own&&m.status==='sent').length;if($('movCnt'))$('movCnt').textContent=n?'('+n+')':''};
   // Агуулахын (LPP) илгээмжийг касс дээрээс хүлээн авах — самбарын «Хүлээн авалт»-тай ижил хуудас (зөвхөн энэ дэлгүүрийнх)
   if(tab==='lpp'){if(!(fb.ready&&fb.user&&navigator.onLine)){openModal(head+'<div class="small" style="color:var(--red);margin:12px 0">Интернэт / үүлэнд холбогдсон байх шаардлагатай</div><div class="rowbtn"><button id="mvc">Хаах</button></div>');bindTabs();$('mvc').onclick=closeModal;return}
-    openModal(head+'<div class="small" style="margin:4px 0 6px">Агуулахаас ирсэн илгээмж: сонгоод (эсвэл «Бүгдийг сонгох») хайрцгийн барааг уншуулна → «Тулгалт дуусгах». Ирээгүй илгээмж «Замд» үлдэнэ.</div><iframe src="wh.html?embed=1&tab=rcv" title="LPP хүлээн авалт" style="width:100%;height:68vh;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe><div class="rowbtn"><button id="mvc">Хаах</button></div>');
+    openModal(head+'<div class="small" style="margin:4px 0 6px">Агуулахаас ирсэн илгээмж: сонгоод (эсвэл «Бүгдийг сонгох») хайрцгийн барааг уншуулна → «Тулгалт дуусгах». Ирээгүй илгээмж «Замд» үлдэнэ.</div><iframe src="wh.html?embed=1&tab=rcv&t='+Date.now()+'" title="LPP хүлээн авалт" style="width:100%;height:68vh;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe><div class="rowbtn"><button id="mvc">Хаах</button></div>');
     bindTabs();$('mvc').onclick=closeModal;return}
   if(tab==='in'){const L=MOV.filter(m=>m.to===own&&m.status==='sent');
     openModal(head+(fb.user?'':'<div class="small" style="color:var(--red)">Үүлэнд холбогдоогүй — ирсэн шилжүүлэг харагдахгүй</div>')+'<div class="list"><table><thead><tr><th>Илгээсэн</th><th>Хаанаас</th><th>Тайлбар</th><th class="n">Тоо</th></tr></thead><tbody id="mil">'+
