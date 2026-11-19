@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="12.0">
+<meta name="vivi-ver" content="12.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1577,6 +1577,30 @@ function stockCalc(st,O,saleDocs,until){
   return {ns,rows:[...R.values()].map(r=>({...r,now:r.open+r.inn-r.out-r.sold+r.ret+r.adj}))};
 }
 // Үлдэгдлийн тайлан: нэг байршил (хөдөлгөөнөөр задалсан) эсвэл «Бүх байршил» (байршил бүрээр багана). Өртгийн болон кассын үнийн дүнтэй.
+/* ==== Үлдэгдлийн тооцоонд борлуулалтыг хурдан уншина ====
+   • нэг байршил: зөвхөн тухайн байршлын баримт (pos_sales индекс: store + date; индекс алга бол бүгдийг уншаад шүүнэ)
+   • 3 хоногоос хуучин өдрүүдийг төхөөрөмж дээр (IndexedDB) хадгална — дараагийн удаа сангаас дахин татахгүй
+   • хуучин баримт устгасан/сэргээсэн бол (pos_audit) тухайн өдрийг дахин татна; сарын хаалт үргэлж сангаас шинээр */
+const SC={mem:new Map(),idx:null,dbp:null};
+function scDb(){if(SC.dbp)return SC.dbp;SC.dbp=new Promise((res,rej)=>{try{const r=indexedDB.open('vivi-panel-cache',1);r.onupgradeneeded=()=>r.result.createObjectStore('days');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});SC.dbp.catch(()=>{});return SC.dbp}
+async function scGet(k){if(SC.mem.has(k))return SC.mem.get(k);try{const d=await scDb();const v=await new Promise((res,rej)=>{const q=d.transaction('days').objectStore('days').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});if(v)SC.mem.set(k,v);return v}catch(e){return null}}
+async function scSet(k,v){SC.mem.set(k,v);try{const d=await scDb();d.transaction('days','readwrite').objectStore('days').put(v,k)}catch(e){}}
+const scLocs=loc=>[...new Set(['FC','DR','NS','ON','YV',...Object.keys(LOC)])].filter(x=>(STOCK_SRC[x]||x)===loc);
+async function scFetch(from,stores){const q=db.collection('pos_sales').where('date','>=',from);
+  if(stores&&SC.idx!==false){try{const r=await(stores.length===1?q.where('store','==',stores[0]):q.where('store','in',stores)).get();SC.idx=true;return r.docs.map(d=>d.data())}
+    catch(e){if(e.code!=='failed-precondition')throw e;SC.idx=false;console.warn('pos_sales (store, date) индекс алга — бүгдийг уншина')}}
+  return (await q.get()).docs.map(d=>d.data()).filter(x=>!stores||stores.includes(x.store))}
+async function salesSince(day,loc,o){o=o||{};const stores=loc?scLocs(loc):null,K=d=>(loc||'ALL')+'|'+d;
+  if(o.fresh)return scFetch(day,stores);
+  let inv=[];try{inv=(await db.collection('pos_audit').where('type','in',['receipt_delete','receipt_restore']).get()).docs.map(d=>d.data())}catch(e){}
+  const cut=sDay(new Date(Date.now()-3*864e5).toISOString()),days=[];
+  for(let t=new Date(day.replace(/\//g,'-')+'T12:00:00');days.length<400;t.setDate(t.getDate()+1)){const d=sDay(t.toISOString());if(d>=cut)break;days.push(d)}
+  const out=[];let from=cut;
+  for(const d of days){const v=await scGet(K(d));if(!v||inv.some(a=>(a.info||{}).date===d&&a.t>v.at)){from=d;break}out.push(...v.docs)}
+  const L=await scFetch(from,stores),at=new Date().toISOString(),by=new Map();
+  L.forEach(x=>{if(x.date<cut){let a=by.get(x.date);if(!a)by.set(x.date,a=[]);a.push(x)}});
+  days.filter(d=>d>=from).forEach(d=>scSet(K(d),{at,docs:by.get(d)||[]}));
+  return out.concat(L)}
 let stockHead=[],stockAllMode=false;
 async function calcStock(){
   const st=$('sSt').value;$('sMsg').textContent='Тооцоолж байна…';stockRows=[];
@@ -1587,7 +1611,7 @@ async function calcStock(){
       stockRows=[...A.M.entries()].map(([c,v])=>{const t=v.reduce((a,b)=>a+b,0),k=costMap.get(c);return {code:c,name:nmOf(c),loc:v,now:t,cost:k==null?null:k,cash:cash(c)}});
       $('sMsg').textContent='Бүх байршил · '+A.SS.map(x=>LOC[x]+' ('+lt(A.O[x].asOf)+'-аас)').join(' · ')}
     else{stockAllMode=false;const od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл хадгалаагүй байна.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
-      const O=od.data(),asOf=O.asOf,snap=await db.collection('pos_sales').where('date','>=',sDay(asOf)).get(),SD=snap.docs.map(d=>d.data()),C=stockCalc(st,O,SD);
+      const O=od.data(),asOf=O.asOf,SD=await salesSince(sDay(asOf),st),C=stockCalc(st,O,SD);
       negSrc={sales:SD,R:{[st]:C},O:{[st]:O},locs:[st]};
       stockHead=['Код','Нэр','Эхний','Орлого','Зарлага','Борлуулсан','Буцаалт','Тооллогын зөрүү','Одоо','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
       stockRows=C.rows.map(r=>({...r,name:r.name||nmOf(r.code),cost:costMap.has(r.code)?costMap.get(r.code):null,cash:cash(r.code)}));
@@ -1604,7 +1628,7 @@ let movReady=false,stkBusy=false;
 async function stockAll(){for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
   const SS=[],O={};for(const st of Object.keys(LOC)){const d=await db.collection('pos_stock_open').doc(st).get();if(d.exists){SS.push(st);O[st]=d.data()}}
   const M=new Map(),R={};if(!SS.length)return {SS,O,M,R};
-  const from=SS.map(s=>O[s].asOf).sort()[0],sales=(await db.collection('pos_sales').where('date','>=',sDay(from)).get()).docs.map(d=>d.data());
+  const from=SS.map(s=>O[s].asOf).sort()[0],sales=await salesSince(sDay(from),null);
   SS.forEach((st,k)=>{R[st]=stockCalc(st,O[st],sales);R[st].rows.forEach(r=>{if(!r.now)return;let v=M.get(r.code);if(!v){v=SS.map(()=>0);M.set(r.code,v)}v[k]=r.now})});
   return {SS,O,M,R,sales}}
 async function publishStock(silent){
@@ -1682,7 +1706,7 @@ $('cFile').onchange=$('cFull').onchange=$('cSt').onchange=async()=>{const f=$('c
         const ki=f2(CODE_H),qi=f2(['тоолсон','тоолсон тоо','бодит тоо','бодит үлдэгдэл','тоо','тоо хэмжээ','qty']);if(ki>=0&&qi>=0){S={a,h,ki,qi,ni:f2(['барааны нэр','нэр'])};break}}if(S)break}
     if(!S)return $('cPrev').innerHTML='<span class="hot">«Код» + «Тоолсон»/«Тоо» багана олдсонгүй</span>';
     const st=$('cSt').value,od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists)return $('cPrev').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл алга</span>';
-    const O=od.data(),sales=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(d=>d.data()),C=stockCalc(st,O,sales),now=new Map(C.rows.map(r=>[r.code,r.now]));
+    const O=od.data(),sales=await salesSince(sDay(O.asOf),st),C=stockCalc(st,O,sales),now=new Map(C.rows.map(r=>[r.code,r.now]));
     const cnt=new Map(),cv=v=>v==null?'':typeof v==='number'?String(Math.round(v)):String(v).trim();
     S.a.slice(S.h+1).forEach(r=>{if(!r||isTotalRow(r,S.ni))return;const c=cv(r[S.ki]),q=Number(r[S.qi]);if(c&&/^[0-9A-Za-z\-]+$/.test(c)&&isFinite(q))cnt.set(c,(cnt.get(c)||0)+q)});
     const lines=[];cnt.forEach((q,c)=>{const d=q-(now.get(c)||0);if(d)lines.push([c,d,''])});
@@ -1731,7 +1755,7 @@ function pivMatch(flt,name){if(!flt||(!flt.inc&&!flt.exc))return true;const n=St
 const pivDec=k=>String(k).slice(1).replace(/_([0-9a-f]+)_/g,(m,h)=>String.fromCharCode(parseInt(h,16)));
 async function pivStock(loc,until,skip){const od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)throw new Error(LOC[loc]+': эхний үлдэгдэл алга');const O=od.data();
   for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
-  const SD=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(d=>d.data()).filter(x=>(x.stockFrom||STOCK_SRC[x.store]||x.store)===loc&&x.iso>=O.asOf);
+  const SD=(await salesSince(sDay(O.asOf),loc)).filter(x=>(x.stockFrom||STOCK_SRC[x.store]||x.store)===loc&&x.iso>=O.asOf);
   const keep=movDocs;if(skip)movDocs=movDocs.filter(m=>m.uid!==skip);let C;try{C=stockCalc(loc,O,SD,until)}finally{movDocs=keep}return {O,SD,M:new Map(C.rows.map(r=>[r.code,r]))}}
 function pivFill(){if(!$('pivLoc').options.length)$('pivLoc').innerHTML=PIV_LOCS.map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('');
   $('pivCard').style.display=can('invadm')?'':'none';if(!can('invadm'))return;
@@ -1796,7 +1820,7 @@ function agToLots(q,ag,base){if(!(q>0))return [];const a=(ag||[]).map(v=>Math.ma
   const L=a.map((v,i)=>[dayAdd(base,-AGOFF[i]),v]).filter(x=>x[1]>0);if(q>sum)L.push([null,q-sum]);return L}
 // байршлын насжилт until мөчид: Map код → {now, b:[5], u (огноогүй), old (хамгийн хуучин огноо)}
 async function ageCalc(loc,until){const od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)return null;const O=od.data();for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
-  const SD=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(d=>d.data()),C=stockCalc(loc,O,SD,until),lots=await lotsLoad(loc,O),IN=new Map(),add=(c,d,q)=>{if(q>0){let L=IN.get(c);if(!L)IN.set(c,L=[]);L.push([d,q])}};
+  const SD=await salesSince(sDay(O.asOf),loc),C=stockCalc(loc,O,SD,until),lots=await lotsLoad(loc,O),IN=new Map(),add=(c,d,q)=>{if(q>0){let L=IN.get(c);if(!L)IN.set(c,L=[]);L.push([d,q])}};
   if(lots)lots.forEach((L,c)=>L.forEach(([d,q])=>add(c,d,q)));else JSON.parse(O.d).forEach(x=>add(x[0],null,x[1]));
   if(lots){const seen=new Set(lots.keys());JSON.parse(O.d).forEach(x=>{if(!seen.has(x[0]))add(x[0],null,x[1])})}
   movDocs.filter(m=>m.type!=='adj'&&m.to===loc&&m.status!=='sent'&&(m.recvAt||m.at)>=O.asOf&&(m.recvAt||m.at)<=until).forEach(m=>{const d=iso(new Date(m.recvAt||m.at));JSON.parse(m.recvLines||m.lines).forEach(x=>add(x[0],d,x[1]))});
@@ -1912,7 +1936,7 @@ const groupOf=code=>{const k=mkey(code);let L=PCAT?PCAT.filter(r=>mkey(r[0])===k
 document.addEventListener('click',e=>{const b=e.target.closest('[data-ncnt]');if(!b)return;const [loc,...cc]=b.dataset.ncnt.split('_');cntNew.q=null;cntNew(loc,cc.join('_'))});
 // байршлын одоогийн үлдэгдлийн мөрүүд (тооцоолсон бол дахин ашиглана)
 async function locRows(loc){if(negSrc&&negSrc.R[loc])return negSrc.R[loc].rows;const od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)return [];
-  const O=od.data(),SD=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(d=>d.data());return stockCalc(loc,O,SD).rows}
+  const O=od.data(),SD=await salesSince(sDay(O.asOf),loc);return stockCalc(loc,O,SD).rows}
 async function cntNew(loc,code){const q0=cntNew.q;if(!TILL_LOC.includes(loc))return alert((LOC[loc]||loc)+'-д касс байхгүй — «Тооллого» Excel-ээр тоолно уу.');
   if(CNTS.some(t=>t.store===loc&&t.status==='open'&&JSON.parse(t.codes).some(x=>x[0]===code)))return alert('Энэ барааны тооллого аль хэдийн кассад илгээгдсэн (хүлээгдэж байна).');
   await loadPCat().catch(()=>{});const G=groupOf(code),it=itRow(code)||{},rows=await locRows(loc).catch(()=>[]),nowOf=c=>(rows.find(x=>x.code===c)||{}).now||0;
@@ -1947,7 +1971,7 @@ function drawCnts(){if(!$('cntTasks'))return;cnFill();drawAcct();stkBan();if(CHL
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-ccan]');if(!b)return;if(!confirm('Даалгаврыг цуцлах уу? (касс дээрээс алга болно)'))return;await db.collection('pos_counts').doc(b.dataset.ccan).update({status:'cancelled',cancelledBy:auth.currentUser.email||'',cancelledAt:new Date().toISOString()})});
 // үр дүн: тоолсон мөчийн системийн үлдэгдэлтэй харьцуулж, шалтгааныг тайлбарлана
 async function cntResult(t){await loadPCat().catch(()=>{});const loc=t.store,od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)return alert(LOC[loc]+': эхний үлдэгдэл алга');
-  const O=od.data(),SD=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(d=>d.data()),C=stockCalc(loc,O,SD,t.countedAt),sys=new Map(C.rows.map(r=>[r.code,r.now]));
+  const O=od.data(),SD=await salesSince(sDay(O.asOf),loc),C=stockCalc(loc,O,SD,t.countedAt),sys=new Map(C.rows.map(r=>[r.code,r.now]));
   const inTask=new Set(JSON.parse(t.codes||'[]').map(x=>x[0])),cntAll=JSON.parse(t.counts||'[]'),cnt=cntAll.filter(x=>inTask.has(x[0])),ext=cntAll.filter(x=>!inTask.has(x[0])&&x[1]>0);
   const R=cnt.map(([c,q])=>{const j=itRow(c)||{},y=sys.get(c)||0;return {c,sz:j.size||'',nm:j.name||c,sys:y,q,d:q-y}});
   // замд яваа (хүлээн аваагүй) шилжүүлэг: бараа дэлгүүрт ирсэн ч системд нэмэгдээгүй байж болно
@@ -2056,7 +2080,7 @@ $('clGo').onclick=async()=>{const d=$('clD').value,m=$('clMsg');if(!d)return m.t
 async function clDo(cut,locs,by,auto){const at=new Date().toISOString(),done=[];for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
     for(const loc of locs){const od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)continue;const O=od.data();
       if(O.asOf>=cut){done.push((LOC[loc]||loc)+': аль хэдийн '+lt(O.asOf)+'-аар хаагдсан');continue}
-      const SD=(await db.collection('pos_sales').where('date','>=',sDay(O.asOf)).get()).docs.map(x=>x.data()),C=stockCalc(loc,O,SD,cut);
+      const SD=await salesSince(sDay(O.asOf),loc,{fresh:true}),C=stockCalc(loc,O,SD,cut);
       let rows=C.rows.filter(r=>r.now).map(r=>[r.code,r.now,r.name||'']).sort((a,b)=>a[0]<b[0]?-1:1);
       if(new TextEncoder().encode(JSON.stringify(rows)).length>950000)rows=rows.map(x=>[x[0],x[1]]);   // нэртэй нь 1 MB-аас их бол нэргүй
       // насжилт: хаасан мөчийн огноотой багцууд шинэ эхний үлдэгдэлд дамжина
