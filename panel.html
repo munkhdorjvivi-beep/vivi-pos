@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="12.3">
+<meta name="vivi-ver" content="12.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -327,6 +327,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 
   <!-- 6. Архив -->
   <div class="card" data-sub="lpp" style="padding:0;overflow:hidden"><iframe data-wh="wh" title="Агуулах (LPP)" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
+  <div class="card" data-sub="rcv" id="trCard"><h2 style="margin:0 0 4px">⇄ Дэлгүүр хооронд шилжүүлэг — хүлээн авах <span id="trCnt" class="small"></span></h2><div class="small" style="margin-bottom:8px">Өөр дэлгүүрээс илгээсэн бараа. Ирсэн барааг уншуулж баталгаажуулна — касс дээрх «Бараа хөдөлгөөн → Ирсэн»-тэй ижил баримт, аль түрүүлж хийснээр хүлээн авагдана. Доор — агуулахын (LPP) илгээмж.</div><div id="trList"></div></div>
   <div class="card" data-sub="rcv" style="padding:0;overflow:hidden"><iframe data-wh="rcv" title="Хүлээн авалт" style="width:100%;height:calc(100vh - 150px);min-height:560px;border:0;display:block"></iframe></div>
   <div class="card" data-sub="zinv" id="pivCard" style="margin-bottom:12px"><h2>📦 POS-ын үлдэгдлээр тооллого (бүсээр)</h2>
     <div class="small" style="margin:-4px 0 8px">1) Энд тооллого үүсгэнэ — тухайн байршлын POS-ын одоогийн үлдэгдэл «систем» болно. 2) Доорх «Тооллого (бүсээр)»-д ажилчид бүсээр скан хийж, дуусаад <b>Хаах</b>. 3) Энд «📊 Үр дүн» → шалгаад <b>«POS-ын үлдэгдэлд тусгах»</b>: зөрүү тооллогын баримт болж архивт хадгалагдана, үлдэгдэл бодит тоо болно.<br>
@@ -1565,7 +1566,37 @@ $('mXlL').onclick=async()=>{try{await loadPCat()}catch(e){}const {L}=xtData('mov
 $('mList').addEventListener('click',async e=>{const b=e.target.closest('[data-mxl]');if(!b)return;const d=movDocs.find(x=>x.uid===b.dataset.mxl);if(!d)return;try{await loadPCat()}catch(x){}await movXlsx(movLinesRows([d]),(d.no||d.uid).replace(/[^\w\-А-яӨөҮү]/g,'_'))});
 function watchMov(){db.collection('pos_stock_docs').onSnapshot(s=>{movAll=s.docs.map(d=>d.data()).sort((a,b)=>a.at<b.at?1:-1);movDocs=movAll.filter(m=>m.status!=='cancel');movReady=true;drawMov()},()=>{})}   // цуцалсан шилжүүлэг үлдэгдэлд огт тооцогдохгүй
 const movInRange=()=>{const a=$('mD1').value,b=$('mD2').value;return movAll.filter(m=>{const d=lt(m.at).slice(0,10);return (!a||d>=a)&&(!b||d<=b)})};
-function drawMov(){const MD=movInRange();
+/* ---- Дэлгүүр хооронд шилжүүлгийг самбараас хүлээн авах (rcv_xx эрхтэй хүн өөрийн дэлгүүрийнхийг) ---- */
+const trMine=()=>(can('stock')||can('stock.move')||(ME&&ME.admin))?null:['fc','dr','ns'].filter(k=>can('rcv_'+k)).map(k=>k.toUpperCase());
+function trDraw(){const box=$('trList');if(!box)return;const mine=trMine(),L=movDocs.filter(m=>m.type==='move'&&m.status==='sent'&&(!mine||mine.includes(m.to)));
+  $('trCnt').textContent=L.length?'('+L.length+')':'';
+  box.innerHTML=L.length?'<table class="t"><thead><tr><th>№</th><th>Илгээсэн</th><th>Хаанаас → Хаана</th><th class="n">Тоо</th><th>Илгээсэн хүн</th><th>Тайлбар</th><th></th></tr></thead><tbody>'+L.map(m=>'<tr><td class="mono">'+esc(m.no||'')+'</td><td>'+esc(lt(m.at))+'</td><td><b>'+esc(LOC[m.from]||m.from)+'</b> → <b>'+esc(LOC[m.to]||m.to)+'</b></td><td class="n">'+nfx(m.qty||0)+'</td><td>'+esc(m.by||'')+'</td><td class="small">'+esc(m.note||'')+'</td><td><button class="btn pri" data-trr="'+esc(m.uid)+'">Хүлээн авах</button></td></tr>').join('')+'</tbody></table>'
+    :'<div class="small">Хүлээгдэж буй шилжүүлэг алга ✓</div>'}
+let TR=null;
+function trOpen(uid){const m=movDocs.find(x=>x.uid===uid);if(!m||m.status!=='sent')return;TR={m,exp:JSON.parse(m.lines),got:new Map()};
+  $('pbox').innerHTML='<h3>Хүлээн авах — '+esc(LOC[m.from]||m.from)+' → '+esc(LOC[m.to]||m.to)+' · '+esc(m.no||'')+'</h3><div class="small">'+esc(lt(m.at))+' · '+esc(m.by||'')+(m.note?' · '+esc(m.note):'')+'. Ирсэн бараа бүрийг уншуулна (олноор нь: 3*код). Зөрвөл улаанаар харагдана.</div>'+
+    '<input id="trScan" class="inp" placeholder="Баркод / код уншуулах…" style="margin:8px 0;font-size:18px" autocomplete="off"><div id="trTbl" class="scroll" style="max-height:45vh;overflow:auto"></div>'+
+    '<label class="f">Тайлбар (зөрүү гарвал заавал)</label><input id="trN" class="inp"><div id="trM" class="small" style="color:var(--red);min-height:18px;margin-top:4px"></div>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="trAll">Бүгд ирсэн гэж бөглөх</button><button class="btn" id="trX">Болих</button><button class="btn pri" id="trOk">Хүлээн авсныг баталгаажуулах</button></div>';
+  $('pm').classList.remove('hide');trTbl();setTimeout(()=>$('trScan').focus(),50);
+  $('trScan').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('trScan').value.trim(),n=1;$('trScan').value='';if(!v)return;const mm=/^(\d{1,4})\*(.+)$/.exec(v);if(mm){n=+mm[1];v=mm[2].trim()}
+    try{await loadPCat()}catch(x){}const it=itRow(v),code=it?it.code:v,ex=TR.exp.find(x=>x[0]===code||x[0]===v),c=ex?ex[0]:code,o=TR.got.get(c)||[c,0,(ex&&ex[2])||(it&&it.name)||''];o[1]+=n;TR.got.set(c,o);
+    $('trM').textContent=ex?'':v+' — илгээсэн жагсаалтад алга (илүү)';trTbl()};
+  $('trX').onclick=()=>{TR=null;pClose()};
+  $('trAll').onclick=()=>{if(!confirm('Тоолохгүйгээр илгээсэн бүх барааг ирсэн гэж бөглөх үү?'))return;TR.got=new Map(TR.exp.map(x=>[x[0],x.slice(0,3)]));TR.all=true;trTbl()};
+  $('trOk').onclick=async()=>{const got=[...TR.got.values()].filter(x=>x[1]>0),gq=got.reduce((a,x)=>a+x[1],0),diff=gq-(TR.m.qty||0),note=$('trN').value.trim();
+    const bad=TR.exp.some(x=>(TR.got.get(x[0])||[0,0])[1]!==x[1])||got.some(x=>!TR.exp.some(y=>y[0]===x[0]));
+    if(!gq)return $('trM').textContent='Бараа уншуулаагүй байна';if(bad&&!note)return $('trM').textContent='Зөрүүтэй байна ('+(diff>0?'+':'')+diff+' ш) — тайлбар бичнэ үү';
+    if(!confirm(gq+' ш хүлээн авах уу?'+(bad?' (зөрүү '+(diff>0?'+':'')+diff+')':'')))return;$('trOk').disabled=true;
+    try{const who=((ME&&ME.name)||auth.currentUser.email||'')+' (самбар)'+(TR.all?' · тоолоогүй':'');
+      await db.collection('pos_stock_docs').doc(TR.m.uid).update({status:'received',recvLines:JSON.stringify(got),recvQty:gq,recvBy:who,recvAt:new Date().toISOString(),recvNote:note,diffQty:diff});
+      try{await auditCfg('stock_move_recv',{no:TR.m.no||'',from:TR.m.from,to:TR.m.to,qty:gq,diff})}catch(x){}TR=null;pClose()}catch(er){$('trOk').disabled=false;$('trM').textContent='Хадгалсангүй: '+(er.code||er)}}}
+function trTbl(){if(!TR)return;const keys=[...new Set([...TR.exp.map(x=>x[0]),...TR.got.keys()])],ex=c=>TR.exp.find(x=>x[0]===c);let ts=0,tg=0;
+  $('trTbl').innerHTML='<table class="t"><thead><tr><th>Код</th><th>Нэр</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th><th class="n">Зөрүү</th></tr></thead><tbody>'+keys.map(c=>{const e=ex(c),s=e?e[1]:0,g=(TR.got.get(c)||[0,0])[1],d=g-s;ts+=s;tg+=g;
+    return '<tr'+(d?' style="background:'+(d<0?'#fff5f5':'#fffbea')+'"':'')+'><td class="mono">'+esc(c)+'</td><td>'+esc((e&&e[2])||(TR.got.get(c)||[])[2]||nmOf(c)||'')+'</td><td class="n">'+s+'</td><td class="n"><b>'+g+'</b></td><td class="n'+(d?' hot':'')+'">'+(d?(d>0?'+':'')+d:'')+'</td></tr>'}).join('')+
+    '<tr><td></td><td><b>Нийт</b></td><td class="n"><b>'+ts+'</b></td><td class="n"><b>'+tg+'</b></td><td class="n'+(tg-ts?' hot':'')+'"><b>'+(tg-ts?(tg-ts>0?'+':'')+(tg-ts):'✓')+'</b></td></tr></tbody></table>'}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-trr]');if(b)trOpen(b.dataset.trr)});
+function drawMov(){const MD=movInRange();trDraw();
   xtable('mList','movs',['Баримт №','Огноо','Төрөл','Хаанаас','Хаана','Нийлүүлэгч / тайлбар','Төлөв','Илгээсэн','Ирсэн','Зөрүү','Илгээсэн хүн','Хүлээн авсан',''],MD.map(m=>{const lpp=m.src==='lpp',rq=m.recvLines?JSON.parse(m.recvLines).reduce((a,x)=>a+x[1],0):lpp?m.qty:null;
     return [m.no||'',lt(m.at),MT[m.type]||m.type,LOC[m.from]||'',LOC[m.to]||'',(lpp?m.note:m.supplier?m.supplier+(m.invoice?' · '+m.invoice:''):m.note||m.file||'')+(m.recvNote?' · '+m.recvNote:''),m.status==='sent'?'замд':m.status==='cancel'?'цуцалсан':m.status==='received'||lpp?'хүлээн авсан':'бүртгэсэн',lpp&&m.sentQty!=null?m.sentQty:m.qty,rq,rq==null||(m.type!=='move'&&!lpp)?null:rq-(lpp&&m.sentQty!=null?m.sentQty:m.qty),m.by||'',m.status==='cancel'?'цуцалсан: '+(m.cancelBy||'')+(m.cancelAt?' · '+lt(m.cancelAt):''):(m.recvBy||'')+(m.recvAt?' · '+lt(m.recvAt):''),m.uid]}),{cell:(x,c)=>c===12?'<button class="btn" data-mp="'+esc(x[12])+'">Хэвлэх</button> <button class="btn" data-mxl="'+esc(x[12])+'">Excel</button>'+((movAll.find(m=>m.uid===x[12])||{}).status==='sent'&&(movAll.find(m=>m.uid===x[12])||{}).type==='move'&&(can('stock')||can('stock.move'))?' <button class="btn" style="color:var(--red)" data-mcan="'+esc(x[12])+'">Цуцлах</button>':''):c===6?'<span class="chip'+(x[6]==='замд'?' b':x[6]==='цуцалсан'?' r':'')+'">'+x[6]+'</span>':c===9&&x[9]?'<span class="hot">'+(x[9]>0?'+':'')+x[9]+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])});
   const tr=movDocs.filter(m=>m.status==='sent');$('mTransit').innerHTML=tr.length?'<span class="chip b">Замд '+tr.length+' шилжүүлэг · '+tr.reduce((a,m)=>a+m.qty,0)+' ш</span> — хүлээн авагч дэлгүүр касс дээрээ скан хийж баталгаажуулна':''}
