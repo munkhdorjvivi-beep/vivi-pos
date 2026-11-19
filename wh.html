@@ -6237,6 +6237,10 @@ const storeName = k => (WH.storeOf(k, whCfg()) || {}).name || k;
 
 // ---------- sound ----------
 let AC = null;
+function isQrScan(raw){ const s = String(raw || '').trim(); return /:\/\/|^www\.|\/|\x1d/i.test(s) || /^\(?01\)?\d{14}\(?21\)?/.test(s) || s.length > 20; }
+function qrStop(raw){ if (!isQrScan(raw)) return false; beep('bad'); let t = document.getElementById('qr-stop');
+  if (!t){ t = document.createElement('div'); t.id = 'qr-stop'; t.style.cssText = 'position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:99999;background:#c62828;color:#fff;padding:18px 26px;border-radius:12px;font-size:21px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.35);text-align:center;max-width:92vw'; document.body.appendChild(t); }
+  t.innerHTML = '⛔ QR / DataMatrix (дөрвөлжин) код уншуулсан байна!<div style="font-size:16px;font-weight:500;margin-top:6px">Тоологдоогүй. Шошгоны <u>зураасан БАРКОД</u>-ыг уншуулна уу.</div>'; t.hidden = false; clearTimeout(qrStop.h); qrStop.h = setTimeout(() => { t.hidden = true; }, 3500); return true; }
 function beep(kind){
   if (!$('#wh-sound') || !$('#wh-sound').checked) return;
   try{ AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain(); o.connect(g); g.connect(AC.destination);
@@ -6314,7 +6318,7 @@ async function whReady(id){ const ok = () => (WS.shipsSrv || (WS.shipsIn && Date
   if (ok()) return true; showResult('', 'Ачаалж байна…', 'Өчигдрийн илгээмжүүдийг серверээс уншиж байна, түр хүлээнэ үү.');
   for (let i = 0; i < 60 && !ok(); i++) await new Promise(r => setTimeout(r, 250)); return ok(); }
 async function onScan(raw){
-  const e = WH.eanOf(raw); if (!e) return; const id = WS.active; const now = Date.now();
+  if (qrStop(raw)) return; const e = WH.eanOf(raw); if (!e) return; const id = WS.active; const now = Date.now();
   if (e === WS.lastKey && now - WS.lastAt < 250) return; WS.lastKey = e; WS.lastAt = now;       // the reader sometimes sends one code twice
   if (!id){ showResult('bad', 'Хүргэлт сонгоогүй', 'Дээрээс идэвхтэй хүргэлтээ сонгоно уу.'); return; }
   // after a restart the shipments and counters come from the server a moment later; scanning before that would open a second shipment for the store
@@ -6543,7 +6547,7 @@ async function shipRemove(sid, e, n){
 }
 // add one piece to a shipment by hand (forgotten / wrongly removed pieces): counts of the delivery follow, the line is logged
 async function shipAddEan(sid, raw){
-  if (!whCanEdit()) return; const s = WS.ships.find(x => x.id === sid), e = WH.eanOf(raw), out = t => { const m = $('#wh-addmsg'); if (m) m.textContent = t; }; if (!s || !e) return;
+  if (!whCanEdit() || qrStop(raw)) return; const s = WS.ships.find(x => x.id === sid), e = WH.eanOf(raw), out = t => { const m = $('#wh-addmsg'); if (m) m.textContent = t; }; if (!s || !e) return;
   const P = await loadParts(s.deliv); let k = P && P.eans[e], it = k ? P.items[k] : null, x = 0;
   if (!it || it.x){ const M = await loadMaster(), m = M && M[e]; if (!it && !m){ out(`✗ ${e} — хүргэлт, мастер файлд алга.`); beep('bad'); return; }
     if (!it){ k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3], p: +m[6] || 0}; } x = 1; }
@@ -6782,14 +6786,14 @@ function rcmPick(e){ const L = rcmShips().filter(s => s.status === 'sent'); if (
   const left = s => rcN(decMap(s.l)[e]) - rcN(decMap(s.r)[e]) - ((P[s.id] || {})[e] || 0);
   const has = s => (s.rq || 0) + Object.values(P[s.id] || {}).reduce((a, b) => a + b, 0) > 0, inL = s => decMap(s.l)[e] != null;
   return L.find(s => left(s) > 0) || L.slice().reverse().find(s => inL(s) && has(s)) || L.slice().reverse().find(inL) || L.find(has) || L[0]; }
-function rcmScan(raw){ const e = WH.eanOf(raw); if (!e) return; const now = Date.now(); if (e === WS.rc.lastE && now - WS.rc.lastAt < 250) return; WS.rc.lastE = e; WS.rc.lastAt = now;
+function rcmScan(raw){ if (qrStop(raw)) return; const e = WH.eanOf(raw); if (!e) return; const now = Date.now(); if (e === WS.rc.lastE && now - WS.rc.lastAt < 250) return; WS.rc.lastE = e; WS.rc.lastAt = now;
   const s = rcmPick(e); if (!s) return; const P = WS.rc.pendM[s.id] || (WS.rc.pendM[s.id] = {}); P[e] = (P[e] || 0) + 1;
   const i = rcmShips().map(x => decMap(x.i)[e]).find(Boolean) || {}, inList = decMap(s.l)[e] != null;
   WS.rc.last.unshift({e, n: i.n || '—', t: new Date().toTimeString().slice(0, 8), sid: s.id, no: s.no}); WS.rc.last = WS.rc.last.slice(0, 30);
   $('#rc-lastname').textContent = inList ? (i.n || e) + ' → ' + s.no : 'Аль ч илгээмжийн жагсаалтад байхгүй баркод (илүү гэж тооцогдоно)'; beep(inList ? 'ok' : 'extra'); renderRcm(); }
 async function rcmFlush(){ const M = WS.rc.pendM || {}; for (const sid of Object.keys(M)){ const P = M[sid]; if (!Object.keys(P).length) continue; M[sid] = {};
     const u = {}; let n = 0; for (const [e, q] of Object.entries(P)){ if (!q) continue; u['r.' + ek(e)] = fv().increment(q); n += q; } if (n) u.rq = fv().increment(n); if (!Object.keys(u).length) continue;
-    try{ await db.doc('ship/' + sid).update(u); }catch(err){ console.warn('rcm flush', err); const B = M[sid]; for (const [e, q] of Object.entries(P)) B[e] = (B[e] || 0) + q; } }
+    try{ await db.doc('ship/' + sid).update(u); }catch(err){ console.warn('rcm flush', err); rcSaveErr(err); const B = M[sid]; for (const [e, q] of Object.entries(P)) B[e] = (B[e] || 0) + q; } }
   renderRcm(); }
 function rcmPendN(){ return Object.values(WS.rc.pendM || {}).reduce((a, P) => a + Object.values(P).reduce((x, y) => x + y, 0), 0); }
 function renderRcm(){ const card = $('#rc-count'); if (!card || !WS.rc.multi) return; const L = rcmShips(); card.hidden = !L.length; if (!L.length) return;
@@ -6809,11 +6813,12 @@ async function rcmFinish(){ await rcmFlush(); const L0 = rcmShips().filter(s => 
   const L = []; for (const s of L0){ let x = s; try{ const f = await db.doc('ship/' + s.id).get(); if (f.exists) x = {...f.data(), id: s.id}; }catch(e){} if (x.status !== 'sent') continue;
     const sent = Object.values(decMap(x.l)).reduce((a, q) => a + Math.max(0, rcN(q)), 0), cnt = Object.values(decMap(x.r)).reduce((a, q) => a + rcN(q), 0); L.push({id: s.id, no: s.no, cnt, low: cnt > 0 && cnt < sent * 0.5}); }
   if (!L.length) return; WS.rc.closing = true;
-  $('#rc-cmp').innerHTML = `<div class="banner" style="margin-bottom:8px">Тоолсон илгээмжийг хаана. <b>Огт тоологдоогүй</b> илгээмж ирээгүй гэж үзээд <b>«Замд»</b> үлдэнэ — ирэхээр нь дахин сонгоод тоолно. Хаахгүй үлдээсэн илгээмжид тоологдсон бараа хаагдах илгээмжид мөн байвал тэнд (илүү гэж) шилжинэ; үгүй бол хадгалагдана.</div>
+  $('#rc-cmp').innerHTML = `<div class="banner bad" style="margin-bottom:8px;font-size:15px"><b>⚠ Тулгалт хараахан дуусаагүй — доорх «✓ Сонгосныг хаах» товчийг дарна уу.</b></div><div class="banner" style="margin-bottom:8px">Тоолсон илгээмжийг хаана. <b>Огт тоологдоогүй</b> илгээмж ирээгүй гэж үзээд <b>«Замд»</b> үлдэнэ — ирэхээр нь дахин сонгоод тоолно. Хаахгүй үлдээсэн илгээмжид тоологдсон бараа хаагдах илгээмжид мөн байвал тэнд (илүү гэж) шилжинэ; үгүй бол хадгалагдана.</div>
     <div class="tbl"><table><thead><tr><th style="width:60px">Хаах</th><th>Илгээмж</th><th class="n">Тоолсон</th><th></th></tr></thead><tbody>${L.map(x => `<tr><td><input type="checkbox" data-rcm-cl="${esc(x.id)}" ${x.cnt > 0 && !x.low ? 'checked' : ''} style="width:20px;height:20px"></td><td class="mono">${esc(x.no)}</td><td class="n">${fmt(x.cnt)} ш</td>
       <td class="note">${!x.cnt ? '🚚 ирээгүй — замд үлдэнэ' : x.low ? '⚠ цөөн тоологдсон — ирээгүй байж магадгүй (бусад илгээмжийн илүү бараа байж болно). Ирсэн бол чагтлаад хаана.' : 'ирсэн — хаагдана'}</td></tr>`).join('')}</tbody></table></div>
     <div class="row" style="margin-top:8px;gap:8px"><button class="btn primary" id="rcm-cl-ok">✓ Сонгосныг хаах</button><button class="btn" id="rcm-cl-no">Болих (үргэлжлүүлж тоолох)</button></div>`;
   $('#rcm-cl-no').onclick = () => { WS.rc.closing = false; renderRcm(); $('#rc-input').focus(); };
+  setTimeout(() => { const b = $('#rcm-cl-ok'); if (b){ b.scrollIntoView({behavior: 'smooth', block: 'center'}); b.focus(); } }, 60);
   $('#rcm-cl-ok').onclick = async () => { const ids = [...document.querySelectorAll('[data-rcm-cl]')].filter(c => c.checked).map(c => c.dataset.rcmCl); if (!ids.length){ alert('Хаах илгээмж сонгоогүй байна.'); return; }
     $('#rcm-cl-ok').disabled = true; await rcmFlush(); let bad = 0; const at = new Date().toISOString(), grp = ids.join(',');
     // хаах үед дахин хуваарилна: хаагдах (ирсэн) илгээмжүүдийн дотор эртнийхээс нь дүүргэж, илүүг сүүлчийнд; ирээгүй үлдэх илгээмжид андуурч орсон бараа ирсэн илгээмж рүү
@@ -6852,7 +6857,7 @@ function renderRcv(){
   const n = L.filter(s => s.status === 'sent').length; const tbg = $('#t-rcv'); if (tbg){ tbg.textContent = n || ''; tbg.hidden = !n; }
   tb.innerHTML = L.length ? L.map(s => { const st = SHIP_ST[s.status] || [s.status, ''];
     return `<tr class="${s.status === 'sent' ? 'sev-warn' : ''}"><td>${s.status === 'sent' ? `<input type="checkbox" data-rcm="${esc(s.id)}" ${WS.rcSel.has(s.id) ? 'checked' : ''} style="width:20px;height:20px">` : ''}</td><td class="mono">${esc(s.no)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td><td class="note">${esc(fmtDT(s.sentAt))}</td>
-      <td><span class="chip ${st[1]}">${st[0]}</span>${s.status !== 'sent' && s.cmp ? `<div class="note">${s.cmp.ok ? 'зөрүүгүй' : `дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}`}</div>` : ''}</td>
+      <td><span class="chip ${st[1]}">${st[0]}</span>${s.status === 'sent' && s.rq ? `<div class="note" style="color:#b35c00;font-weight:600">⏳ ${fmt(s.rq)} ш тоолсон — «Тулгалт дуусгах» хийгээгүй</div>` : ''}${s.status !== 'sent' && s.cmp ? `<div class="note">${s.cmp.ok ? 'зөрүүгүй' : `дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}`}</div>` : ''}</td>
       <td>${s.status === 'sent' ? `<button class="btn primary" data-rc-open="${esc(s.id)}">Тоолох</button>` : `<button class="btn" data-rc-view="${esc(s.id)}">Харах</button><button class="btn" data-wh-rcvx="${esc(s.id)}">📋 Excel</button>`}</td></tr>`; }).join('')
     : `<tr><td colspan="7" class="empty">${WS.rcF === 'all' ? 'Илгээмж алга.' : 'Хүлээгдэж буй илгээмж алга — өмнөх тулгалтууд «Архив» хэсэгт.'}</td></tr>`;
   rcmBar(); renderRcvCount();
@@ -6871,18 +6876,19 @@ function renderRcvCount(){
       <div class="tbl"><table><thead><tr><th>Баркод</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Тоолсон</th></tr></thead><tbody>${cmp.lines.map(x => `<tr><td class="mono">${esc(x.e)}</td><td>${esc((I[x.e] || {}).n || '')}</td><td class="n">${fmt(x.sent)}</td><td class="n">${fmt(x.recv)}</td></tr>`).join('')}</tbody></table></div>`; }
   else $('#rc-cmp').innerHTML = '';
 }
+function rcSaveErr(err){ const now = Date.now(); if (now - (rcSaveErr.t || 0) < 60000) return; rcSaveErr.t = now; alert('⚠ Тоолсныг хадгалж чадсангүй — интернэт эсвэл эрхээ шалгана уу. Тоолсон бараа энэ төхөөрөмж дээр хадгалагдсан, дахин оролдоно.\n[' + ((err && err.code) || '') + '] ' + ((err && err.message) || err || '')); }
 async function rcFlush(){
   if (WS.rc.multi) return rcmFlush();
   const sid = WS.rc.ship, P = WS.rc.pend; if (!sid || !Object.keys(P).length || !db) return; WS.rc.pend = {};
   const u = {}; let n = 0; for (const [e, q] of Object.entries(P)){ if (!q) continue; u['r.' + ek(e)] = fv().increment(q); n += q; }
   if (n) u.rq = fv().increment(n); if (!Object.keys(u).length) return;
-  try{ await db.doc('ship/' + sid).update(u); }catch(err){ console.warn('rc flush', err); for (const [e, q] of Object.entries(P)) WS.rc.pend[e] = (WS.rc.pend[e] || 0) + q; }
+  try{ await db.doc('ship/' + sid).update(u); }catch(err){ console.warn('rc flush', err); rcSaveErr(err); for (const [e, q] of Object.entries(P)) WS.rc.pend[e] = (WS.rc.pend[e] || 0) + q; }
   renderRcvCount();
 }
 setInterval(rcFlush, 1500);
 function rcScan(raw){
   if (WS.rc.multi) return rcmScan(raw);
-  const e = WH.eanOf(raw), s = WS.ships.find(x => x.id === WS.rc.ship); if (!e || !s || s.status !== 'sent') return; const now = Date.now();
+  if (qrStop(raw)) return; const e = WH.eanOf(raw), s = WS.ships.find(x => x.id === WS.rc.ship); if (!e || !s || s.status !== 'sent') return; const now = Date.now();
   if (e === WS.rc.lastE && now - WS.rc.lastAt < 250) return; WS.rc.lastE = e; WS.rc.lastAt = now;
   WS.rc.pend[e] = (WS.rc.pend[e] || 0) + 1; const i = decMap(s.i)[e] || {};
   WS.rc.last.unshift({e, n: i.n || '—', t: new Date().toTimeString().slice(0, 8)}); WS.rc.last = WS.rc.last.slice(0, 20);
@@ -7116,7 +7122,7 @@ function ivShow(kind, big, small){
   el.innerHTML = `<div class="wh-big" style="color:${col}">${esc(big)}</div><div>${small}</div>`;
 }
 async function ivScan(raw){
-  const c0 = INV.codeOf(raw); if (!c0) return; const id = IV.active, zi = IV.zone, I = ivOf(id), now = Date.now();
+  if (qrStop(raw)) return; const c0 = INV.codeOf(raw); if (!c0) return; const id = IV.active, zi = IV.zone, I = ivOf(id), now = Date.now();
   if (!I){ ivShow('bad', 'Тооллого сонгоогүй', 'Дээрээс тооллогоо сонгоно уу.'); return; }
   if (I.status === 'closed'){ ivShow('bad', 'Тооллого хаагдсан', ''); return; }
   if (zi === ''){ ivShow('bad', 'Бүс сонгоогүй', 'Аль бүсийг тоолж байгаагаа сонгоно уу.'); return; }

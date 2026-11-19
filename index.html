@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.2">
+<meta name="vivi-ver" content="7.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -437,6 +437,10 @@ async function cloudConnect(){
   $('cx').onclick=close;$('ce').focus();
   $('co2').onclick=()=>{$('cm2').textContent='Холбогдож байна…';fb.auth.signInWithEmailAndPassword($('ce').value.trim(),$('cp').value).then(close).catch(e=>{$('cm2').textContent='Холбогдсонгүй: '+(e&&e.code||e)})};
 }
+// QR код (шошгоны доод талын дөрвөлжин) уншуулбал хаана — зөвхөн зураасан баркод
+function qrStop(v){const s=String(v||'').trim();if(!(/:\/\/|^www\.|^https?|\x1d/i.test(s)||/^\(?01\)?\d{14}\(?21\)?/.test(s)||(!/\s/.test(s)&&s.length>20)))return false;let t=document.getElementById('qrStop');
+  if(!t){t=document.createElement('div');t.id='qrStop';t.style.cssText='position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:99999;background:#c62828;color:#fff;padding:18px 26px;border-radius:12px;font-size:21px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.35);text-align:center;max-width:92vw';document.body.appendChild(t)}
+  t.innerHTML='⛔ QR / DataMatrix (дөрвөлжин) код уншуулсан байна!<div style="font-size:16px;font-weight:500;margin-top:6px">Тоологдоогүй. Шошгоны <u>зураасан БАРКОД</u>-ыг уншуулна уу.</div>';t.hidden=false;clearTimeout(qrStop.h);qrStop.h=setTimeout(()=>{t.hidden=true},3500);return true}
 function flash(t){$('msg').textContent=t;clearTimeout(flash.h);flash.h=setTimeout(()=>$('msg').textContent='',4000)}
 
 /* ---------- promo engine ----------
@@ -543,7 +547,7 @@ $('cart').addEventListener('click',e=>{
     render();$('scan').focus();return}
   const tr=e.target.closest('tr[data-i]');if(tr){S.sel=+tr.dataset.i;render()}});
 function onScan(){
-  const q=$('scan').value.trim();$('scan').value='';if(!q)return;
+  const q=$('scan').value.trim();$('scan').value='';if(!q||qrStop(q))return;
   if(IDX.has(q)){addItem(IDX.get(q));return}
   openSearch(q);
 }
@@ -887,7 +891,7 @@ function scanBox(st,exp){
       const tq=[...st.values()].reduce((a,x)=>a+x[1],0);$('mst').innerHTML=(ex?'Илгээсэн <b>'+lnQty(exp)+'</b> · ':'')+'Уншуулсан <b>'+tq+'</b> ширхэг, '+st.size+' нэр төрөл'+(ex?' · зөрүү <b>'+(tq-lnQty(exp))+'</b>':'');
       $('msl').querySelectorAll('input[data-k]').forEach(x=>x.onchange=()=>{const k=x.dataset.k,q=Math.max(0,Math.round(num(x.value))),r=st.get(k)||[k,0,(ex&&ex.get(k)||[])[2]||k];if(q)st.set(k,[k,q,r[2]]);else st.delete(k);draw()});
       $('msl').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{st.delete(b.dataset.x);draw()})};
-    $('msc').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('msc').value.trim(),n=1;$('msc').value='';if(!v)return;const m=/^(\d{1,4})\*(.+)$/.exec(v);if(m){n=+m[1];v=m[2].trim()}
+    $('msc').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('msc').value.trim(),n=1;$('msc').value='';if(!v||qrStop(v))return;const m=/^(\d{1,4})\*(.+)$/.exec(v);if(m){n=+m[1];v=m[2].trim()}
       const i=IDX.get(v),code=i!=null?CAT[i][0]:v,nm=i!=null?CAT[i][2]:'(жагсаалтад алга) '+v;const r=st.get(code)||[code,0,nm];r[1]+=n;st.set(code,r);
       $('msm').textContent=(i==null?'⚠ Танигдаагүй код: ':'')+nm+' +'+n;$('msm').style.color=i==null?'var(--red)':'';draw()};
     draw()}}
@@ -1680,7 +1684,7 @@ function cntTask(t){const K='cnt_'+t.uid,codes=JSON.parse(t.codes||'[]'),cm=new 
     $('ctT').innerHTML='Уншуулсан <b>'+[...C.values()].reduce((a,b)=>a+b,0)+'</b> ширхэг';
     $('ctL').querySelectorAll('input[data-k]').forEach(x=>x.onchange=()=>{const q=Math.max(0,Math.round(num(x.value)));if(q)C.set(x.dataset.k,q);else C.delete(x.dataset.k);save();draw()});
     $('ctL').querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{C.delete(b.dataset.x);save();draw()})};
-  $('ctS').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('ctS').value.trim(),n=1;$('ctS').value='';if(!v)return;const m=/^(\d{1,4})\*(.+)$/.exec(v);if(m){n=+m[1];v=m[2].trim()}
+  $('ctS').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('ctS').value.trim(),n=1;$('ctS').value='';if(!v||qrStop(v))return;const m=/^(\d{1,4})\*(.+)$/.exec(v);if(m){n=+m[1];v=m[2].trim()}
     const i=IDX.get(v),code=i!=null?CAT[i][0]:v;C.set(code,(C.get(code)||0)+n);save();
     const x=cm.get(code);$('ctM').textContent=(x?'✓ '+(x[2]||'')+' ':i!=null?'⚠ Энэ загварт хамаарахгүй: ':'⚠ Танигдаагүй код: ')+(i!=null?CAT[i][2]:v)+' +'+n;$('ctM').style.color=x?'':'var(--red)';draw()};
   $('ctX').onclick=closeModal;
