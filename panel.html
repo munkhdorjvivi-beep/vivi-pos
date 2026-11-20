@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="13.8">
+<meta name="vivi-ver" content="13.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -189,6 +189,16 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
     <div id="hcKpi" class="kpi" style="margin-top:10px"></div><div id="hcChart" style="margin-top:8px"></div><div class="scroll" id="hcTbl" style="margin-top:8px"></div>
     <div style="margin-top:6px"><button id="hcX" class="btn">⬇ Excel</button></div></div>
   <div data-rsub="trip" class="card"><h2>Явуулын касс — аянаар</h2><div class="small" style="margin:-4px 0 8px">Дээрх огнооны хугацаанд хийгдсэн Явуулын кассын борлуулалт аян бүрээр. Бүх аяныг харьцуулах бол хугацааг уртаар сонгоно.</div><div class="scroll" id="cTrip" style="max-height:360px;overflow:auto"></div></div>
+  <div data-rsub="new" class="card" id="nwCard" hidden><h2>🆕 Шинэ ачааны борлуулалт — шинээр ирсэн бараа хэр зарагдаж байна</h2>
+    <div class="small" style="margin:-4px 0 8px">Сонгосон хугацаанд дэлгүүрт <b>хүлээн авсан орлого</b> (LPP илгээмж, бусад нийлүүлэгчийн орлого) — бараа бүр тухайн дэлгүүрт хүлээн авснаас хойш хэдэн ширхэг зарагдсан, зарагдалтын хувь, борлуулалт, ашиг, үлдсэн. Ижил код хэд хэдэн орлогоор ирсэн бол эртнийхээс нь эхлэн тооцно; буцаалт хасагдана. «Өмнө нь бас байсан» — тэр код дэлгүүрт өмнө нь бас байсан (зарагдсан нь хуучин бараанаас байж болно).</div>
+    <div class="slf">
+      <div><label class="f">Хүлээн авсан огноо</label><div class="two"><input type="date" id="nwA" class="inp"><span>—</span><input type="date" id="nwB" class="inp"></div></div>
+      <div><label class="f">Борлуулалт хүртэл</label><input type="date" id="nwC" class="inp"></div>
+      <div><label class="f">Дэлгүүр</label><select id="nwSt" class="inp"></select></div>
+      <div><label class="f">Нийлүүлэгч</label><select id="nwSu" class="inp"><option value="">Бүгд</option><option value="LPP">LPP</option><option value="o">Бусад</option></select></div>
+      <div><label class="f">Бүлэглэх</label><select id="nwG" class="inp"><option value="grp">Ачаа / нийлүүлэгч</option><option value="doc">Илгээмж (орлогын баримт)</option><option value="st">Дэлгүүр</option><option value="cat">Ангилал</option><option value="brand">Брэнд</option><option value="model">Загвар</option><option value="code">Бараа (код)</option></select></div>
+      <div style="display:flex;gap:6px;align-items:flex-end"><button class="btn pri" id="nwGo">Харах</button><button class="btn" id="nwX">Excel</button></div></div>
+    <div class="small" id="nwMsg" style="margin:6px 0"></div><div class="kpi" id="nwKpi"></div><div id="nwT"></div></div>
   <div data-rsub="acc" class="card" id="slCard"><h2>📋 Борлуулалтын жагсаалт</h2>
     <div class="small" style="margin:-4px 0 8px">Огноогоо сонгоод <b>Харах</b> — сонгосон хугацааны баримтуудыг сангаас уншина. Бусад талбарын ▾ сумыг дарж жагсаалтаас сонгоно (эсвэл бичиж хайна) — шууд үйлчилнэ. <b>Excel</b> нь Smart-ын «Борлуулалтын жагсаалт» маягтаар (баримтаар бүлэглэсэн) зөвхөн шүүсэн мөрүүдийг татна.</div>
     <div class="slf">
@@ -574,7 +584,7 @@ $('lgG').onclick=()=>{$('lm').textContent='Google-ээр нэвтэрч байн
 const PERM_TABS=[['home','Нүүр','дэлгүүрийн борлуулалт, нийлүүлэгч'],['req','Хүсэлт','буцаалт, солилт, төлбөр засах зөвшөөрөх; буцаалтын маягт шалгах'],['chat','Чат','кассуудтай чатлах'],['rep','Борлуулалтын тайлан','тайлан, Excel, SaleMany'],['rcpt','Баримтууд','баримт харах, устгах, сэргээх'],['cash','Ээлж, бэлэн мөнгө','ээлж, кассчны үйлдэл'],['stock','Агуулах, хөдөлгөөн','үлдэгдэл, орлого, шилжүүлэг, зарлага'],['items','Бараа, үнэ, шошго','бараа бүртгэх, үнэ, каталог оруулах'],['promo','Урамшуулал','урамшуулал үүсгэх, засах'],['vch','Ваучер','ваучер бүртгэх, үлдэгдэл засах'],['till','Касс, ажилтан','кассчин, ПИН, касс, аян, буцаалтын тохиргоо'],['bonus','💰 Кассын урамшуулал','«Касс, ажилтан» цэс дотор: кассчны баримтын урамшуулал тооцох, дүн тохируулах'],['guide','📜 Удирдамж (бичих)','урамшууллын удирдамж бичих, нийтлэх — унших, танилцахыг бүх хэрэглэгч хийнэ'],['set','Тохиргоо','харилцагч, нөөц хуулбар']];
 /* Дэд цэсийн эрх: үндсэн цэсийг сонговол бүх дэд цэс; эсвэл зөвхөн сонгосон дэд цэс */
 const PERM_SUB={
-  rep:[['rep.sum','📊 Тойм'],['rep.fc','📈 Өнөөдрийн таамаг (борлуулалтын урьдчилсан тооцоо)'],['rep.hour','⏱ Цагаар харьцуулах'],['rcpt','🧾 Баримтууд — харах, устгах, сэргээх'],['cash','💵 Ээлж, бэлэн мөнгө, Z тайлан, кассчны үйлдэл'],['rep.acc','📋 Борлуулалтын жагсаалт, Smart тайлан, SaleMany, нягтлангийн тохиргоо'],['rep.disc','🔍 Хөнгөлөлтийн хяналт'],['rep.hist','📥 Smart-ын түүх'],['rep.trip','🚐 Явуулын касс']],
+  rep:[['rep.sum','📊 Тойм'],['rep.fc','📈 Өнөөдрийн таамаг (борлуулалтын урьдчилсан тооцоо)'],['rep.hour','⏱ Цагаар харьцуулах'],['rcpt','🧾 Баримтууд — харах, устгах, сэргээх'],['cash','💵 Ээлж, бэлэн мөнгө, Z тайлан, кассчны үйлдэл'],['rep.acc','📋 Борлуулалтын жагсаалт, Smart тайлан, SaleMany, нягтлангийн тохиргоо'],['rep.new','🆕 Шинэ ачааны борлуулалт'],['rep.disc','🔍 Хөнгөлөлтийн хяналт'],['rep.hist','📥 Smart-ын түүх'],['rep.trip','🚐 Явуулын касс']],
   stock:[['stock.bal','📦 Үлдэгдэл, хасах үлдэгдэл, ⏳ насжилт'],['stock.in','⬇ Орлого'],['stock.move','⇄ Шилжүүлэг'],['stock.out','⬆ Зарлага'],['stock.cnt','✓ Тооллого (кассаар)'],
     ['wh','🚚 Агуулах (LPP) — скан, илгээмж, хүргэлт, шошго, бүтээмж'],['whedit','🚚 Агуулах (LPP) — илгээмж засах, цуцлах, хүргэлт устгах'],
     ['rcv_fc','📥 Хүлээн авалт — Food city'],['rcv_dr','📥 Хүлээн авалт — Драгон'],['rcv_ns','📥 Хүлээн авалт — Нийслэл'],['rcv_ht','📥 Хүлээн авалт — Бөөн'],
@@ -947,7 +957,7 @@ async function dfBal(){const box=$('dfBal');box.innerHTML='<span class="small">�
     L.map(g=>'<tr><td><b>'+esc(g.k)+'</b></td><td class="n">'+g.n+'</td><td class="n">'+nfx(g.sent)+'</td><td class="n">'+(g.transit?nfx(g.transit):'')+'</td><td class="n">'+nfx(g.recv)+'</td><td class="n">'+(g.short||'')+'</td><td class="n">'+(g.over||'')+'</td><td class="small">'+esc(rk(g.res))+'</td><td class="n'+(g.open?' hot':'')+'">'+(g.open||'')+'</td><td>'+(g.open?'<span class="chip r">дуусаагүй '+g.open+'</span>':g.transit?'<span class="chip b">замд байна</span>':'<span class="chip">✓ тэнцсэн</span>')+'</td></tr>').join('')+'</tbody></table><div class="small" style="margin-top:6px">Илгээсэн (хүлээн авсан илгээмжүүд) = хүлээн авсан + дутуу − илүү. Дутуу/илүү ширхэг бүр шийдвэртэй бол «тэнцсэн».</div>':'<div class="small">LPP илгээмж алга.</div>'}
 function dfInit(){watchDiff();if(!$('dfA').value){$('dfA').value=DF.a=DF.from;$('dfB').value=DF.b=iso(new Date())}if(!$('dfLA').value){const d=new Date();$('dfLB').value=iso(d);d.setDate(1);$('dfLA').value=iso(d)}
   $('dfSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+['FC','DR','NS'].map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('');$('dfSt').value=DF.st;dfDraw();dfLossDraw()}
-$('dfA').onchange=()=>{DF.a=$('dfA').value;dfDraw()};$('dfB').onchange=()=>{DF.b=$('dfB').value;dfDraw()};$('dfSt').onchange=()=>{DF.st=$('dfSt').value;dfDraw()};$('dfTy').onchange=()=>{DF.ty=$('dfTy').value;dfDraw()};$('dfLGo').onclick=dfLossDraw;$('dfLX').onclick=()=>{dfLossDraw();xtXlsx('dfloss','Hohirol_'+$('dfLA').value+'_'+$('dfLB').value,'Хохирол')};$('dfBalGo').onclick=dfBal;$('dfShX').onclick=()=>{dfDraw();xtXlsx('dfships','LPP_huleen_avalt_'+(DF.a||'')+'_'+(DF.b||''),'Хүлээн авалт')};$('dfMgSt').onchange=()=>{MG.sel=null;MG.use=null;dfMgList()};$('dfMgR').addEventListener('change',e=>{const u=e.target.closest('[data-dfmu]');if(!u)return;u.checked?MG.use.add(u.dataset.dfmu):MG.use.delete(u.dataset.dfmu);dfMgCalc(true)});$('dfMgR').addEventListener('click',e=>{const o=e.target.closest('[data-dfmone]');if(!o)return;MG.use=new Set([o.dataset.dfmone]);dfMgCalc(true)});$('dfMgC').onclick=()=>{MG.use=null;dfMgCalc(false)};$('dfMgXf').onchange=e=>{const f=e.target.files[0];e.target.value='';withBusy?withBusy('Excel уншиж байна…',()=>dfMgXl(f)):dfMgXl(f)};$('dfMg').addEventListener('toggle',()=>{if($('dfMg').open)dfMgList()});
+$('dfA').onchange=()=>{DF.a=$('dfA').value;dfDraw()};$('dfB').onchange=()=>{DF.b=$('dfB').value;dfDraw()};$('dfSt').onchange=()=>{DF.st=$('dfSt').value;dfDraw()};$('dfTy').onchange=()=>{DF.ty=$('dfTy').value;dfDraw()};$('dfLGo').onclick=dfLossDraw;$('dfLX').onclick=()=>{dfLossDraw();xtXlsx('dfloss','Hohirol_'+$('dfLA').value+'_'+$('dfLB').value,'Хохирол')};$('dfBalGo').onclick=dfBal;$('nwGo').onclick=nwLoad;['nwSt','nwSu','nwG'].forEach(id=>$(id).onchange=nwDraw);$('nwX').onclick=()=>{if(NW.rows)xtXlsx('nwt','Shine_achaa_'+NW.A+'_'+NW.B,'Шинэ ачаа')};$('dfShX').onclick=()=>{dfDraw();xtXlsx('dfships','LPP_huleen_avalt_'+(DF.a||'')+'_'+(DF.b||''),'Хүлээн авалт')};$('dfMgSt').onchange=()=>{MG.sel=null;MG.use=null;dfMgList()};$('dfMgR').addEventListener('change',e=>{const u=e.target.closest('[data-dfmu]');if(!u)return;u.checked?MG.use.add(u.dataset.dfmu):MG.use.delete(u.dataset.dfmu);dfMgCalc(true)});$('dfMgR').addEventListener('click',e=>{const o=e.target.closest('[data-dfmone]');if(!o)return;MG.use=new Set([o.dataset.dfmone]);dfMgCalc(true)});$('dfMgC').onclick=()=>{MG.use=null;dfMgCalc(false)};$('dfMgXf').onchange=e=>{const f=e.target.files[0];e.target.value='';withBusy?withBusy('Excel уншиж байна…',()=>dfMgXl(f)):dfMgXl(f)};$('dfMg').addEventListener('toggle',()=>{if($('dfMg').open)dfMgList()});
 document.addEventListener('change',e=>{const c=e.target.closest&&e.target.closest('[data-dfck],[data-dfckall]');if(!c)return;const ck=DF.ck[DF.sel]||(DF.ck[DF.sel]=new Set());
   if(c.dataset.dfck){c.checked?ck.add(c.dataset.dfck):ck.delete(c.dataset.dfck)}else{const D=dfItems().find(x=>x.key===DF.sel);if(D)D.lines.filter(l=>l.left>0&&(DF.lf==='all'||DF.lf==='open'||(DF.lf==='short'?l.d<0:l.d>0))).forEach(l=>c.checked?ck.add(l.k):ck.delete(l.k))}dfDraw()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-dfa]');if(b){if(b.dataset.dfa==='wh'||dfCan())dfDo(b);return}
@@ -1008,6 +1018,44 @@ async function dfMgRealloc(){const S=MG.S,C=MG.C;if(!S||!dfCan())return;const ke
   MG.use=null;MG.xl=null;dfMgXlChip();alert('Дахин хуваарилж хаалаа. Үлдсэн бодит зөрүү «⚠ Зөрүү» жагсаалтад гарна.');setTimeout(()=>{dfMgList();dfDraw()},800)}
 async function dfMgPos(no){const S=MG.S;if(!S||!dfCan())return;if(!confirm(no?S.map(s=>s.no).join(', ')+' — эдгээрийн бараа эхний үлдэгдэлд аль хэдийн орсон тул POS-д LPP орлогоор ДАХИН нэмэхгүй үү? (Дэлгүүрийн үлдэгдлээс энэ илгээмжийн тоо хасагдана, зөрүүний жагсаалтаас гарна.)':S.map(s=>s.no).join(', ')+' — POS-д дахин LPP орлогоор тооцох уу?'))return;
   const by=auth.currentUser.email||'',at=new Date().toISOString();busy(true,'Хадгалж байна…');try{for(const s of S)await db.collection('wh_ship').doc(s.id).update({noPos:no,noPosBy:by,noPosAt:at});await auditCfg('lpp_nopos',{ships:S.map(s=>s.no).join(','),no}).catch(()=>{});await lppSync(false)}catch(e){alert('Алдаа: '+(e.code||e.message||e))}finally{busy(false)}setTimeout(()=>{dfMgList();dfDraw()},800)}
+
+/* ==== 🆕 Шинэ ачааны борлуулалт: хүлээн авсан орлого (LPP илгээмж, бусад нийлүүлэгч) хэр зарагдаж байна ====
+   Орлого бүрийн бараа (дэлгүүр × код) — тухайн дэлгүүрт хүлээн авснаас хойшхи борлуулалтыг эртний орлогоос нь эхлэн (FIFO) хуваарилна; буцаалт хасагдана. */
+let NW={rows:null};
+function nwInit(){if(!$('nwA').value){const d=new Date();$('nwB').value=$('nwC').value=iso(d);d.setDate(d.getDate()-14);$('nwA').value=iso(d)}
+  if(!$('nwSt').options.length)$('nwSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+Object.keys(LPP_LOC).map(k=>LPP_LOC[k]).map(k=>'<option value="'+k+'">'+esc(LOC[k]||k)+'</option>').join('');if(NW.rows)nwDraw()}
+async function nwLoad(){const A=$('nwA').value,B=$('nwB').value,C=$('nwC').value>=B?$('nwC').value:B;if(!A||!B)return;
+  await withBusy('Шинэ ачааны борлуулалт тооцож байна…',async()=>{await loadPCat().catch(()=>{});
+    const IN=(await db.collection('pos_stock_docs').where('type','==','in').get()).docs.map(d=>d.data()).filter(m=>m.status!=='cancel'&&m.to),dd=m=>iso(new Date(m.recvAt||m.at));
+    const R=IN.filter(m=>dd(m)>=A&&dd(m)<=B),RL=[];
+    R.forEach(m=>{const at=m.recvAt||m.at,lpp=m.src==='lpp';let L=[];try{L=JSON.parse(m.lines||'[]')}catch(e){}
+      L.forEach(x=>{const q=+x[1]||0;if(q<=0)return;const nm=x[2]||nmOf0(x[0]);RL.push({doc:m.no||m.uid,grp:lpp?(m.dname||'LPP'):((m.supplier||'Бусад')+(m.invoice?' · '+m.invoice:'')),sup:lpp?'LPP':(m.supplier||'Бусад'),st:m.to,code:x[0],name:nm,q,at,sold:0,sum:0,cost:0,cn:0,pre:false})})});
+    if(!RL.length){NW={rows:[],A,B,C};nwDraw();return}
+    // өмнө нь байсан эсэх: эхний үлдэгдэл эсвэл энэ хугацаанаас өмнөх орлогод тухайн дэлгүүрт ижил код
+    const PRE=new Set();for(const st of new Set(RL.map(r=>r.st))){try{const o=(await db.collection('pos_stock_open').doc(st).get()).data();if(o)JSON.parse(o.d||'[]').forEach(x=>{if(+x[1]>0)PRE.add(st+'|'+x[0])})}catch(e){}}
+    IN.filter(m=>dd(m)<A).forEach(m=>{try{JSON.parse(m.lines||'[]').forEach(x=>{if(+x[1]>0)PRE.add(m.to+'|'+x[0])})}catch(e){}});
+    const K=new Map();RL.forEach(r=>{r.pre=PRE.has(r.st+'|'+r.code);const k=r.st+'|'+r.code;(K.get(k)||K.set(k,[]).get(k)).push(r)});K.forEach(a=>a.sort((x,y)=>String(x.at).localeCompare(String(y.at))));
+    const A0=RL.reduce((a,r)=>{const d=iso(new Date(r.at));return d<a?d:a},B);
+    const S=(await db.collection('pos_sales').where('date','>=',A0.replace(/-/g,'/')).where('date','<=',C.replace(/-/g,'/')).get()).docs.map(d=>d.data()).filter(x=>x.type==='sale'||x.type==='return').sort((a,b)=>String(a.iso).localeCompare(String(b.iso)));
+    S.forEach(sx=>{const t=sx.iso||(dIso(sx.date)+'T23:59:59'),ret=sx.type==='return';(sx.lines||[]).forEach(l=>{const E=K.get(sx.store+'|'+l.code);if(!E)return;const q=Math.abs(+l.qty||0);if(!q)return;const pu=Math.abs(+l.sum||0)/q,uc=costMap.has(l.code)?costMap.get(l.code):null;
+      const ok=E.filter(r=>String(r.at)<=t);if(!ok.length)return;
+      if(!ret){let left=q;for(const r of ok){if(left<=0)break;const n=Math.min(left,r.q-r.sold);if(n<=0)continue;r.sold+=n;r.sum+=pu*n;if(uc!=null){r.cost+=uc*n;r.cn+=n}left-=n}if(left>0){const r=ok[ok.length-1];r.sold+=left;r.sum+=pu*left;if(uc!=null){r.cost+=uc*left;r.cn+=left}}}
+      else{let left=q;for(const r of ok.slice().reverse()){if(left<=0)break;const n=Math.min(left,r.sold);if(n<=0)continue;r.sold-=n;r.sum-=pu*n;if(uc!=null){r.cost-=uc*n;r.cn-=n}left-=n}}})});
+    NW={rows:RL,A,B,C,ns:S.length};nwDraw()})}
+function nwDraw(){const box=$('nwT');if(!NW.rows){$('nwMsg').textContent='Хугацаагаа сонгоод «Харах» дарна уу';return}
+  const st=$('nwSt').value,su=$('nwSu').value,g=$('nwG').value,cc=can('cost'),C=NW.C,days=at=>Math.max(1,Math.round((new Date(C+'T23:59:59')-new Date(at))/864e5));
+  const F=NW.rows.filter(r=>(!st||r.st===st)&&(!su||(su==='LPP'?r.sup==='LPP':r.sup!=='LPP')));
+  const KEY={grp:r=>r.grp,doc:r=>r.doc,st:r=>LOC[r.st]||r.st,code:r=>r.code,model:r=>String(r.name).replace(/\s+\d{2,3}(\/\d+)?\s*$/,''),cat:r=>catOf(r.name).typ||'—',brand:r=>slBrand(r.name)||'—',sup:r=>r.sup}[g];
+  const G=new Map();F.forEach(r=>{const k=KEY(r),x=G.get(k)||G.set(k,{k,name:r.name,q:0,sold:0,sum:0,cost:0,cn:0,at:r.at,pre:0,n:0}).get(k);x.q+=r.q;x.sold+=r.sold;x.sum+=r.sum;x.cost+=r.cost;x.cn+=r.cn;x.n++;if(r.pre)x.pre++;if(String(r.at)<String(x.at))x.at=r.at});
+  const T=k=>F.reduce((a,r)=>a+r[k],0),tq=T('q'),ts=T('sold'),tsum=T('sum'),tc=T('cost');
+  $('nwKpi').innerHTML=[['Хүлээн авсан',nfx(tq)+' ш'],['Зарагдсан',nfx(ts)+' ш <span class="small">('+(tq?Math.round(ts/tq*1000)/10:0)+'%)</span>'],['Үлдсэн',nfx(tq-ts)+' ш'],['Борлуулалт',money(tsum)],...(cc?[['Ашиг',money(tsum-tc)+' <span class="small">('+(tsum?Math.round((tsum-tc)/tsum*1000)/10:0)+'%)</span>']]:[])]
+    .map(k=>'<div class="k"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
+  const lbl={grp:'Ачаа / нийлүүлэгч',doc:'Орлогын баримт (илгээмж)',st:'Дэлгүүр',code:'Код',model:'Загвар',cat:'Ангилал',brand:'Брэнд',sup:'Нийлүүлэгч'}[g],isC=g==='code';
+  const head=[lbl,...(isC?['Бараа']:[]),'Хүлээн авсан огноо','Хүлээн авсан ш','Зарагдсан ш','Зарагдалт %','Үлдсэн ш','Хоног','Өдөрт дунджаар ш','Борлуулалт ₮',...(cc?['Өртөг ₮','Ашиг ₮','Ашиг %']:[]),isC?'Өмнө нь бас байсан':'Өмнө нь байсан код'];
+  const rows=[...G.values()].map(x=>{const d=days(x.at),pr=x.sum-x.cost;return [x.k,...(isC?[x.name]:[]),lt(x.at).slice(0,10),x.q,x.sold,x.q?Math.round(x.sold/x.q*1000)/10:0,x.q-x.sold,d,Math.round(x.sold/d*10)/10,Math.round(x.sum),...(cc?[Math.round(x.cost),Math.round(pr),x.sum?Math.round(pr/x.sum*1000)/10:null]:[]),isC?(x.pre?'тийм':''):(x.pre?x.pre+' / '+x.n:'')]}).sort((a,b)=>b[isC?5:4]-a[isC?5:4]);
+  const pi=head.indexOf('Зарагдалт %'),ni=[pi,head.indexOf('Хоног'),head.indexOf('Өдөрт дунджаар ш'),head.indexOf('Ашиг %')].filter(i=>i>=0);
+  xtable('nwT','nwt',head,rows,{noSum:ni});
+  $('nwMsg').textContent=NW.A+' – '+NW.B+' хооронд хүлээн авсан орлого, борлуулалт '+NW.C+' хүртэл ('+nfx(NW.ns||0)+' баримт уншсан).'}
 
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
@@ -1388,7 +1436,7 @@ const TAB_RED={rcpt:'rcpt',cash:'sh'};
 const TABK=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab);
 /* ==== Дэд цэс: үндсэн цэс бүрийн доорх хуудсууд ==== */
 const SUBS={stock:[['bal','📦 Үлдэгдэл'],['age','⏳ Насжилт'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['lpp','🚚 Агуулах (LPP)',()=>can('wh')||can('whedit')],['rcv','📥 Хүлээн авалт (LPP, шилжүүлэг)',()=>can('wh')||can('whedit')||rcvAnyP()],['zinv','🗂 Тооллого (бүсээр)',()=>can('inv')||can('invadm')],['whset','⚙ LPP тохиргоо',()=>!!(ME&&ME.admin)],['diff','⚠ Зөрүү',()=>dfView()],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
-  rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','📋 Борлуулалтын жагсаалт'],['rcpt','🧾 Баримтууд'],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
+  rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','📋 Борлуулалтын жагсаалт'],['new','🆕 Шинэ ачааны борлуулалт',()=>can('rep.new')||can('rep.acc')],['rcpt','🧾 Баримтууд'],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
 let CURTAB='';
 const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'vivipanel_sub_'+t)}catch(e){return ''}};
 function subMark(t,k){if(CURTAB!==t)return;document.querySelectorAll('#subtabs [data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===k||(t==='stock'&&k==='mov'&&false)))}
@@ -1402,7 +1450,7 @@ function badgeDraw(){Object.keys(SUBS).forEach(t=>{const vis=(SUBS[t]||[]).filte
 function drawSubtabs(t){const L=(SUBS[t]||[]).filter(x=>subOk(t,x)),el=$('subtabs');el.classList.toggle('hide',!L.length);if(!L.length){el.innerHTML='';return}
   let cur=subGet(t);if(!L.some(x=>x[0]===cur))cur=L[0][0];el.innerHTML=L.map(([k,l])=>'<button data-st="'+k+'"'+(k===cur?' class="on"':'')+'>'+l+'<span class="sn hide" id="sn_'+t+'_'+k+'"></span></button>').join('');badgeDraw();
   if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0);else if(t==='cash')csSub(cur)}
-function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='fc')setTimeout(fcShow,0);if(k==='z')setTimeout(zInit,0);if(k==='acc')setTimeout(slInit,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
+function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='fc')setTimeout(fcShow,0);if(k==='z')setTimeout(zInit,0);if(k==='acc')setTimeout(slInit,0);if(k==='new')setTimeout(nwInit,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
 $('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);else if(CURTAB==='cash')csSub(k);window.scrollTo(0,0)};
 function csSub(k){document.querySelectorAll('section[data-panel="cash"] [data-csub]').forEach(c=>c.hidden=c.dataset.csub!==k);try{localStorage.setItem('vivipanel_sub_cash',k)}catch(e){}subMark('cash',k);if(k==='z')setTimeout(zInit,0)}
 /* ==== 🧾 Z тайлан: хаасан ээлжүүд (pos_shifts), огнооны хүрээгээр; Excel, A4 хүснэгт, 80 мм Z баримт ==== */
