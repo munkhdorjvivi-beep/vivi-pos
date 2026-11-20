@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="14.0">
+<meta name="vivi-ver" content="14.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -552,6 +552,8 @@ async function init(){
   try{
     if(!window.firebase)for(const m of ['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+FB_VER+'/firebase-'+m+'-compat.js');
     firebase.initializeApp(FB_CONFIG);auth=firebase.auth();db=firebase.firestore();
+    // төхөөрөмж дээрх кэш: дахин нээхэд өгөгдөл шууд гарч, зөвхөн өөрчлөгдсөн нь сүлжээгээр ирнэ (утсан дээр хурдан)
+    try{const pr=db.enablePersistence&&db.enablePersistence({synchronizeTabs:true});if(pr&&pr.catch)pr.catch(e=>console.warn('persistence',e&&e.code))}catch(e){}
     auth.onAuthStateChanged(async u=>{if(!u){ME=null;$('login').classList.remove('hide');$('app').classList.add('hide');return}
       const em=(u.email||'').toLowerCase();let P=null;
       if(em===PANEL_EMAIL)P={owner:true,admin:true,perms:PERM_ALL};
@@ -1025,19 +1027,25 @@ let NW={rows:null};
 function nwInit(){if(!$('nwA').value){const d=new Date();$('nwB').value=$('nwC').value=iso(d);d.setDate(d.getDate()-14);$('nwA').value=iso(d)}
   if(!$('nwSt').options.length)$('nwSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+Object.keys(LPP_LOC).map(k=>LPP_LOC[k]).map(k=>'<option value="'+k+'">'+esc(LOC[k]||k)+'</option>').join('');if(NW.rows)nwDraw()}
 async function nwLoad(){const A=$('nwA').value,B=$('nwB').value,C=$('nwC').value>=B?$('nwC').value:B;if(!A||!B)return;
-  await withBusy('Шинэ ачааны борлуулалт тооцож байна…',async()=>{await loadPCat().catch(()=>{});
-    const IN=(await db.collection('pos_stock_docs').where('type','==','in').get()).docs.map(d=>d.data()).filter(m=>m.status!=='cancel'&&m.to),dd=m=>iso(new Date(m.recvAt||m.at));
+  await withBusy('Шинэ ачааны борлуулалт тооцож байна…',async()=>{
+    // хурд: орлогын баримтыг аль хэдийн нээлттэй сонсогчоос (movAll), эхний үлдэгдлийг санах ойгоос; бүгдийг зэрэг уншина
+    const inP=(typeof movReady!=='undefined'&&movReady)?Promise.resolve(movAll.filter(m=>m.type==='in')):(NW.inC&&Date.now()-NW.inC.t<300000?Promise.resolve(NW.inC.d):db.collection('pos_stock_docs').where('type','==','in').get().then(q=>{const d=q.docs.map(x=>x.data());NW.inC={t:Date.now(),d};return d}));
+    NW.open=NW.open||{};const opP=Promise.all(Object.values(LPP_LOC).map(st=>NW.open[st]?null:db.collection('pos_stock_open').doc(st).get().then(o=>{const S=new Set();try{const x=o.data();if(x)JSON.parse(x.d||'[]').forEach(r=>{if(+r[1]>0)S.add(r[0])})}catch(e){}NW.open[st]=S}).catch(()=>{NW.open[st]=new Set()})));
+    const [IN0]=await Promise.all([inP,opP,loadPCat().catch(()=>{})]);
+    const IN=IN0.filter(m=>m.status!=='cancel'&&m.to),dd=m=>iso(new Date(m.recvAt||m.at));
     const R=IN.filter(m=>dd(m)>=A&&dd(m)<=B),RL=[];
     R.forEach(m=>{const at0=m.recvAt||m.at,at=m.sentAt&&String(m.sentAt)<String(at0)?m.sentAt:at0,lpp=m.src==='lpp';let L=[];try{L=JSON.parse(m.lines||'[]')}catch(e){}
       L.forEach(x=>{const q=+x[1]||0;if(q<=0)return;const nm=x[2]||nmOf0(x[0]);RL.push({doc:m.no||m.uid,grp:lpp?(m.dname||'LPP'):((m.supplier||'Бусад')+(m.invoice?' · '+m.invoice:'')),sup:lpp?'LPP':(m.supplier||'Бусад'),st:m.to,code:x[0],name:nm,q,at,rat:at0,sold:0,sum:0,cost:0,cn:0,sk:0,pre:false})})});
     if(!RL.length){NW={rows:[],A,B,C};nwDraw();return}
     // өмнө нь байсан эсэх: эхний үлдэгдэл эсвэл энэ хугацаанаас өмнөх орлогод тухайн дэлгүүрт ижил код
-    const PRE=new Set();for(const st of new Set(RL.map(r=>r.st))){try{const o=(await db.collection('pos_stock_open').doc(st).get()).data();if(o)JSON.parse(o.d||'[]').forEach(x=>{if(+x[1]>0)PRE.add(st+'|'+x[0])})}catch(e){}}
+    const PRE=new Set();Object.entries(NW.open).forEach(([st,S])=>S.forEach(c=>PRE.add(st+'|'+c)));
     IN.filter(m=>dd(m)<A).forEach(m=>{try{JSON.parse(m.lines||'[]').forEach(x=>{if(+x[1]>0)PRE.add(m.to+'|'+x[0])})}catch(e){}});
     const K=new Map();RL.forEach(r=>{r.pre=PRE.has(r.st+'|'+r.code);const k=r.st+'|'+r.code;(K.get(k)||K.set(k,[]).get(k)).push(r)});K.forEach(a=>a.sort((x,y)=>String(x.at).localeCompare(String(y.at))));
     const A0=RL.reduce((a,r)=>{const d=iso(new Date(r.at));return d<a?d:a},B);
-    const S=(await db.collection('pos_sales').where('date','>=',A0.replace(/-/g,'/')).where('date','<=',C.replace(/-/g,'/')).get()).docs.map(d=>d.data()).filter(x=>x.type==='sale'||x.type==='return').sort((a,b)=>String(a.iso).localeCompare(String(b.iso)));
-    S.forEach(sx=>{const t=sx.iso||(dIso(sx.date)+'T23:59:59'),ret=sx.type==='return';(sx.lines||[]).forEach(l=>{const E=K.get(sx.store+'|'+l.code);if(!E)return;const q=Math.abs(+l.qty||0);if(!q)return;const pu=Math.abs(+l.sum||0)/q,uc=costMap.has(l.code)?costMap.get(l.code):null;
+    // борлуулалт: өдрийн кэштэй (salesSince) — өмнө уншсан өдрүүдийг дахин татахгүй, зөвхөн сүүлийн өдрүүд
+    const stores=new Set(RL.map(r=>r.st)),Cs=C.replace(/-/g,'/');
+    const S=(await salesSince(A0.replace(/-/g,'/'),null)).filter(x=>(x.type==='sale'||x.type==='return')&&x.date<=Cs&&stores.has(STOCK_SRC[x.store]||x.store)).sort((a,b)=>String(a.iso).localeCompare(String(b.iso)));
+    S.forEach(sx=>{const t=sx.iso||(dIso(sx.date)+'T23:59:59'),ret=sx.type==='return';const sst=STOCK_SRC[sx.store]||sx.store;(sx.lines||[]).forEach(l=>{const E=K.get(sst+'|'+l.code);if(!E)return;const q=Math.abs(+l.qty||0);if(!q)return;const pu=Math.abs(+l.sum||0)/q,uc=costMap.has(l.code)?costMap.get(l.code):null;
       const ok=E.filter(r=>String(r.at)<=t);if(!ok.length)return;
       if(!ret){let left=q;for(const r of ok){if(left<=0)break;const n=Math.min(left,r.q-r.sold);if(n<=0)continue;r.sold+=n;r.sum+=pu*n;if(uc!=null){r.cost+=uc*n;r.cn+=n;r.sk+=pu*n}left-=n}if(left>0){const r=ok[ok.length-1];r.sold+=left;r.sum+=pu*left;if(uc!=null){r.cost+=uc*left;r.cn+=left;r.sk+=pu*left}}}
       else{let left=q;for(const r of ok.slice().reverse()){if(left<=0)break;const n=Math.min(left,r.sold);if(n<=0)continue;r.sold-=n;r.sum-=pu*n;if(uc!=null){r.cost-=uc*n;r.cn-=n;r.sk-=pu*n}left-=n}}})});
