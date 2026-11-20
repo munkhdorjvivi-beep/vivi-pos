@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="15.6">
+<meta name="vivi-ver" content="15.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -772,9 +772,9 @@ const DF_ACT={pair:'Өөр дэлгүүрийнхтэй тааруулж шил�
 let DF={U:{},from:'2026-11-18',ships:[],res:{},tasks:{},on:false,view:'open',st:'',ty:'',a:'',b:'',sel:'',ck:{},lf:'open',lim:150,lossA:'',lossB:''};
 const dfCan=()=>can('stock.diff')||!!(ME&&ME.admin),dfWh=()=>can('wh')||can('whedit'),dfView=()=>dfCan()||dfWh()||can('stock.bal');
 function watchDiff(){if(DF.on||!dfView())return;DF.on=true;db.collection('wh_users').get().then(q=>{DF.U={};q.docs.forEach(d=>{const x=d.data();DF.U[d.id]=x.name||x.email||d.id});dfSoon()}).catch(()=>{});lppFrom().then(f=>{DF.from=f||DF.from;dfSoon()});
-  db.collection('wh_ship').where('status','in',['sent','recv','diff','closed']).onSnapshot(s=>{DF.ships=s.docs.map(d=>({id:d.id,...d.data()}));dfSoon()},e=>console.warn('diff ships',e));
-  db.collection('pos_diff').onSnapshot(s=>{DF.res={};s.docs.forEach(d=>DF.res[d.id]=d.data());dfSoon()},e=>console.warn('pos_diff',e));
-  db.collection('pos_counts').onSnapshot(s=>{DF.tasks={};s.docs.forEach(d=>DF.tasks[d.id]={uid:d.id,...d.data()});dfSoon()},()=>{})}
+  db.collection('wh_ship').where('status','in',['sent','recv','diff','closed']).onSnapshot(s=>{DF.ships=s.docs.map(d=>({id:d.id,...d.data()}));(DF.ld=DF.ld||new Set()).add('s');dfSoon()},e=>console.warn('diff ships',e));
+  db.collection('pos_diff').onSnapshot(s=>{DF.res={};s.docs.forEach(d=>DF.res[d.id]=d.data());(DF.ld=DF.ld||new Set()).add('r');dfSoon()},e=>console.warn('pos_diff',e));
+  db.collection('pos_counts').onSnapshot(s=>{DF.tasks={};s.docs.forEach(d=>DF.tasks[d.id]={uid:d.id,...d.data()});(DF.ld=DF.ld||new Set()).add('t');dfSoon()},()=>{})}
 function dfSoon(){clearTimeout(dfSoon.t);dfSoon.t=setTimeout(()=>{dfBadge();if(!$('dfCard').hidden)dfDraw()},120)}
 // бүх зөрүүтэй баримт → мөрүүд
 function dfItems(){const out=[],R=k=>{try{return JSON.parse((DF.res[k]||{}).res||'{}')}catch(e){return {}}},RS={};
@@ -809,7 +809,7 @@ function dfLine(k,code,name,sent,recv,acts,rs){acts=acts||[];rs=rs||[];const d=r
   const rsRecv=d<0?rs.filter(x=>x.st!=='sent').reduce((a,x)=>a+x.q,0):0,rsWait=d<0?rs.filter(x=>x.st==='sent').reduce((a,x)=>a+x.q,0):0,need=Math.max(0,Math.abs(d)-done-rsRecv);
   return {k,code,name,sent,recv,d,acts,rs,rsRecv,wait:Math.min(need,rsWait),left:Math.max(0,need-rsWait)}}
 function dfBadge(){if(!dfView())return;const I=dfItems(),open=I.reduce((a,D)=>a+D.open,0),old=I.filter(D=>D.open&&D.days>=3).reduce((a,D)=>a+D.open,0);DF.open=open;DF.old=old;
-  stkBan()}
+  stkBan();dfAuto(I)}
 // таарах мөр: нэг дэлгүүрт дутуу ↔ өөр дэлгүүрт илүү (ижил код)
 function dfPairs(I,D,l){const want=l.d<0?1:-1,R=[];I.forEach(X=>{if(X.to===D.to)return;X.lines.forEach(y=>{if(y.code===l.code&&Math.sign(y.d)===want&&y.left>0)R.push({X,y})})});return R}
 // ---- жагсаалт (огноогоор) + сонгосон баримтын дэлгэрэнгүй, бөөнөөр шийдвэрлэх ----
@@ -839,7 +839,7 @@ function dfDet(I,ce,wh){const box=$('dfList'),D=I.find(x=>x.key===DF.sel);if(!D)
   if(D.transit){box.innerHTML='<div class="card" id="dfDetC" style="margin:10px 0;padding:10px 12px;border-left:4px solid #3b82f6"><b style="font-size:16px">🚚 LPP '+esc(D.no)+'</b> · → <b>'+esc(LOC[D.to]||D.to)+'</b> · '+esc(D.deliv)+' <button class="btn" style="min-height:28px;float:right" data-dfo="">✕ Хаах</button><div class="small">Илгээсэн '+esc(lt(D.at))+' · '+nfx(D.sent)+' ш · <b>хүлээн авалт дуусаагүй</b>'+(D.recv?' — одоогоор '+nfx(D.recv)+' ш тоолсон':' — тоолоогүй (замд)')+'</div><div class="small" style="margin-top:6px">Дэлгүүр «📥 Хүлээн авалт» (эсвэл касс → «Агуулахаас (LPP)») дээр энэ илгээмжийг сонгоод үлдсэн хайрцгийг тоолж, «Тулгалт дуусгах» дарна. Хэрэв түүний бараа өөр илгээмжид андуурч тоологдсон бол (тэр илгээмжийн анхааруулгыг харна уу) дахин уншуулалгүйгээр шууд хаана. Дуусмагц зөрүү энд гарна.</div></div>';return}
   const ck=DF.ck[D.key]||(DF.ck[D.key]=new Set()),lf=DF.lf,W=dfWarn(I,D);[...ck].forEach(k=>{const l=D.lines.find(x=>x.k===k);if(!l||!l.left)ck.delete(k)});
   const L=D.lines.map((l,i)=>({l,i})).filter(({l})=>lf==='all'||(lf==='short'?l.d<0&&l.left:lf==='over'?l.d>0&&l.left:l.left>0||l.wait>0));
-  const S=D.lines.filter(l=>ck.has(l.k)&&l.left>0),sh=S.filter(l=>l.d<0),ov=S.filter(l=>l.d>0),pa=S.filter(l=>dfPairs(I,D,l).length),q=A=>A.reduce((a,l)=>a+l.left,0);
+  const S=D.lines.filter(l=>ck.has(l.k)&&l.left>0&&!dfCntT(D,l)),sh=S.filter(l=>l.d<0),ov=S.filter(l=>l.d>0),pa=S.filter(l=>dfPairs(I,D,l).length),q=A=>A.reduce((a,l)=>a+l.left,0);
   const bb=(a,t,n,cls)=>n?'<button class="btn'+(cls?' '+cls:'')+'" style="min-height:30px;padding:2px 10px" data-dfb="'+a+'">'+t+' ('+n+')</button>':'';
   let bulk='';if(S.length){const lpp=D.src==='lpp';
     if(ce){bulk=bb('pair','🔁 Өөр дэлгүүртэй тааруулж шилжүүлэх',pa.length,'pri')+bb('recount','📋 Нэг даалгавраар дахин тоолуулах',S.length);
@@ -863,7 +863,7 @@ function dfDet(I,ce,wh){const box=$('dfList'),D=I.find(x=>x.key===DF.sel);if(!D)
 async function dfSaveMany(D,arr){if(!arr.length)return;if(DF._cz)arr.forEach(([k,a])=>{if(a.act!=='recount'&&!a.cause){a.cause=DF._cz.cause;a.cnote=DF._cz.cnote}});const ref=db.collection('pos_diff').doc(D.key),cur=await ref.get(),res=cur.exists?JSON.parse(cur.data().res||'{}'):{};arr.forEach(([k,a])=>(res[k]=res[k]||[]).push(a));const last=arr[arr.length-1][1];
   await ref.set({key:D.key,src:D.src,srcId:D.srcId,no:D.no,from:D.from,to:D.to,at:D.at,res:JSON.stringify(res),updated:last.at,updatedBy:last.by},{merge:true})}
 async function dfBulk(act){const I=dfItems(),D=I.find(x=>x.key===DF.sel);if(!D)return;DF._cz=null;if(['pair','dbl','accept','ret','sender','wh'].includes(act)){const cz=await dfCauseAsk(dfCauseDef(act,{d:act==='dbl'||act==='accept'?1:-1}),esc(D.no)+' · сонгосон мөрүүд → '+esc(DF_ACT[act]||act));if(!cz)return;DF._cz=cz}const ck=DF.ck[D.key]||new Set(),by=auth.currentUser.email||'',at=new Date().toISOString(),where=LOC[D.to]||D.to,lpp=D.src==='lpp';
-  const S=D.lines.filter(l=>ck.has(l.k)&&l.left>0),sh=S.filter(l=>l.d<0),ov=S.filter(l=>l.d>0),q=A=>A.reduce((a,l)=>a+l.left,0),done=()=>{ck.clear();dfDraw()};
+  const S=D.lines.filter(l=>ck.has(l.k)&&l.left>0&&!dfCntT(D,l)),sh=S.filter(l=>l.d<0),ov=S.filter(l=>l.d>0),q=A=>A.reduce((a,l)=>a+l.left,0),done=()=>{ck.clear();dfDraw()};
   try{
   if(act==='pair'){const G=new Map(),P=[];S.forEach(l=>{const p=dfPairs(I,D,l)[0];if(!p)return;const n=Math.min(l.left,p.y.left),from=l.d<0?p.X.to:D.to,to=l.d<0?D.to:p.X.to,k=from+'>'+to;(G.get(k)||G.set(k,{from,to,L:[]}).get(k)).L.push({l,p,n})});
     if(!G.size)return;if(!confirm([...G.values()].map(g=>(LOC[g.from]||g.from)+' → '+(LOC[g.to]||g.to)+': '+g.L.reduce((a,x)=>a+x.n,0)+' ш ('+g.L.length+' бараа)').join('\n')+'\n\nШилжүүлэг үүсгэх үү? Илгээх дэлгүүрийн касс дээр «📤 Илгээх ёстой» гарна.'))return;
@@ -900,25 +900,49 @@ async function dfNet(xk){const I=dfItems(),D=I.find(x=>x.key===DF.sel),w=D&&dfWa
   if(!confirm(w.net.length+' бараа: '+D.no+' ба '+w.X.no+' хоёр илгээмжийн нэгд илүү, нөгөөд дутуу гарсан. Хоёулаа '+(LOC[D.to]||D.to)+'-д ирсэн тул нийтдээ зөрүүгүй — тэнцүүлж хаах уу? (үлдэгдэл өөрчлөгдөхгүй)'))return;
   const a=[],b=[];w.net.forEach(([l,y])=>{const n=Math.min(l.left,y.left);a.push([l.k,{act:'same',qty:n,by,at,pair:w.X.key,docNo:w.X.no}]);b.push([y.k,{act:'same',qty:n,by,at,pair:D.key,docNo:D.no}])});
   try{await dfSaveMany(D,a);await dfSaveMany(w.X,b)}catch(e){alert('Алдаа: '+(e.code||e))}}
+// ---- Тооллого ↔ зөрүү: тухайн мөрийн сүүлийн тооллого, дүгнэлт, автомат хаалт ----
+function dfCntT(D,l){
+  const rc=l.acts.filter(a=>a.act==='recount'&&a.task).map(a=>DF.tasks[a.task]).filter(t=>t&&t.status!=='cancelled');
+  // өөр (гараар, бүсээр) тооллого: тухайн дэлгүүрт, хүлээн авснаас хойш, энэ код орсон, тоолсон/баталсан
+  if(!rc.length){const ot=Object.values(DF.tasks).filter(t=>t.store===D.to&&['counted','applied'].includes(t.status)&&String(t.countedAt||t.created||'')>=String(D.at)&&(()=>{try{return JSON.parse(t.codes||'[]').some(x=>x[0]===l.code)}catch(e){return false}})()).sort((a,b)=>String(a.countedAt).localeCompare(String(b.countedAt)));if(ot.length)rc.push(ot[ot.length-1])}
+  return rc[rc.length-1]||null}
+// БОДИТ тоолсон тоог (тоолсон ш) илгээсэн/ирсэнтэй харьцуулна. fq = тооллогоор тайлбарлагдсан, хараахан хаагаагүй ш (давхар уншуулсан / олдсон)
+function dfCntV(D,l,t){const v={rr:null,ph:0,sy:0,real:0,fake:0,found:0,lost:0,fq:0};if(!t||t.status!=='applied')return v;
+  try{const rw=(t.res||{}).rows,rows=typeof rw==='string'?JSON.parse(rw||'[]'):(rw||[]);v.rr=rows.find(x=>x[0]===l.code)||null}catch(e){}
+  if(!v.rr)return v;v.ph=+v.rr[3]||0;v.sy=+v.rr[2]||0;const rcd=l.acts.filter(a=>a.act==='recounted').reduce((a,x)=>a+(+x.qty||0),0);
+  if(l.d>0){v.real=Math.max(0,Math.min(l.d,v.ph-l.sent));v.fake=l.d-v.real;v.fq=Math.min(l.left,Math.max(0,v.fake-rcd))}
+  else if(l.d<0){const m=-l.d;v.found=Math.max(0,Math.min(m,v.ph-l.recv));v.lost=m-v.found;v.fq=Math.min(l.left,Math.max(0,v.found-rcd))}
+  return v}
+// Баталсан тооллогоор тайлбарлагдсан хэсгийг автоматаар хаана (шийдвэр тооллого дээр гарсан тул дахин батлах шаардлагагүй)
+async function dfAuto(I){if(!dfCan()||!DF.ld||DF.ld.size<3||!auth.currentUser)return;DF._auto=DF._auto||new Set();const by=auth.currentUser.email||'';
+  for(const D of I){const arr=[];D.lines.forEach(l=>{if(!l.left)return;const t=dfCntT(D,l);if(!t||t.status!=='applied')return;const v=dfCntV(D,l,t);if(!v.fq)return;const g=D.key+'|'+l.k+'|'+t.uid+'|'+(l.acts.length);if(DF._auto.has(g))return;DF._auto.add(g);
+      arr.push([l.k,{act:'recounted',qty:v.fq,by,at:new Date().toISOString(),task:t.uid,auto:1,cause:l.d>0?'dblscan':'notscan',cnote:'автомат — тооллого ('+lt(t.countedAt||'')+'): тоолсон '+v.ph+' ш'}])});
+    if(!arr.length)continue;
+    try{const ref=db.collection('pos_diff').doc(D.key);await db.runTransaction(async tx=>{const cur=await tx.get(ref),res=cur.exists?JSON.parse((cur.data()||{}).res||'{}'):{};let n=0;
+        arr.forEach(([k,a])=>{const ex=(res[k]||[]).some(x=>x.act==='recounted'&&x.task===a.task);if(ex)return;(res[k]=res[k]||[]).push(a);n++});if(!n)return;
+        tx.set(ref,{key:D.key,src:D.src,srcId:D.srcId,no:D.no,from:D.from,to:D.to,at:D.at,res:JSON.stringify(res),updated:arr[0][1].at,updatedBy:by},{merge:true})})}
+    catch(e){console.warn('dfAuto',e);arr.forEach(([k])=>{[...DF._auto].filter(g=>g.startsWith(D.key+'|'+k+'|')).forEach(g=>DF._auto.delete(g))})}}}
 function dfActs(I,D,l,i,ce,wh){const done=l.acts.map((a,ai)=>'<div class="small">✓ '+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':'')+(a.act!=='recount'?' · <b>шалтгаан:</b> '+(a.cause?esc(DF_CZ[a.cause]||a.cause)+(a.cnote?' ('+esc(a.cnote)+')':''):'<i>бичээгүй</i>')+(ce?' <a href="#" data-dfce="'+esc(D.key)+'|'+esc(l.k)+'|'+ai+'" title="Шалтгаан засах">✎</a>':''):'')+(a.resp?' · хариуцагч: '+esc(DF_RESP[a.resp]||a.resp):'')+(a.note?' · '+esc(a.note):'')+(a.docNo?' · '+esc(a.docNo):'')+' <span style="color:#8a93a0">('+esc(String(a.by||'').split('@')[0])+', '+esc(lt(a.at))+')</span></div>').join('');
   const RT={resend:'Олдсон — дахин илгээнэ',lost:'Олдсонгүй (акт)',keep:'Илүү — дэлгүүрт үлдээнэ',back:'Илүү — агуулах руу буцаана',other:'Бусад'};
   const rsH=(l.d<0?l.rs:[]).map(x=>x.st==='sent'?'<div class="small" style="color:#b35c00">🚚 Агуулахаас дахин илгээсэн '+x.q+' ш · <b>'+esc(x.no)+'</b> — '+esc(LOC[D.to]||D.to)+' хүлээн аваагүй ('+esc(lt(x.at))+')</div>':'<div class="small">✓ Агуулахаас дахин илгээсэн '+x.q+' ш · '+esc(x.no)+' — дэлгүүр хүлээн авсан'+(x.g<x.q?' <b class="hot">(тэнд '+(x.q-x.g)+' ш дахин дутуу — тэр илгээмжээр шийдвэрлэнэ)</b>':'')+'</div>').join('')+
     (l.whr&&l.whr.how&&!(l.whr.how==='resend'&&l.rs.length)?'<div class="small">🏬 Агуулахын тэмдэглэл: '+esc(RT[l.whr.how]||l.whr.how)+(l.whr.note?' · '+esc(l.whr.note):'')+'</div>':'');
   const hl=' <a href="#" class="small" data-dfs="'+esc(D.key)+'|'+esc(l.k)+'" title="Энэ зөрүүний бүх үйл явдал">📒 түүх</a> · <a href="#" class="small" data-dfh="'+esc(l.code)+'|'+esc(D.to)+'" title="Барааны хөдөлгөөний түүх">📜 хөдөлгөөн</a>';
   if(!l.left)return done+rsH+hl;const b=(act,txt,cls)=>'<button class="btn'+(cls?' '+cls:'')+'" style="min-height:28px;padding:2px 8px;margin:2px 4px 2px 0" data-dfa="'+act+'" data-dfk="'+esc(D.key)+'" data-dfi="'+i+'">'+txt+'</button>';
-  // дахин тоолуулж байгаа бол үр дүн
-  const rc=l.acts.filter(a=>a.act==='recount'&&a.task).map(a=>DF.tasks[a.task]).filter(t=>t&&t.status!=='cancelled');
-  // өөр (гараар, бүсээр) тооллого: тухайн дэлгүүрт, хүлээн авснаас хойш, энэ код орсон, тоолсон/баталсан
-  if(!rc.length){const ot=Object.values(DF.tasks).filter(t=>t.store===D.to&&['counted','applied'].includes(t.status)&&String(t.countedAt||t.created||'')>=String(D.at)&&(()=>{try{return JSON.parse(t.codes||'[]').some(x=>x[0]===l.code)}catch(e){return false}})()).sort((a,b)=>String(a.countedAt).localeCompare(String(b.countedAt)));if(ot.length)rc.push(ot[ot.length-1])}
-  const last=rc[rc.length-1];let pend='';
-  if(last){const st=last.status;if(st==='applied'){let dd=0,rr=null;try{const rw=(last.res||{}).rows,rows=typeof rw==='string'?JSON.parse(rw||'[]'):(rw||[]);rr=rows.find(x=>x[0]===l.code);dd=rr?+rr[4]||0:0}catch(e){}
-      const ok=l.d<0?dd>0:dd<0;DF._cnf=!ok;if(l.d>0&&dd===0&&rr){pend='<div class="small" style="margin:2px 0">📋 Тооллого ('+esc(lt(last.countedAt||''))+'): систем '+rr[2]+' = тоолсон '+rr[3]+' ш — <b>илүү бараа бодитоор ирсэн</b> (агуулах илүү явуулсан). Үлдэгдэлд аль хэдийн орсон → «✓ хүлээн авах» дарж хаана.</div>'}else pend='<div class="small" style="margin:2px 0">📋 Тооллого: зөрүү '+(dd>0?'+':'')+dd+' ш (тооллогын баримтаар зассан) — '+(ok?'<b>олдсон</b>':(l.d>0?'<b>илүү бараа бодитоор байгаа нь батлагдлаа</b> → «✓ хүлээн авах»':'<b>олдсонгүй</b> → агуулах эсвэл хохирол'))+'</div>'+(ok&&ce?b('recounted:'+Math.min(l.left,Math.abs(dd))+':'+last.uid,'✓ Тооллогоор шийдсэн ('+Math.min(l.left,Math.abs(dd))+' ш)','pri'):'')}
+  const last=dfCntT(D,l);let pend='';
+  if(last){const st=last.status;if(st==='applied'){const v=dfCntV(D,l,last),dt=esc(lt(last.countedAt||'')),cav='<div class="small muted" style="margin:1px 0">⚠ Хүлээн авснаас хойш зарагдсан бол тоолсон тоо бага гарна — «📜 хөдөлгөөн»-өөс шалгана уу.</div>';
+      if(!v.rr)pend='<div class="small" style="margin:2px 0">📋 Тооллого ('+dt+') баталсан, гэхдээ энэ бараа тооллогын мөрөнд алга — дахин тоолуулна уу.</div>';
+      else{const hd='<div class="small" style="margin:2px 0">📋 Тооллого ('+dt+'): систем '+v.sy+', <b>тоолсон '+v.ph+' ш</b> · илгээсэн '+l.sent+', ирсэн гэж уншуулсан '+l.recv+' → ',au=v.fq?'<div class="small" style="margin:2px 0">⏳ Тооллогоор тайлбарлагдсан '+v.fq+' ш автоматаар хаагдаж байна…</div>':'';
+        if(l.d>0)pend=hd+(!v.fake?'<b>илүү бараа бодитоор ирсэн</b> (агуулах илүү явуулсан) → доорх товчоор шийдвэрлэнэ.':!v.real?'<b>илүү бараа БАЙХГҮЙ</b> — тоолсон тоо илгээсэнтэй тэнцүү, <b>давхар уншуулсан</b>. Дэлгүүрийн үлдэгдэл '+v.ph+' ш болж зассан, агуулах хэвээр.':'<b>'+v.real+' ш нь бодитоор илүү</b> ирсэн, <b>'+v.fake+' ш нь давхар уншуулсан</b> (тооллогоор хаагдана).')+'</div>'+cav+au;
+        else pend=hd+(!v.lost?'<b>бүгд олдсон</b> — тоолохдоо уншуулаагүй байсан. Үлдэгдэл '+v.ph+' ш болж зассан.':!v.found?'<b>олдсонгүй</b> — дэлгүүрт '+v.lost+' ш байхгүй → доорх товчоор шийдвэрлэнэ.':'<b>'+v.found+' ш олдсон</b> (тооллогоор хаагдана), <b>'+v.lost+' ш олдсонгүй</b>.')+'</div>'+cav+au}}
     else pend='<div class="small" style="margin:2px 0">📋 '+esc(LOC[last.store]||last.store)+'-д дахин тоолуулж байна — '+(st==='counted'?'<b>касс тоолсон</b></div>'+(ce?b('cres:'+last.uid,'📋 Тооллогын үр дүнг харах, батлах','pri'):''):'касс тоолоогүй</div>')}
   // QR код уншуулсан (баркодын оронд) → тухайн илгээмжийн дутуу бараатай тааруулж, тоолсныг засна
   if(ce&&D.src==='lpp'&&l.d>0&&dfIsQr(l.k)){const Q=dfQrCands(D,l);return done+rsH+'<div class="small hot" style="margin:2px 0">⛔ Баркод биш — шошгоны <b>QR / DataMatrix (дөрвөлжин) код</b> уншуулсан байна</div>'+(Q.map(x=>b('qr:'+x.k,'🔗 '+esc(x.code)+' '+esc(x.name)+' — энэ барааных','pri')).join('')||'')+b('qr:?','🔗 Аль барааных вэ? (баркод оруулах)')}
+  // тооллого хийгдэж байгаа / баталсан бол: зөвхөн тооллогын дүгнэлтэд тохирох шийдвэр (буруу товч харуулахгүй)
+  if(last&&last.status!=='applied')return done+rsH+pend+'<div class="small" style="margin:2px 0">Шийдэх: <b>'+l.left+' ш</b> — тооллогын үр дүнг хүлээж байна'+hl+'</div>';
+  if(last){const v=dfCntV(D,l,last);if(v.rr&&l.left<=v.fq)return done+rsH+pend+hl}
   let btn='';if(ce){const P=dfPairs(I,D,l);P.slice(0,3).forEach((p,j)=>{btn+=b('pair:'+j,l.d<0?'🔁 '+esc(LOC[p.X.to]||p.X.to)+'-д илүү гарсан → энд шилжүүлэх':'🔁 '+esc(LOC[p.X.to]||p.X.to)+'-д дутуу → тийш шилжүүлэх','pri')});
-    if(!last||last.status==='applied')btn+=b('recount','📋 '+esc(LOC[D.to]||D.to)+'-д дахин тоолуулах');
-    if(D.src==='lpp'){const cf=!!(last&&last.status==='applied'&&DF._cnf);DF._cnf=false;btn+=l.d<0?b('wh','🏬 Агуулахад үлдсэн → дахин илгээх',cf?'pri':'')+b('loss','✖ Хохирол'):b('accept','✓ Агуулахаас ирсэн — хүлээн авах',cf?'pri':'')+b('ret','↩ LPP агуулах руу буцааж өгөх')}
+    if(!last)btn+=b('recount','📋 '+esc(LOC[D.to]||D.to)+'-д дахин тоолуулах');
+    if(D.src==='lpp'){const cf=!!last;btn+=l.d<0?b('wh','🏬 Агуулахад үлдсэн → дахин илгээх',cf?'pri':'')+b('loss','✖ Хохирол'):b('accept','✓ Агуулахаас ирсэн — хүлээн авах',cf?'pri':'')+b('ret','↩ LPP агуулах руу буцааж өгөх')}
     else btn+=l.d<0?b('sender','↩ Илгээгчид үлдсэн (илгээгчид буцааж нэмэх)')+b('loss','✖ Хохирол'):b('sender','✓ Илгээгч илүү явуулсан (илгээгчээс хасах)')+b('ret','↩ Илгээгч рүү буцааж шилжүүлэх')}
   else if(wh&&D.src==='lpp'&&l.d<0)btn=b('wh','🏬 Агуулахад үлдсэн → дахин илгээх');
   return done+rsH+pend+'<div class="small" style="margin:2px 0">Шийдэх: <b>'+l.left+' ш</b>'+hl+'</div>'+btn}
