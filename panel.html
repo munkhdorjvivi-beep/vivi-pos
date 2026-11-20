@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="14.9">
+<meta name="vivi-ver" content="15.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -102,7 +102,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 @media (max-width:820px){input,select,textarea,.inp{font-size:16px!important}}
 /* --- багтаамж (утас, компьютер): хүснэгт дэлгэцээс хэтэрвэл өөрөө хажуу тийш гүйлгэгдэнэ, бусад нь цонхонд багтана --- */
 .xtw{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
-.xtw>table{min-width:100%}.xtw th,.xtw td{overflow-wrap:normal;word-break:normal}.xtw td{white-space:nowrap}.xtw td:has(>div),.xtw td.wrap{white-space:normal}@media (max-width:820px){.xtw>table{width:max-content}}
+.xtw>table{min-width:100%}.xtw th,.xtw td{overflow-wrap:normal;word-break:normal}.xtw td{white-space:nowrap}.xtw td:first-child{white-space:normal;min-width:120px;max-width:260px}.xtw td:has(>div),.xtw td.wrap{white-space:normal}@media (max-width:820px){.xtw>table{width:max-content}}
 .xfb{white-space:normal;line-height:1.25;min-width:56px}
 main select,main .inp,main input{max-width:100%}
 main textarea{max-width:100%}
@@ -1096,15 +1096,17 @@ const NWNEXT={grp:'seg',doc:'seg',st:'seg',sup:'seg',age:'seg',seg:'cat',tg:'cat
 function nwDraw(){if(!NW.rows){$('nwMsg').textContent='Хугацаагаа сонгоод «Харах» дарна уу';return}NW.path=NW.path||[];
   const st=$('nwSt').value,su=$('nwSu').value,g=$('nwG').value,cc=can('cost'),C=NW.C,days=at=>Math.max(1,Math.round((new Date(C+'T23:59:59')-new Date(at))/864e5));
   const F=NW.rows.filter(r=>(!st||r.st===st)&&(!su||(su==='LPP'?r.sup==='LPP':r.sup!=='LPP'))&&NW.path.every(p=>NWG[p.g][1](r)===p.k)),KEY=NWG[g][1];
-  const G=new Map();F.forEach(r=>{const k=KEY(r),x=G.get(k)||G.set(k,{k,name:r.name,q:0,sold:0,sum:0,cost:0,cn:0,sk:0,at:r.at,pre:0,n:0}).get(k);x.q+=r.q;x.sold+=r.sold;x.sum+=r.sum;x.cost+=r.cost;x.cn+=r.cn;x.sk+=r.sk;x.n++;if(r.pre)x.pre++;if(String(r.at)<String(x.at))x.at=r.at});
+  const SS=Object.values(LPP_LOC).filter(st=>F.some(r=>r.st===st)),multi=SS.length>1&&g!=='st';
+  const G=new Map();F.forEach(r=>{const k=KEY(r),x=G.get(k)||G.set(k,{k,name:r.name,q:0,sold:0,sum:0,cost:0,cn:0,sk:0,at:r.at,pre:0,n:0,bs:{}}).get(k);x.q+=r.q;x.sold+=r.sold;const b=x.bs[r.st]||(x.bs[r.st]={q:0,sold:0,sum:0});b.q+=r.q;b.sold+=r.sold;b.sum+=r.sum;x.sum+=r.sum;x.cost+=r.cost;x.cn+=r.cn;x.sk+=r.sk;x.n++;if(r.pre)x.pre++;if(String(r.at)<String(x.at))x.at=r.at});
   const T=k=>F.reduce((a,r)=>a+r[k],0),tq=T('q'),ts=T('sold'),tsum=T('sum'),tc=T('cost'),tsk=T('sk'),tcn=T('cn');
+  const kS=SS.map(st=>{const a=F.filter(r=>r.st===st),q=a.reduce((x,r)=>x+r.q,0),so=a.reduce((x,r)=>x+r.sold,0),su=a.reduce((x,r)=>x+r.sum,0);return ['📍 '+(LOC[st]||st),nfx(so)+' ш <span class="small">/ '+nfx(q)+' ('+(q?Math.round(so/q*1000)/10:0)+'%)</span><div class="small">'+money(su)+'</div>']});
   $('nwPath').innerHTML='<b>Шүүлт:</b> <a href="#" data-nwp="0">Бүгд</a>'+NW.path.map((p,i)=>' › <a href="#" data-nwp="'+(i+1)+'">'+esc(p.k)+'</a>').join('')+(NWNEXT[g]?' <span class="small">— мөр дээр дарж задлана ('+esc(NWG[NWNEXT[g]][0])+')</span>':'');
   $('nwKpi').innerHTML=[['Хүлээн авсан',nfx(tq)+' ш'],['Зарагдсан',nfx(ts)+' ш <span class="small">('+(tq?Math.round(ts/tq*1000)/10:0)+'%)</span>'],['Үлдсэн',nfx(tq-ts)+' ш'],['Борлуулалт',money(tsum)],...(cc?[['Ашиг (өртөгтэй барааны)',(tsk?money(tsk-tc)+' <span class="small">('+Math.round((tsk-tc)/tsk*1000)/10+'%)</span>':'—')+'<div class="small">'+(ts?(tcn<ts?'⚠ '+nfx(ts-tcn)+' ш-ийн өртөг байхгүй — ашигт ороогүй':'бүх зарагдсан бараа өртөгтэй'):'')+'</div>']]:[])]
-    .map(k=>'<div class="k"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
+    .concat(SS.length>1?kS:[]).map(k=>'<div class="k"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
   const isC=g==='code';
-  const head=[NWG[g][0],...(isC?['Бараа']:[]),'Хүлээн авсан огноо','Хүлээн авсан ш','Зарагдсан ш','Зарагдалт %','Үлдсэн ш','Хоног','Өдөрт дунджаар ш','Борлуулалт ₮',...(cc?['Өртөг ₮','Ашиг ₮','Ашиг %','Өртөггүй ш']:[]),isC?'Өмнө нь бас байсан':'Өмнө нь байсан код'];
-  const rows=[...G.values()].map(x=>{const d=days(x.at),pr=x.sk-x.cost,r=[x.k,...(isC?[x.name]:[]),lt(x.at).slice(0,10),x.q,x.sold,x.q?Math.round(x.sold/x.q*1000)/10:0,x.q-x.sold,d,Math.round(x.sold/d*10)/10,Math.round(x.sum),...(cc?[Math.round(x.cost),Math.round(pr),x.sk?Math.round(pr/x.sk*1000)/10:null,(x.sold-x.cn)||null]:[]),isC?(x.pre?'тийм':''):(x.pre?x.pre+' / '+x.n:'')];r.key=x.k;return r}).sort((a,b)=>b[isC?5:4]-a[isC?5:4]);
-  const ni=['Зарагдалт %','Хоног','Өдөрт дунджаар ш','Ашиг %'].map(h=>head.indexOf(h)).filter(i=>i>=0);
+  const head=[NWG[g][0],...(isC?['Бараа']:[]),'Хүлээн авсан огноо','Хүлээн авсан ш','Зарагдсан ш','Зарагдалт %',...(multi?SS.flatMap(st=>{const n=LOC[st]||st;return [n+' · ирсэн ш',n+' · зарсан ш',n+' · %']}):[]),'Үлдсэн ш','Хоног','Өдөрт дунджаар ш','Борлуулалт ₮',...(cc?['Өртөг ₮','Ашиг ₮','Ашиг %','Өртөггүй ш']:[]),isC?'Өмнө нь бас байсан':'Өмнө нь байсан код'];
+  const rows=[...G.values()].map(x=>{const d=days(x.at),pr=x.sk-x.cost,r=[x.k,...(isC?[x.name]:[]),lt(x.at).slice(0,10),x.q,x.sold,x.q?Math.round(x.sold/x.q*1000)/10:0,...(multi?SS.flatMap(st=>{const b=x.bs[st];return b?[b.q,b.sold,b.q?Math.round(b.sold/b.q*1000)/10:0]:[null,null,null]}):[]),x.q-x.sold,d,Math.round(x.sold/d*10)/10,Math.round(x.sum),...(cc?[Math.round(x.cost),Math.round(pr),x.sk?Math.round(pr/x.sk*1000)/10:null,(x.sold-x.cn)||null]:[]),isC?(x.pre?'тийм':''):(x.pre?x.pre+' / '+x.n:'')];r.key=x.k;return r}).sort((a,b)=>b[isC?5:4]-a[isC?5:4]);
+  const ni=head.map((h,i)=>/%$|^Хоног$|^Өдөрт дунджаар ш$/.test(h)?i:-1).filter(i=>i>=0);
   xtable('nwT','nwt',head,rows,{noSum:ni,rowAttr:r=>NWNEXT[g]?' data-nwk="'+esc(r.key)+'" style="cursor:pointer"':''});
   $('nwMsg').textContent=NW.A+' – '+NW.B+' хооронд хүлээн авсан орлого; борлуулалтыг илгээмж агуулахаас гарснаас хойш '+NW.C+' хүртэл тооцсон ('+nfx(NW.ns||0)+' баримт уншсан).'}
 document.addEventListener('click',e=>{const r=e.target.closest('[data-nwk]');if(r&&!e.target.closest('.xfb')&&r.closest('#nwT')){const g=$('nwG').value,nx=NWNEXT[g];if(!nx)return;NW.path=(NW.path||[]).concat([{g,k:r.dataset.nwk,from:g}]);$('nwG').value=nx;nwDraw();return}
