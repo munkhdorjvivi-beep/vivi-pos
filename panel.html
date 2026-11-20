@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="16.0">
+<meta name="vivi-ver" content="16.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -3778,6 +3778,21 @@ document.querySelectorAll('.drng').forEach(box=>{if(!box.querySelector('.dgo')){
 document.querySelectorAll('.dr1,.dr2').forEach(e=>e.onchange=()=>{const box=e.closest('.drng');setRange(box.querySelector('.dr1').value,box.querySelector('.dr2').value)});
 syncDates();
 init();
+
+// ---- Утсан дээрх огноо сонгогч: iPhone-ий үндсэн календарь нээгдээд шууд хаагддаг тул мэдрэгчтэй төхөөрөмжид өөрийн календарь ----
+(function(){if(!(window.matchMedia&&matchMedia('(pointer:coarse)').matches))return;
+  const st=document.createElement('style');st.textContent='#dpO{position:fixed;inset:0;z-index:10000;background:rgba(15,20,30,.45);display:flex;align-items:flex-end;justify-content:center}#dpO .dpc{background:#fff;width:min(420px,100%);border-radius:16px 16px 0 0;padding:12px 12px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,.25);font-size:16px}#dpO .dph{display:flex;align-items:center;justify-content:space-between;margin:2px 0 8px}#dpO .dph b{font-size:17px}#dpO .dph button,#dpO .dpf button{font:inherit;border:1px solid #d6dae1;background:#fff;border-radius:10px;min-height:44px;min-width:44px;padding:0 12px}#dpO .dpg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}#dpO .dpg i{font-style:normal;font-size:12.5px;color:#7b8494;padding:4px 0}#dpO .dpg button{font:inherit;border:0;background:#f3f5f8;border-radius:10px;height:44px}#dpO .dpg button.t{box-shadow:inset 0 0 0 2px #2f6fdb}#dpO .dpg button.s{background:#b3262b;color:#fff;font-weight:700}#dpO .dpg button:disabled{opacity:.3}#dpO .dpf{display:flex;gap:8px;justify-content:space-between;margin-top:10px}#dpO .dpf .p{background:#b3262b;color:#fff;border-color:#b3262b}input[type=date][data-dp]{-webkit-user-select:none;user-select:none}';document.head.appendChild(st);
+  const mark=()=>document.querySelectorAll('input[type=date]:not([data-dp])').forEach(i=>{i.dataset.dp='1';i.readOnly=true;i.setAttribute('inputmode','none')});
+  let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;mark()})}).observe(document.documentElement,{childList:true,subtree:true});mark();document.addEventListener('DOMContentLoaded',mark);
+  const p2=n=>String(n).padStart(2,'0'),ds=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+  function open(inp){if(inp.disabled||$('dpO'))return;inp.blur();const today=ds(new Date());let cur=inp.value||today,ym=new Date((cur||today)+'T00:00:00');ym.setDate(1);
+    const o=document.createElement('div');o.id='dpO';o.innerHTML='<div class="dpc"><div class="dph"><button data-m="-12">«</button><button data-m="-1">‹</button><b></b><button data-m="1">›</button><button data-m="12">»</button></div><div class="dpg"></div><div class="dpf"><button data-a="x">Болих</button>'+(inp.required?'':'<button data-a="c">Арилгах</button>')+'<button data-a="t" class="p">Өнөөдөр</button></div></div>';document.body.appendChild(o);
+    const draw=()=>{o.querySelector('.dph b').textContent=ym.getFullYear()+' оны '+(ym.getMonth()+1)+'-р сар';const f=(ym.getDay()+6)%7,n=new Date(ym.getFullYear(),ym.getMonth()+1,0).getDate(),mn=inp.min||'',mx=inp.max||'';
+      let h=['Да','Мя','Лх','Пү','Ба','Бя','Ня'].map(x=>'<i>'+x+'</i>').join('')+'<span></span>'.repeat(f);for(let d=1;d<=n;d++){const v=ym.getFullYear()+'-'+p2(ym.getMonth()+1)+'-'+p2(d);h+='<button data-d="'+v+'" class="'+(v===cur?'s ':'')+(v===today?'t':'')+'"'+((mn&&v<mn)||(mx&&v>mx)?' disabled':'')+'>'+d+'</button>'}o.querySelector('.dpg').innerHTML=h};
+    const set=v=>{o.remove();if(v===inp.value)return;inp.value=v;inp.dispatchEvent(new Event('input',{bubbles:true}));inp.dispatchEvent(new Event('change',{bubbles:true}))};
+    o.addEventListener('click',e=>{e.stopPropagation();if(e.target===o)return o.remove();const b=e.target.closest('button');if(!b)return;if(b.dataset.m){ym.setMonth(ym.getMonth()+ +b.dataset.m);draw()}else if(b.dataset.d)set(b.dataset.d);else if(b.dataset.a==='t')set(today);else if(b.dataset.a==='c')set('');else o.remove()});draw()}
+  document.addEventListener('click',e=>{const i=e.target.closest&&e.target.closest('input[type=date][data-dp]');if(!i)return;e.preventDefault();open(i)},true);
+})();
 </script>
 </body>
 </html>
