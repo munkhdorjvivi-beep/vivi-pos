@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="15.9">
+<meta name="vivi-ver" content="16.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -933,11 +933,15 @@ async function dfUndo(key,k,i){if(!dfAdm())return alert('Зөвхөн админ
     try{await auditCfg('diff_undo',{no:x.no||'',key,code:k,act:a.act,qty:q,why:why.trim(),doc:a.docNo||a.ship||''})}catch(e){}
   }catch(e){alert('Цуцалсангүй: '+(e.code||e.message||e))}finally{busy(false)}}
 // ---- Тооллого ↔ зөрүү: тухайн мөрийн сүүлийн тооллого, дүгнэлт, автомат хаалт ----
-function dfCntT(D,l){
-  const rc=l.acts.filter(a=>a.act==='recount'&&a.task).map(a=>DF.tasks[a.task]).filter(t=>t&&t.status!=='cancelled');
-  // өөр (гараар, бүсээр) тооллого: тухайн дэлгүүрт, хүлээн авснаас хойш, энэ код орсон, тоолсон/баталсан
-  if(!rc.length){const ot=Object.values(DF.tasks).filter(t=>t.store===D.to&&['counted','applied'].includes(t.status)&&String(t.countedAt||t.created||'')>=String(D.at)&&(()=>{try{return JSON.parse(t.codes||'[]').some(x=>x[0]===l.code)}catch(e){return false}})()).sort((a,b)=>String(a.countedAt).localeCompare(String(b.countedAt)));if(ot.length)rc.push(ot[ot.length-1])}
-  return rc[rc.length-1]||null}
+function dfCntT(D,l){const has=t=>{try{return JSON.parse(t.codes||'[]').some(x=>x[0]===l.code)}catch(e){return false}};
+  // энэ мөрийн дахин тоолуулах даалгавар + өөр (гараар, бүсээр) тооллого: тухайн дэлгүүрт, хүлээн авснаас хойш, энэ код орсон
+  const M=new Map();l.acts.filter(a=>a.act==='recount'&&a.task).forEach(a=>{const t=DF.tasks[a.task];if(t&&t.status!=='cancelled')M.set(t.uid||a.task,t)});
+  Object.values(DF.tasks).forEach(t=>{if(t.store===D.to&&['counted','applied'].includes(t.status)&&String(t.countedAt||t.created||'')>=String(D.at)&&has(t))M.set(t.uid,t)});
+  const T=[...M.values()],ts=t=>String(t.countedAt||t.created||t.at||'');
+  // ХАМГИЙН СҮҮЛИЙН бодит тооллого үнэн: баталсан тооллогуудаас сүүлийнх; түүнээс хойш үүссэн хүлээгдэж буй тооллого байвал түүнийг хүлээнэ
+  const ap=T.filter(t=>t.status==='applied').sort((x,y)=>ts(x).localeCompare(ts(y))),la=ap[ap.length-1]||null;
+  const pe=T.filter(t=>t.status!=='applied'&&(!la||ts(t)>ts(la))).sort((x,y)=>ts(x).localeCompare(ts(y)));
+  return pe.length?pe[pe.length-1]:la}
 // БОДИТ тоолсон тоог (тоолсон ш) илгээсэн/ирсэнтэй харьцуулна. fq = тооллогоор тайлбарлагдсан, хараахан хаагаагүй ш (давхар уншуулсан / олдсон)
 function dfCntV(D,l,t){const v={rr:null,ph:0,sy:0,real:0,fake:0,found:0,lost:0,fq:0};if(!t||t.status!=='applied')return v;
   try{const rw=(t.res||{}).rows,rows=typeof rw==='string'?JSON.parse(rw||'[]'):(rw||[]);v.rr=rows.find(x=>x[0]===l.code)||null}catch(e){}
@@ -2604,7 +2608,11 @@ async function cntResult(t){await loadPCat().catch(()=>{});const loc=t.store,od=
     '<div id="cr_m" class="small hot" style="min-height:18px;margin-top:6px"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="cr_p">🖨 Акт хэвлэх</button><button class="btn" id="cr_x">Хаах</button>'+(t.status==='counted'&&R.some(r=>r.d)?'<button class="btn pri" id="cr_ok">Зөрүүг засах (тооллогын баримт)</button>':'')+(t.status==='counted'&&!R.some(r=>r.d)?'<button class="btn pri" id="cr_ok">Хаах (зөрүүгүй)</button>':'')+'</div>';
   $('pm').classList.remove('hide');$('cr_x').onclick=pClose;$('cr_p').onclick=()=>cntAct({...t,res:t.res||res,result:t.result||dx.replace(/<[^>]+>/g,'')});
   if(t.countedAt<O.asOf&&$('cr_ok')){$('cr_ok').disabled=true;$('cr_m').textContent='Энэ тооллого үлдэгдэл хаасан огнооноос ('+lt(O.asOf)+') өмнө хийгдсэн тул засах боломжгүй — дахин тоолуулна уу.'}
-  if($('cr_ok'))$('cr_ok').onclick=async()=>{$('cr_ok').disabled=true;const by=auth.currentUser.email||'',at=new Date().toISOString(),lines=R.filter(r=>r.d).map(r=>[r.c,r.d,r.nm]),plain=dx.replace(/<[^>]+>/g,'');
+  if($('cr_ok'))$('cr_ok').onclick=async()=>{$('cr_ok').disabled=true;const by=auth.currentUser.email||'',at=new Date().toISOString(),plain=dx.replace(/<[^>]+>/g,'');
+    // энэ тооллогоос ХОЙШ тоолж баталсан бараа: хуучин тооллогоор засвал шинэ тооллогын үр дүн эвдэрнэ → тэр барааг засахгүй
+    let newer=new Map();try{(await db.collection('pos_counts').where('store','==',loc).get()).docs.forEach(d=>{const x=d.data();if(d.id===t.uid||x.status!=='applied'||String(x.countedAt||'')<=String(t.countedAt||''))return;try{JSON.parse(x.codes||'[]').forEach(c=>newer.set(c[0],x))}catch(e){}})}catch(e){console.warn('newer',e)}
+    const skip=R.filter(r=>r.d&&newer.has(r.c));if(skip.length&&!confirm('⚠ '+skip.length+' бараа энэ тооллогоос ХОЙШ дахин тоолж баталсан:\n'+skip.slice(0,8).map(r=>r.c+' '+r.nm+' ('+lt(newer.get(r.c).countedAt||'')+')').join('\n')+'\n\nЭдгээрийг энэ (хуучин) тооллогоор ЗАСАХГҮЙ — шинэ тооллого үнэн. Үргэлжлүүлэх үү?')){$('cr_ok').disabled=false;return}
+    const lines=R.filter(r=>r.d&&!newer.has(r.c)).map(r=>[r.c,r.d,r.nm]);
     try{let docUid='';if(lines.length){docUid='adj_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
         await db.collection('pos_stock_docs').doc(docUid).set({uid:docUid,type:'adj',from:'',to:loc,at:t.countedAt,note:'Тооллого (даалгавар) · '+(t.title||'')+' · '+(t.countedBy||''),file:'',lines:JSON.stringify(lines),count:lines.length,qty:lines.reduce((a,x)=>a+x[1],0),costSum:Math.round(lines.reduce((a,x)=>a+(costMap.get(x[0])||0)*x[1],0)),by,saved:at,task:t.uid})}
       // Firestore-д массив дотор массив хадгалж болохгүй (invalid-argument) → мөрүүдийг JSON текстээр; undefined утгыг хасна
