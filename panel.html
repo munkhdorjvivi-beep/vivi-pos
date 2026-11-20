@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="15.8">
+<meta name="vivi-ver" content="15.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -804,10 +804,10 @@ async function dfQr(D,l,tk){const sh=DF.ships.find(x=>x.id===D.srcId);if(!sh)ret
   const by=auth.currentUser.email||'',at=new Date().toISOString();busy(true,'Засаж байна…');
   try{await db.collection('wh_ship').doc(sh.id).update({r,rq:n,cmp:{ok:!miss&&!extra,sent:Object.values(L).reduce((a,x)=>a+Math.max(0,+x||0),0),recv:n,miss,extra},status:sh.status==='closed'?'closed':(!miss&&!extra?'recv':'diff'),fixBy:by,fixAt:at});
     await dfSave(D,tk,{act:'qr',qty:q,by,at,note:'QR '+l.k});await lppSync(false)}catch(e){alert('Алдаа: '+(e.code||e.message||e))}finally{busy(false)}}
-function dfLine(k,code,name,sent,recv,acts,rs){acts=acts||[];rs=rs||[];const d=recv-sent,done=acts.filter(a=>DF_FIN.includes(a.act)&&!(a.act==='wh'&&a.ship)).reduce((a,x)=>a+(+x.qty||0),0);
+function dfLine(k,code,name,sent,recv,acts,rs){const all=acts||[];all.forEach((a,j)=>a._i=j);acts=all.filter(a=>!a.undone);const undo=all.filter(a=>a.undone);rs=rs||[];const d=recv-sent,done=acts.filter(a=>DF_FIN.includes(a.act)&&!(a.act==='wh'&&a.ship)).reduce((a,x)=>a+(+x.qty||0),0);
   // дахин илгээсэн: дэлгүүр хүлээн авсан бол энэ мөр шийдэгдэнэ (дутуу гарвал тэр илгээмжийн зөрүү болж тусад нь шийдвэрлэнэ); замд байвал хүлээгдэж байна
   const rsRecv=d<0?rs.filter(x=>x.st!=='sent').reduce((a,x)=>a+x.q,0):0,rsWait=d<0?rs.filter(x=>x.st==='sent').reduce((a,x)=>a+x.q,0):0,need=Math.max(0,Math.abs(d)-done-rsRecv);
-  return {k,code,name,sent,recv,d,acts,rs,rsRecv,wait:Math.min(need,rsWait),left:Math.max(0,need-rsWait)}}
+  return {k,code,name,sent,recv,d,acts,undo,rs,rsRecv,wait:Math.min(need,rsWait),left:Math.max(0,need-rsWait)}}
 function dfBadge(){if(!dfView())return;const I=dfItems(),open=I.reduce((a,D)=>a+D.open,0),old=I.filter(D=>D.open&&D.days>=3).reduce((a,D)=>a+D.open,0);DF.open=open;DF.old=old;
   stkBan();dfAuto(I)}
 // таарах мөр: нэг дэлгүүрт дутуу ↔ өөр дэлгүүрт илүү (ижил код)
@@ -900,6 +900,38 @@ async function dfNet(xk){const I=dfItems(),D=I.find(x=>x.key===DF.sel),w=D&&dfWa
   if(!confirm(w.net.length+' бараа: '+D.no+' ба '+w.X.no+' хоёр илгээмжийн нэгд илүү, нөгөөд дутуу гарсан. Хоёулаа '+(LOC[D.to]||D.to)+'-д ирсэн тул нийтдээ зөрүүгүй — тэнцүүлж хаах уу? (үлдэгдэл өөрчлөгдөхгүй)'))return;
   const a=[],b=[];w.net.forEach(([l,y])=>{const n=Math.min(l.left,y.left);a.push([l.k,{act:'same',qty:n,by,at,pair:w.X.key,docNo:w.X.no}]);b.push([y.k,{act:'same',qty:n,by,at,pair:D.key,docNo:D.no}])});
   try{await dfSaveMany(D,a);await dfSaveMany(w.X,b)}catch(e){alert('Алдаа: '+(e.code||e))}}
+// ---- ↶ Шийдвэр цуцлах (зөвхөн админ): шийдвэр + түүний үр дагаврыг буцаана, архивт «цуцалсан» гэж үлдэнэ ----
+const dfAdm=()=>!!(ME&&ME.admin);
+async function dfUndo(key,k,i){if(!dfAdm())return alert('Зөвхөн админ цуцална');const x=DF.res[key];if(!x)return;let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}const a=(res[k]||[])[i];if(!a||a.undone)return;
+  const by=auth.currentUser.email||'',at=new Date().toISOString(),q=+a.qty||0,nm=DF_ACT[a.act]||a.act,where=LOC[x.to]||x.to;
+  // холбоотой бусад шийдвэр: ижил баримт (бөөнөөр хийсэн), хос мөр (шилжүүлэг / тэнцүүлэлт)
+  const T=[];Object.entries(DF.res).forEach(([kk,X])=>{let R={};try{R=JSON.parse(X.res||'{}')}catch(e){}Object.entries(R).forEach(([lk,L])=>L.forEach((b,j)=>{if(b.undone)return;const self=kk===key&&lk===k&&j===i;
+    if(self||(a.doc&&b.doc===a.doc)||(a.act==='same'&&b.act==='same'&&kk===a.pair&&b.pair===key&&b.at===a.at)||(a.act==='pair'&&b.act==='pair'&&b.doc===a.doc))T.push({kk,lk,j,b,no:X.no})}))});
+  let eff='',doc=null,sh=null;
+  if(a.doc){doc=movAll.find(m=>m.uid===a.doc);if(!doc)return alert('Баримт '+(a.docNo||a.doc)+' олдсонгүй');
+    if(doc.type==='move'&&doc.status==='received')return alert('Шилжүүлэг '+(doc.no||'')+' аль хэдийн хүлээн авсан тул цуцлах боломжгүй.\nБараа бодитоор очсон — буцаах бол «Шилжүүлэг»-ээр урвуу шилжүүлэг хийнэ үү.');
+    if(doc.status!=='cancel')eff='• Баримт '+(doc.no||'')+' цуцлагдана → '+(doc.type==='move'?'бараа '+(LOC[doc.from]||doc.from)+'-ийн үлдэгдэлд буцаж орно, '+(LOC[doc.to]||doc.to)+' руу орохгүй':doc.type==='out'?where+'-ийн үлдэгдэлд '+q+' ш буцаж нэмэгдэнэ':'үлдэгдлийн засвар буцна')+(T.length>1?' (энэ баримтад '+T.length+' мөр — бүгд цуцлагдана)':'')}
+  else if(a.act==='wh'&&a.ship){sh=DF.ships.find(s=>s.id===a.ship);if(sh&&(sh.status!=='sent'||(+sh.rq||0)>0))return alert('Дахин илгээсэн '+(sh.no||'')+'-ийг '+where+' аль хэдийн хүлээн авсан тул цуцлах боломжгүй.');
+    eff='• Дахин илгээх илгээмж '+(a.docNo||'')+' устгагдана (агуулах ачаанд хийгээгүй эсэхийг шалгана уу!)'}
+  else if(a.act==='qr')eff='• QR засвар буцна: '+q+' ш дахин «'+String(a.note||'').replace(/^QR /,'')+'» мөрөнд, '+k+'-ээс хасагдана';
+  else if(a.act==='accept')eff='• Агуулахын тэнцэлд хассан '+q+' ш буцна';
+  else if(a.act==='loss')eff='• Хохирлын бүртгэлээс хасагдана';
+  else if(a.act==='recounted')eff='• Тооллогын үлдэгдлийн засвар хэвээр (бодит тоолсон тоо) — зөвхөн шийдвэр нээгдэнэ, автоматаар дахин хаахгүй';
+  else eff='• Үлдэгдэл өөрчлөгдөхгүй';
+  const why=prompt('↶ ЦУЦЛАХ: '+(x.no||'')+' · '+nm+' '+q+' ш\n\n'+eff+'\n• Мөр дахин нээгдэж, шинэ шийдвэр гаргана. Архивт «цуцалсан» гэж үлдэнэ.\n\nЦуцлах шалтгаан (заавал):','');if(why==null)return;if(why.trim().length<3)return alert('Шалтгаан бичнэ үү');
+  busy(true,'Цуцалж байна…');
+  try{if(doc&&doc.status!=='cancel')await db.collection('pos_stock_docs').doc(doc.uid).update({status:'cancel',cancelBy:by,cancelAt:at,cancelNote:'Зөрүүний шийдвэр цуцалсан: '+why.trim()});
+    if(sh){const raw=Object.keys(sh.l||{})[0];await db.collection('wh_ship').doc(sh.id).delete();const o=DF.ships.find(s=>s.id===sh.resendOf);
+      if(o&&raw&&o.res&&o.res[raw]&&o.res[raw].how==='resend'&&!DF.ships.some(s=>s.id!==sh.id&&s.resendOf===o.id&&(s.l||{})[raw])){const r2={...o.res};delete r2[raw];await db.collection('wh_ship').doc(o.id).update({res:r2})}}
+    if(a.act==='qr'){const S0=DF.ships.find(s=>s.id===(DF.res[key].srcId||key.slice(2)));if(S0){const raw=kk=>Object.keys(S0.r||{}).find(z=>Object.keys(lppDec({[z]:1}))[0]===kk)||Object.keys(S0.l||{}).find(z=>Object.keys(lppDec({[z]:1}))[0]===kk)||dfEk(kk);
+      const r={...(S0.r||{})},t=raw(k),f=raw(String(a.note||'').replace(/^QR /,''));r[t]=(+r[t]||0)-q;if(r[t]<=0)delete r[t];r[f]=(+r[f]||0)+q;
+      const L=lppDec(S0.l),G=lppDec(r);let miss=0,extra=0,n=0;new Set([...Object.keys(L),...Object.keys(G)]).forEach(e=>{const d=Math.max(0,+G[e]||0)-Math.max(0,+L[e]||0);if(d<0)miss-=d;else extra+=d});Object.values(G).forEach(v=>n+=Math.max(0,+v||0));
+      await db.collection('wh_ship').doc(S0.id).update({r,rq:n,cmp:{ok:!miss&&!extra,sent:Object.values(L).reduce((s2,v)=>s2+Math.max(0,+v||0),0),recv:n,miss,extra},status:S0.status==='closed'?'closed':(!miss&&!extra?'recv':'diff'),fixBy:by,fixAt:at});await lppSync(false)}}
+    const G2=new Map();T.forEach(t=>(G2.get(t.kk)||G2.set(t.kk,[]).get(t.kk)).push(t));
+    for(const [kk,L] of G2){const ref=db.collection('pos_diff').doc(kk);await db.runTransaction(async tx=>{const cur=await tx.get(ref),R=cur.exists?JSON.parse((cur.data()||{}).res||'{}'):{};
+      L.forEach(t=>{const b=(R[t.lk]||[])[t.j];if(b&&!b.undone&&b.act===t.b.act&&b.at===t.b.at)b.undone={by,at,why:why.trim()}});tx.set(ref,{res:JSON.stringify(R),updated:at,updatedBy:by},{merge:true})})}
+    try{await auditCfg('diff_undo',{no:x.no||'',key,code:k,act:a.act,qty:q,why:why.trim(),doc:a.docNo||a.ship||''})}catch(e){}
+  }catch(e){alert('Цуцалсангүй: '+(e.code||e.message||e))}finally{busy(false)}}
 // ---- Тооллого ↔ зөрүү: тухайн мөрийн сүүлийн тооллого, дүгнэлт, автомат хаалт ----
 function dfCntT(D,l){
   const rc=l.acts.filter(a=>a.act==='recount'&&a.task).map(a=>DF.tasks[a.task]).filter(t=>t&&t.status!=='cancelled');
@@ -915,34 +947,35 @@ function dfCntV(D,l,t){const v={rr:null,ph:0,sy:0,real:0,fake:0,found:0,lost:0,f
   return v}
 // Баталсан тооллогоор тайлбарлагдсан хэсгийг автоматаар хаана (шийдвэр тооллого дээр гарсан тул дахин батлах шаардлагагүй)
 async function dfAuto(I){if(!dfCan()||!DF.ld||DF.ld.size<3||!auth.currentUser)return;DF._auto=DF._auto||new Set();const by=auth.currentUser.email||'';
-  for(const D of I){const arr=[];D.lines.forEach(l=>{if(!l.left)return;const t=dfCntT(D,l);if(!t||t.status!=='applied')return;const v=dfCntV(D,l,t);if(!v.fq)return;const g=D.key+'|'+l.k+'|'+t.uid+'|'+(l.acts.length);if(DF._auto.has(g))return;DF._auto.add(g);
+  for(const D of I){const arr=[];D.lines.forEach(l=>{if(!l.left||(l.undo||[]).length)return;const t=dfCntT(D,l);if(!t||t.status!=='applied')return;const v=dfCntV(D,l,t);if(!v.fq)return;const g=D.key+'|'+l.k+'|'+t.uid+'|'+(l.acts.length);if(DF._auto.has(g))return;DF._auto.add(g);
       arr.push([l.k,{act:'recounted',qty:v.fq,by,at:new Date().toISOString(),task:t.uid,auto:1,cause:l.d>0?'dblscan':'notscan',cnote:'автомат — тооллого ('+lt(t.countedAt||'')+'): тоолсон '+v.ph+' ш'}])});
     if(!arr.length)continue;
     try{const ref=db.collection('pos_diff').doc(D.key);await db.runTransaction(async tx=>{const cur=await tx.get(ref),res=cur.exists?JSON.parse((cur.data()||{}).res||'{}'):{};let n=0;
         arr.forEach(([k,a])=>{const ex=(res[k]||[]).some(x=>x.act==='recounted'&&x.task===a.task);if(ex)return;(res[k]=res[k]||[]).push(a);n++});if(!n)return;
         tx.set(ref,{key:D.key,src:D.src,srcId:D.srcId,no:D.no,from:D.from,to:D.to,at:D.at,res:JSON.stringify(res),updated:arr[0][1].at,updatedBy:by},{merge:true})})}
     catch(e){console.warn('dfAuto',e);arr.forEach(([k])=>{[...DF._auto].filter(g=>g.startsWith(D.key+'|'+k+'|')).forEach(g=>DF._auto.delete(g))})}}}
-function dfActs(I,D,l,i,ce,wh){const done=l.acts.map((a,ai)=>'<div class="small">✓ '+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':'')+(a.act!=='recount'?' · <b>шалтгаан:</b> '+(a.cause?esc(DF_CZ[a.cause]||a.cause)+(a.cnote?' ('+esc(a.cnote)+')':''):'<i>бичээгүй</i>')+(ce?' <a href="#" data-dfce="'+esc(D.key)+'|'+esc(l.k)+'|'+ai+'" title="Шалтгаан засах">✎</a>':''):'')+(a.resp?' · хариуцагч: '+esc(DF_RESP[a.resp]||a.resp):'')+(a.note?' · '+esc(a.note):'')+(a.docNo?' · '+esc(a.docNo):'')+' <span style="color:#8a93a0">('+esc(String(a.by||'').split('@')[0])+', '+esc(lt(a.at))+')</span></div>').join('');
+function dfActs(I,D,l,i,ce,wh){const done=l.acts.map((a,ai)=>'<div class="small">✓ '+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':'')+(a.act!=='recount'?' · <b>шалтгаан:</b> '+(a.cause?esc(DF_CZ[a.cause]||a.cause)+(a.cnote?' ('+esc(a.cnote)+')':''):'<i>бичээгүй</i>')+(ce?' <a href="#" data-dfce="'+esc(D.key)+'|'+esc(l.k)+'|'+a._i+'" title="Шалтгаан засах">✎</a>':''):'')+(dfAdm()&&a.act!=='recount'?' <a href="#" class="hot" data-dfu="'+esc(D.key)+'|'+esc(l.k)+'|'+a._i+'" title="Шийдвэрийг цуцлах (зөвхөн админ)">↶ цуцлах</a>':'')+(a.resp?' · хариуцагч: '+esc(DF_RESP[a.resp]||a.resp):'')+(a.note?' · '+esc(a.note):'')+(a.docNo?' · '+esc(a.docNo):'')+' <span style="color:#8a93a0">('+esc(String(a.by||'').split('@')[0])+', '+esc(lt(a.at))+')</span></div>').join('')+
+    (l.undo||[]).map(a=>'<div class="small" style="color:#8a93a0"><s>'+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':'')+'</s> — ↶ <b>цуцалсан</b>: '+esc(String(a.undone.by||'').split('@')[0])+', '+esc(lt(a.undone.at))+(a.undone.why?' · '+esc(a.undone.why):'')+'</div>').join('');
   const RT={resend:'Олдсон — дахин илгээнэ',lost:'Олдсонгүй (акт)',keep:'Илүү — дэлгүүрт үлдээнэ',back:'Илүү — агуулах руу буцаана',other:'Бусад'};
   const rsH=(l.d<0?l.rs:[]).map(x=>x.st==='sent'?'<div class="small" style="color:#b35c00">🚚 Агуулахаас дахин илгээсэн '+x.q+' ш · <b>'+esc(x.no)+'</b> — '+esc(LOC[D.to]||D.to)+' хүлээн аваагүй ('+esc(lt(x.at))+')</div>':'<div class="small">✓ Агуулахаас дахин илгээсэн '+x.q+' ш · '+esc(x.no)+' — дэлгүүр хүлээн авсан'+(x.g<x.q?' <b class="hot">(тэнд '+(x.q-x.g)+' ш дахин дутуу — тэр илгээмжээр шийдвэрлэнэ)</b>':'')+'</div>').join('')+
     (l.whr&&l.whr.how&&!(l.whr.how==='resend'&&l.rs.length)?'<div class="small">🏬 Агуулахын тэмдэглэл: '+esc(RT[l.whr.how]||l.whr.how)+(l.whr.note?' · '+esc(l.whr.note):'')+'</div>':'');
   const hl=' <a href="#" class="small" data-dfs="'+esc(D.key)+'|'+esc(l.k)+'" title="Энэ зөрүүний бүх үйл явдал">📒 түүх</a> · <a href="#" class="small" data-dfh="'+esc(l.code)+'|'+esc(D.to)+'" title="Барааны хөдөлгөөний түүх">📜 хөдөлгөөн</a>';
   if(!l.left)return done+rsH+hl;const b=(act,txt,cls)=>'<button class="btn'+(cls?' '+cls:'')+'" style="min-height:28px;padding:2px 8px;margin:2px 4px 2px 0" data-dfa="'+act+'" data-dfk="'+esc(D.key)+'" data-dfi="'+i+'">'+txt+'</button>';
-  const last=dfCntT(D,l);let pend='';
+  const last=dfCntT(D,l),lock=!!last&&!(l.undo||[]).length;let pend='';
   if(last){const st=last.status;if(st==='applied'){const v=dfCntV(D,l,last),dt=esc(lt(last.countedAt||'')),cav='<div class="small muted" style="margin:1px 0">⚠ Хүлээн авснаас хойш зарагдсан бол тоолсон тоо бага гарна — «📜 хөдөлгөөн»-өөс шалгана уу.</div>';
       if(!v.rr)pend='<div class="small" style="margin:2px 0">📋 Тооллого ('+dt+') баталсан, гэхдээ энэ бараа тооллогын мөрөнд алга — дахин тоолуулна уу.</div>';
-      else{const hd='<div class="small" style="margin:2px 0">📋 Тооллого ('+dt+'): систем '+v.sy+', <b>тоолсон '+v.ph+' ш</b> · илгээсэн '+l.sent+', ирсэн гэж уншуулсан '+l.recv+' → ',au=v.fq?'<div class="small" style="margin:2px 0">⏳ Тооллогоор тайлбарлагдсан '+v.fq+' ш автоматаар хаагдаж байна…</div>':'';
+      else{const hd='<div class="small" style="margin:2px 0">📋 Тооллого ('+dt+'): систем '+v.sy+', <b>тоолсон '+v.ph+' ш</b> · илгээсэн '+l.sent+', ирсэн гэж уншуулсан '+l.recv+' → ',au=v.fq&&lock?'<div class="small" style="margin:2px 0">⏳ Тооллогоор тайлбарлагдсан '+v.fq+' ш автоматаар хаагдаж байна…</div>':'';
         if(l.d>0)pend=hd+(!v.fake?'<b>илүү бараа бодитоор ирсэн</b> (агуулах илүү явуулсан) → доорх товчоор шийдвэрлэнэ.':!v.real?'<b>илүү бараа БАЙХГҮЙ</b> — тоолсон тоо илгээсэнтэй тэнцүү, <b>давхар уншуулсан</b>. Дэлгүүрийн үлдэгдэл '+v.ph+' ш болж зассан, агуулах хэвээр.':'<b>'+v.real+' ш нь бодитоор илүү</b> ирсэн, <b>'+v.fake+' ш нь давхар уншуулсан</b> (тооллогоор хаагдана).')+'</div>'+cav+au;
         else pend=hd+(!v.lost?'<b>бүгд олдсон</b> — тоолохдоо уншуулаагүй байсан. Үлдэгдэл '+v.ph+' ш болж зассан.':!v.found?'<b>олдсонгүй</b> — дэлгүүрт '+v.lost+' ш байхгүй → доорх товчоор шийдвэрлэнэ.':'<b>'+v.found+' ш олдсон</b> (тооллогоор хаагдана), <b>'+v.lost+' ш олдсонгүй</b>.')+'</div>'+cav+au}}
     else pend='<div class="small" style="margin:2px 0">📋 '+esc(LOC[last.store]||last.store)+'-д дахин тоолуулж байна — '+(st==='counted'?'<b>касс тоолсон</b></div>'+(ce?b('cres:'+last.uid,'📋 Тооллогын үр дүнг харах, батлах','pri'):''):'касс тоолоогүй</div>')}
   // QR код уншуулсан (баркодын оронд) → тухайн илгээмжийн дутуу бараатай тааруулж, тоолсныг засна
   if(ce&&D.src==='lpp'&&l.d>0&&dfIsQr(l.k)){const Q=dfQrCands(D,l);return done+rsH+'<div class="small hot" style="margin:2px 0">⛔ Баркод биш — шошгоны <b>QR / DataMatrix (дөрвөлжин) код</b> уншуулсан байна</div>'+(Q.map(x=>b('qr:'+x.k,'🔗 '+esc(x.code)+' '+esc(x.name)+' — энэ барааных','pri')).join('')||'')+b('qr:?','🔗 Аль барааных вэ? (баркод оруулах)')}
   // тооллого хийгдэж байгаа / баталсан бол: зөвхөн тооллогын дүгнэлтэд тохирох шийдвэр (буруу товч харуулахгүй)
-  if(last&&last.status!=='applied')return done+rsH+pend+'<div class="small" style="margin:2px 0">Шийдэх: <b>'+l.left+' ш</b> — тооллогын үр дүнг хүлээж байна'+hl+'</div>';
-  if(last){const v=dfCntV(D,l,last);if(v.rr&&l.left<=v.fq)return done+rsH+pend+hl}
+  if(lock&&last.status!=='applied')return done+rsH+pend+'<div class="small" style="margin:2px 0">Шийдэх: <b>'+l.left+' ш</b> — тооллогын үр дүнг хүлээж байна'+hl+'</div>';
+  if(lock){const v=dfCntV(D,l,last);if(v.rr&&l.left<=v.fq)return done+rsH+pend+hl}
   let btn='';if(ce){const P=dfPairs(I,D,l);P.slice(0,3).forEach((p,j)=>{btn+=b('pair:'+j,l.d<0?'🔁 '+esc(LOC[p.X.to]||p.X.to)+'-д илүү гарсан → энд шилжүүлэх':'🔁 '+esc(LOC[p.X.to]||p.X.to)+'-д дутуу → тийш шилжүүлэх','pri')});
-    if(!last)btn+=b('recount','📋 '+esc(LOC[D.to]||D.to)+'-д дахин тоолуулах');
-    if(D.src==='lpp'){const cf=!!last;btn+=l.d<0?b('wh','🏬 Агуулахад үлдсэн → дахин илгээх',cf?'pri':'')+b('loss','✖ Хохирол'):b('accept','✓ Агуулахаас ирсэн — хүлээн авах',cf?'pri':'')+b('ret','↩ LPP агуулах руу буцааж өгөх')}
+    if(!lock)btn+=b('recount','📋 '+esc(LOC[D.to]||D.to)+'-д дахин тоолуулах');
+    if(D.src==='lpp'){const cf=lock;btn+=l.d<0?b('wh','🏬 Агуулахад үлдсэн → дахин илгээх',cf?'pri':'')+b('loss','✖ Хохирол'):b('accept','✓ Агуулахаас ирсэн — хүлээн авах',cf?'pri':'')+b('ret','↩ LPP агуулах руу буцааж өгөх')}
     else btn+=l.d<0?b('sender','↩ Илгээгчид үлдсэн (илгээгчид буцааж нэмэх)')+b('loss','✖ Хохирол'):b('sender','✓ Илгээгч илүү явуулсан (илгээгчээс хасах)')+b('ret','↩ Илгээгч рүү буцааж шилжүүлэх')}
   else if(wh&&D.src==='lpp'&&l.d<0)btn=b('wh','🏬 Агуулахад үлдсэн → дахин илгээх');
   return done+rsH+pend+'<div class="small" style="margin:2px 0">Шийдэх: <b>'+l.left+' ш</b>'+hl+'</div>'+btn}
@@ -956,7 +989,7 @@ function dfCauseAsk(def,info){return new Promise(done=>{$('pbox').innerHTML='<h3
 async function dfCauseEdit(key,k,i){const x=DF.res[key];if(!x)return;let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}const a=(res[k]||[])[i];if(!a)return;
   const cz=await dfCauseAsk(a.cause||dfCauseDef(a.act),'Шалтгааныг засах: '+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':''));if(!cz)return;a.cause=cz.cause;a.cnote=cz.cnote;a.czBy=auth.currentUser.email||'';a.czAt=new Date().toISOString();
   try{await db.collection('pos_diff').doc(key).set({res:JSON.stringify(res)},{merge:true})}catch(e){alert('Алдаа: '+(e.code||e))}}
-function dfCzRows(){const A=$('dfCA').value,B=$('dfCB').value,R=[];Object.values(DF.res).forEach(x=>{let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}Object.entries(res).forEach(([k,L])=>L.forEach(a=>{if(a.act==='recount')return;const d=lt(a.at).slice(0,10);if(A&&d<A||B&&d>B)return;
+function dfCzRows(){const A=$('dfCA').value,B=$('dfCB').value,R=[];Object.values(DF.res).forEach(x=>{let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}Object.entries(res).forEach(([k,L])=>L.forEach(a=>{if(a.act==='recount'||a.undone)return;const d=lt(a.at).slice(0,10);if(A&&d<A||B&&d>B)return;
   const it=itRow(a.code||k)||{};R.push([lt(a.at),LOC[x.to]||x.to,x.no,x.src==='lpp'?'LPP':'Шилжүүлэг',a.code||((itRow(k)||{}).code)||k,a.name||it.name||'',DF_ACT[a.act]||a.act,+a.qty||0,DF_CZ[a.cause]||'— (бичээгүй)',a.cnote||a.note||'',a.resp?DF_RESP[a.resp]||a.resp:'',String(a.by||'').split('@')[0]])}))});return R.sort((a,b)=>a[0]<b[0]?1:-1)}
 function dfCzDraw(){const R=dfCzRows(),S=new Map();R.forEach(r=>{const o=S.get(r[8])||{n:0,q:0};o.n++;o.q+=r[7];S.set(r[8],o)});
   $('dfCzS').innerHTML=[...S.entries()].sort((a,b)=>b[1].q-a[1].q).map(([c,o])=>'<span class="chip" style="margin:2px">'+esc(c)+': <b>'+o.q+' ш</b> ('+o.n+')</span>').join('')||'<span class="small">Мэдээлэл алга</span>';
@@ -991,6 +1024,7 @@ function dfStoryEv(D,l){const E=[],lpp=D.src==='lpp',sh=lpp?DF.ships.find(x=>x.i
     else if(a.act==='sender'){note=(note?note+' · ':'')+'илгээгчийн үлдэгдэл '+(l.d<0?'+':'−')+q}
     E.push([a.at,ev,null,null,null,st,wh,a.act==='recount'?'':cz(a),note,String(a.by||'').split('@')[0]])});
   (l.rs||[]).forEach(x=>{E.push([x.at,'Агуулахаас дахин илгээсэн '+x.no,x.q,x.st==='sent'?null:x.g,null,x.st==='sent'?0:x.g,-x.q,'',x.st==='sent'?'замд':'дэлгүүр хүлээн авсан',''])});
+  (l.undo||[]).forEach(a=>E.push([a.undone.at,'↶ Цуцалсан шийдвэр: '+(DF_ACT[a.act]||a.act)+' '+(+a.qty||0)+' ш',null,null,null,0,null,'',(a.undone.why||'')+(a.docNo?' · '+a.docNo+' цуцалсан':''),String(a.undone.by||'').split('@')[0]]));
   return E.sort((a,b)=>String(a[0]||'').localeCompare(String(b[0]||'')))}
 function dfStoryTxt(D,l){const E=dfStoryEv(D,l),st=E.reduce((a,e)=>a+(+e[5]||0),0),wh=E.reduce((a,e)=>a+(+e[6]||0),0),lpp=D.src==='lpp',fin=l.acts.filter(a=>a.act!=='recount');
   let t=(lpp?'Агуулах':(LOC[D.from]||D.from))+' '+l.sent+' ш илгээсэн, '+(LOC[D.to]||D.to)+' '+l.recv+' ш хүлээн авсан ('+(l.d>0?'+':'')+l.d+').';
@@ -1048,7 +1082,7 @@ function dfLoss(D,l){const c=costMap.has(l.code)?costMap.get(l.code):null,p=(itR
   $('dfOk').onclick=async()=>{const q=Math.round(+$('dfQ').value),r=$('dfR').value,n=$('dfN').value.trim();if(!(q>0&&q<=l.left))return $('dfM').textContent='Тоо 1–'+l.left;if(!r)return $('dfM').textContent='Хариуцагчийг сонгоно уу';if(n.length<4)return $('dfM').textContent='Тайлбар бичнэ үү';
     $('dfOk').disabled=true;try{await dfSave(D,l.k,{act:'loss',qty:q,resp:r,note:n,cause:$('dfCz').value,by:auth.currentUser.email||'',at:new Date().toISOString(),cost:c,cash:p,code:l.code,name:l.name,store:D.to});pClose()}catch(e){$('dfOk').disabled=false;$('dfM').textContent='Алдаа: '+(e.code||e)}}}
 // хохирлын бүртгэл (огноогоор, Excel)
-function dfLossRows(){const A=$('dfLA').value,B=$('dfLB').value,R=[];Object.values(DF.res).forEach(x=>{let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}Object.entries(res).forEach(([k,L])=>L.forEach(a=>{if(a.act!=='loss')return;const d=lt(a.at).slice(0,10);if(A&&d<A||B&&d>B)return;
+function dfLossRows(){const A=$('dfLA').value,B=$('dfLB').value,R=[];Object.values(DF.res).forEach(x=>{let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}Object.entries(res).forEach(([k,L])=>L.forEach(a=>{if(a.act!=='loss'||a.undone)return;const d=lt(a.at).slice(0,10);if(A&&d<A||B&&d>B)return;
   R.push([lt(a.at),LOC[x.to]||x.to,x.no,x.src==='lpp'?'LPP':'Шилжүүлэг',a.code||k,a.name||'',a.qty,DF_RESP[a.resp]||a.resp,a.note||'',String(a.by||'').split('@')[0],a.cash?a.cash*a.qty:null,...(can('cost')?[a.cost!=null?Math.round(a.cost*a.qty):null]:[])])}))});return R.sort((a,b)=>a[0]<b[0]?1:-1)}
 function dfLossDraw(){xtable('dfLoss','dfloss',['Огноо','Дэлгүүр','Баримт','Төрөл','Код','Бараа','Тоо','Хариуцагч','Тайлбар','Баталсан','Дүн (касс) ₮',...(can('cost')?['Дүн (өртөг) ₮']:[])],dfLossRows(),{noSum:[]})}
 // тээврийн (LPP хүргэлт) тэнцэл: илгээсэн = хүлээн авсан + дутуу − илүү; зөрүү бүр шийдвэртэй эсэх
@@ -1075,6 +1109,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-dfa]');if(
   const bk=e.target.closest('[data-dfb]');if(bk){if(bk.dataset.dfb==='wh'||dfCan())dfBulk(bk.dataset.dfb);return}
   const ss=e.target.closest('[data-dfs]');if(ss){e.preventDefault();const p=ss.dataset.dfs.split('|');dfStory(p[0],p.slice(1).join('|'));return}
   const hh=e.target.closest('[data-dfh]');if(hh){e.preventDefault();const p=hh.dataset.dfh.split('|');dfHist(p[0],p[1]);return}
+  const uu=e.target.closest('[data-dfu]');if(uu){e.preventDefault();const p=uu.dataset.dfu.split('|');dfUndo(p[0],p.slice(1,-1).join('|'),+p[p.length-1]);return}
   const ce=e.target.closest('[data-dfce]');if(ce){e.preventDefault();const p=ce.dataset.dfce.split('|');dfCauseEdit(p[0],p.slice(1,-1).join('|'),+p[p.length-1]);return}
   if(e.target.closest('[data-dfrst]')){DF.st='';DF.ty='';$('dfSt').value='';$('dfTy').value='';$('dfA').value=DF.a=DF.from;$('dfB').value=DF.b=iso(new Date());dfDraw();return}
   if(e.target.closest('[data-dfckn]')){(DF.ck[DF.sel]||new Set()).clear();dfDraw();return}
