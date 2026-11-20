@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="14.1">
+<meta name="vivi-ver" content="14.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -99,6 +99,7 @@ details summary{cursor:pointer}
 tr.pr:hover td{background:var(--soft);cursor:pointer}
 @media (max-width:640px){.frm{grid-template-columns:1fr}}
 .dfchips{display:inline-flex;gap:4px;flex-wrap:wrap}.dfchips button{border:1px solid #d5dae0;background:#fff;border-radius:16px;padding:4px 12px;cursor:pointer;font:inherit;font-size:13px}.dfchips button[aria-pressed="true"]{background:#1f2937;color:#fff;border-color:#1f2937}
+@media (max-width:820px){input,select,textarea,.inp{font-size:16px!important}}
 </style>
 </head>
 <body>
@@ -363,6 +364,7 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
       <div style="display:flex;gap:8px;align-items:center;margin:6px 0"><select id="dfMgSt" class="inp" style="width:auto"><option value="ns">Нийслэл</option><option value="fc">Food city</option><option value="dr">Драгон</option></select><button class="btn" id="dfMgC">Тооцоолох</button><label class="btn" style="cursor:pointer">📥 Тоолсныг Excel-ээс<input type="file" id="dfMgXf" accept=".xlsx,.xls,.csv" hidden></label><span id="dfMgXlI"></span></div>
       <div class="small" style="margin:-2px 0 6px">Excel: дэлгүүр системээс өмнө Excel-д уншуулсан бол (баркод багана, давтагдсан мөр бүр = 1 ш). Ачаалсны дараа илгээмжүүдээ сонгоод «Тооцоолох» — илгээмжүүдийн тоолсны оронд Excel-ийн тоо ашиглагдана.</div>
       <div id="dfMgL"></div><div id="dfMgR"></div></details>
+    <details style="margin-top:10px" id="dfCzD"><summary><b>📊 Зөрүүний шалтгааны тайлан</b> — бүх шийдвэрлэсэн зөрүү, шалтгаантай (Excel)</summary><div style="display:flex;gap:6px;align-items:center;margin:8px 0;flex-wrap:wrap"><input type="date" id="dfCA" class="inp" style="width:auto"> — <input type="date" id="dfCB" class="inp" style="width:auto"><button class="btn" id="dfCGo">Харах</button><button class="btn" id="dfCX">Excel</button></div><div id="dfCzS" style="margin-bottom:6px"></div><div id="dfCz"></div></details>
     <details style="margin-top:10px"><summary><b>✖ Хохирлын бүртгэл</b> — огноогоор, хариуцагчтай (Excel)</summary><div style="display:flex;gap:6px;align-items:center;margin:8px 0"><input type="date" id="dfLA" class="inp" style="width:auto"> — <input type="date" id="dfLB" class="inp" style="width:auto"><button class="btn" id="dfLGo">Харах</button><button class="btn" id="dfLX">Excel</button></div><div id="dfLoss"></div></details>
     <details style="margin-top:10px"><summary><b>⚖ Тээврийн (LPP хүргэлт) тэнцэл</b> — юу ч алга болоогүй эсэх</summary><div style="margin:8px 0"><button class="btn" id="dfBalGo">Тооцоолох</button></div><div id="dfBal"></div></details></div>
   <div class="card" data-sub="arc"><h2>Хөдөлгөөний баримтын архив</h2>
@@ -526,6 +528,10 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 </section>
 <section class="pnl" data-panel="set" hidden>
   <div class="grid">
+  <div class="card" id="lcCard"><h2>💰 LPP брэндийн нэгж өртөг (худалдан авалт)</h2><div class="small" style="margin:-4px 0 8px">LPP-ийг ачаагаар авдаг тул ширхэг бүрийн өртгийг брэндээр тохируулна (тээвэр, гааль орсон). Өртөг <b>огноотой</b>: шинэ өртөг зөвхөн <b>«хүчинтэй огноо»-ноос хойш хүлээн авсан ачаанд</b> үйлчилнэ — өмнөх ачааны үлдэгдэл хуучин өртгөөрөө үлдэнэ. Нэг бараа хэд хэдэн ачаагаар ирсэн бол жигнэсэн дундаж. <b>Хоосон</b> — өртгийн файлын (Smart) өртөг. «Бусад LPP» — брэнд нь нэрнээс танигдаагүй LPP бараа.</div>
+    <table class="t" data-xe="1"><thead><tr><th>Брэнд</th><th class="n">Одоогийн</th><th class="n">Шинэ өртөг ₮ / ш</th><th class="n">Каталогт бараа</th></tr></thead><tbody id="lcRows"></tbody></table>
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="small">Хүчинтэй огноо</span><input type="date" id="lcFrom" class="inp" style="width:auto"><button id="lcOk" class="btn pri">Хадгалах</button><span id="lcMsg" class="small"></span></div>
+    <details style="margin-top:10px"><summary><b>Өртгийн түүх</b></summary><div id="lcHist" style="margin-top:6px"></div></details></div>
   <div class="card"><h2>Харилцагч — зээлээр борлуулах</h2><div class="small" style="margin:-4px 0 8px">Касс дээр «Зээлээр» төлөхөд сонгох жагсаалт (ажилтан, харилцагч). Өөрчлөлт бүх кассад автоматаар очно.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><input id="ptC" class="inp" style="width:130px" placeholder="Код"><input id="ptN" class="inp" style="flex:1;min-width:160px" placeholder="Нэр"><button id="ptAdd" class="btn pri">Нэмэх / засах</button>
       <label class="btn" style="cursor:pointer">Excel-ээс (A код, B нэр)<input type="file" id="ptFile" accept=".xlsx,.xls,.csv" class="hide"></label><span id="ptMsg" class="small"></span></div>
@@ -757,7 +763,7 @@ const dfCan=()=>can('stock.diff')||!!(ME&&ME.admin),dfWh=()=>can('wh')||can('whe
 function watchDiff(){if(DF.on||!dfView())return;DF.on=true;db.collection('wh_users').get().then(q=>{DF.U={};q.docs.forEach(d=>{const x=d.data();DF.U[d.id]=x.name||x.email||d.id});dfSoon()}).catch(()=>{});lppFrom().then(f=>{DF.from=f||DF.from;dfSoon()});
   db.collection('wh_ship').where('status','in',['sent','recv','diff','closed']).onSnapshot(s=>{DF.ships=s.docs.map(d=>({id:d.id,...d.data()}));dfSoon()},e=>console.warn('diff ships',e));
   db.collection('pos_diff').onSnapshot(s=>{DF.res={};s.docs.forEach(d=>DF.res[d.id]=d.data());dfSoon()},e=>console.warn('pos_diff',e));
-  db.collection('pos_counts').where('kind','==','diff').onSnapshot(s=>{DF.tasks={};s.docs.forEach(d=>DF.tasks[d.id]=d.data());dfSoon()},()=>{})}
+  db.collection('pos_counts').onSnapshot(s=>{DF.tasks={};s.docs.forEach(d=>DF.tasks[d.id]={uid:d.id,...d.data()});dfSoon()},()=>{})}
 function dfSoon(){clearTimeout(dfSoon.t);dfSoon.t=setTimeout(()=>{dfBadge();if(!$('dfCard').hidden)dfDraw()},120)}
 // бүх зөрүүтэй баримт → мөрүүд
 function dfItems(){const out=[],R=k=>{try{return JSON.parse((DF.res[k]||{}).res||'{}')}catch(e){return {}}},RS={};
@@ -843,9 +849,9 @@ function dfDet(I,ce,wh){const box=$('dfList'),D=I.find(x=>x.key===DF.sel);if(!D)
       '<table class="t" data-xe="1" style="margin-top:6px"><thead><tr><th style="width:26px"></th><th>Код</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th><th class="n">Зөрүү</th><th>Шийдвэр</th></tr></thead><tbody>'+
       L.slice(0,DF.lim).map(({l,i})=>'<tr'+(ck.has(l.k)?' style="background:#eef5ff"':'')+'><td>'+(l.left?'<input type="checkbox" data-dfck="'+esc(l.k)+'"'+(ck.has(l.k)?' checked':'')+'>':'')+'</td><td class="mono">'+esc(l.code)+'</td><td>'+esc(l.name)+'</td><td class="n">'+l.sent+'</td><td class="n">'+l.recv+'</td><td class="n"><b class="'+(l.d<0?'hot':'')+'">'+(l.d>0?'+':'')+l.d+'</b><div class="small">'+(l.d<0?'дутуу':'илүү')+'</div></td><td>'+dfActs(I,D,l,i,ce,wh)+'</td></tr>').join('')+'</tbody></table>'+
       (L.length>DF.lim?'<div class="small" style="margin:6px 0">'+DF.lim+' / '+L.length+' мөр харагдаж байна <button class="btn" data-dfmore="1">Бүгдийг харуулах</button> (бөөнөөр сонгоход бүх мөр орно)</div>':'')+(!L.length?'<div class="small" style="padding:8px">Энэ шүүлтүүрт мөр алга.</div>':''):'<div class="small" style="padding:8px">Энэ баримт зөрүүгүй хүлээн авагдсан.</div>')+'</div>'}
-async function dfSaveMany(D,arr){if(!arr.length)return;const ref=db.collection('pos_diff').doc(D.key),cur=await ref.get(),res=cur.exists?JSON.parse(cur.data().res||'{}'):{};arr.forEach(([k,a])=>(res[k]=res[k]||[]).push(a));const last=arr[arr.length-1][1];
+async function dfSaveMany(D,arr){if(!arr.length)return;if(DF._cz)arr.forEach(([k,a])=>{if(a.act!=='recount'&&!a.cause){a.cause=DF._cz.cause;a.cnote=DF._cz.cnote}});const ref=db.collection('pos_diff').doc(D.key),cur=await ref.get(),res=cur.exists?JSON.parse(cur.data().res||'{}'):{};arr.forEach(([k,a])=>(res[k]=res[k]||[]).push(a));const last=arr[arr.length-1][1];
   await ref.set({key:D.key,src:D.src,srcId:D.srcId,no:D.no,from:D.from,to:D.to,at:D.at,res:JSON.stringify(res),updated:last.at,updatedBy:last.by},{merge:true})}
-async function dfBulk(act){const I=dfItems(),D=I.find(x=>x.key===DF.sel);if(!D)return;const ck=DF.ck[D.key]||new Set(),by=auth.currentUser.email||'',at=new Date().toISOString(),where=LOC[D.to]||D.to,lpp=D.src==='lpp';
+async function dfBulk(act){const I=dfItems(),D=I.find(x=>x.key===DF.sel);if(!D)return;DF._cz=null;if(['pair','dbl','accept','ret','sender','wh'].includes(act)){const cz=await dfCauseAsk(dfCauseDef(act,{d:act==='dbl'||act==='accept'?1:-1}),esc(D.no)+' · сонгосон мөрүүд → '+esc(DF_ACT[act]||act));if(!cz)return;DF._cz=cz}const ck=DF.ck[D.key]||new Set(),by=auth.currentUser.email||'',at=new Date().toISOString(),where=LOC[D.to]||D.to,lpp=D.src==='lpp';
   const S=D.lines.filter(l=>ck.has(l.k)&&l.left>0),sh=S.filter(l=>l.d<0),ov=S.filter(l=>l.d>0),q=A=>A.reduce((a,l)=>a+l.left,0),done=()=>{ck.clear();dfDraw()};
   try{
   if(act==='pair'){const G=new Map(),P=[];S.forEach(l=>{const p=dfPairs(I,D,l)[0];if(!p)return;const n=Math.min(l.left,p.y.left),from=l.d<0?p.X.to:D.to,to=l.d<0?D.to:p.X.to,k=from+'>'+to;(G.get(k)||G.set(k,{from,to,L:[]}).get(k)).L.push({l,p,n})});
@@ -873,41 +879,61 @@ async function dfBulk(act){const I=dfItems(),D=I.find(x=>x.key===DF.sel);if(!D)r
 function dfLossMany(D,sh,done){const tot=sh.reduce((a,l)=>a+l.left,0),cash=sh.reduce((a,l)=>a+((itRow(l.code)||{}).price||0)*l.left,0);
   $('pbox').innerHTML='<h3>✖ Хохирол бүртгэх — '+sh.length+' бараа, '+tot+' ш</h3><div class="small">'+esc(D.no)+' · '+esc(LOC[D.to]||D.to)+' · кассын үнээр '+nfx(cash)+' ₮</div>'+
     '<label class="f">Хариуцагч</label><select id="dfR" class="inp"><option value="">— сонгох —</option>'+Object.entries(DF_RESP).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>'+
-    '<label class="f">Тайлбар (заавал) — юу болсон, хэн шалгасан</label><input id="dfN" class="inp" placeholder="ж: хайрцаг ломбо тасарсан ирсэн, жолооч Б.Бат"><div id="dfM" class="small hot" style="min-height:18px"></div>'+
+    '<label class="f">Шалтгаан</label><select id="dfCz" class="inp">'+DF_CAUSE.map(([k,t])=>'<option value="'+k+'">'+t+'</option>').join('')+'</select>'+'<label class="f">Тайлбар (заавал) — юу болсон, хэн шалгасан</label><input id="dfN" class="inp" placeholder="ж: хайрцаг ломбо тасарсан ирсэн, жолооч Б.Бат"><div id="dfM" class="small hot" style="min-height:18px"></div>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="dfX">Болих</button><button class="btn pri" id="dfOk">Хохирол батлах</button></div>';
-  $('pm').classList.remove('hide');$('dfX').onclick=pClose;
+  $('pm').classList.remove('hide');$('dfX').onclick=pClose;$('dfR').onchange=()=>{$('dfCz').value={tr:'transport',st:'store',wh:'whleft'}[$('dfR').value]||$('dfCz').value};$('dfCz').value='transport';
   $('dfOk').onclick=async()=>{const r=$('dfR').value,n=$('dfN').value.trim();if(!r)return $('dfM').textContent='Хариуцагчийг сонгоно уу';if(n.length<4)return $('dfM').textContent='Тайлбар бичнэ үү';$('dfOk').disabled=true;const by=auth.currentUser.email||'',at=new Date().toISOString();
-    try{await dfSaveMany(D,sh.map(l=>[l.k,{act:'loss',qty:l.left,resp:r,note:n,by,at,cost:costMap.has(l.code)?costMap.get(l.code):null,cash:(itRow(l.code)||{}).price||0,code:l.code,name:l.name,store:D.to}]));pClose();done()}catch(e){$('dfOk').disabled=false;$('dfM').textContent='Алдаа: '+(e.code||e)}}}
+    try{await dfSaveMany(D,sh.map(l=>[l.k,{act:'loss',qty:l.left,resp:r,note:n,cause:$('dfCz').value,by,at,cost:costMap.has(l.code)?costMap.get(l.code):null,cash:(itRow(l.code)||{}).price||0,code:l.code,name:l.name,store:D.to}]));pClose();done()}catch(e){$('dfOk').disabled=false;$('dfM').textContent='Алдаа: '+(e.code||e)}}}
 // нэг дэлгүүрийн 2 илгээмж хооронд: нэгд илүү, нөгөөд дутуу (ижил код) → бараа дэлгүүрт байгаа, баримт хэрэггүй
-async function dfNet(xk){const I=dfItems(),D=I.find(x=>x.key===DF.sel),w=D&&dfWarn(I,D).find(w=>w.X.key===xk);if(!w||!w.net.length)return;const by=auth.currentUser.email||'',at=new Date().toISOString();
+async function dfNet(xk){const I=dfItems(),D=I.find(x=>x.key===DF.sel),w=D&&dfWarn(I,D).find(w=>w.X.key===xk);if(!w||!w.net.length)return;DF._cz=null;{const cz=await dfCauseAsk('shipmix',esc(D.no)+' ↔ '+esc(w.X.no));if(!cz)return;DF._cz=cz}const by=auth.currentUser.email||'',at=new Date().toISOString();
   if(!confirm(w.net.length+' бараа: '+D.no+' ба '+w.X.no+' хоёр илгээмжийн нэгд илүү, нөгөөд дутуу гарсан. Хоёулаа '+(LOC[D.to]||D.to)+'-д ирсэн тул нийтдээ зөрүүгүй — тэнцүүлж хаах уу? (үлдэгдэл өөрчлөгдөхгүй)'))return;
   const a=[],b=[];w.net.forEach(([l,y])=>{const n=Math.min(l.left,y.left);a.push([l.k,{act:'same',qty:n,by,at,pair:w.X.key,docNo:w.X.no}]);b.push([y.k,{act:'same',qty:n,by,at,pair:D.key,docNo:D.no}])});
   try{await dfSaveMany(D,a);await dfSaveMany(w.X,b)}catch(e){alert('Алдаа: '+(e.code||e))}}
-function dfActs(I,D,l,i,ce,wh){const done=l.acts.map(a=>'<div class="small">✓ '+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':'')+(a.resp?' · хариуцагч: '+esc(DF_RESP[a.resp]||a.resp):'')+(a.note?' · '+esc(a.note):'')+(a.docNo?' · '+esc(a.docNo):'')+' <span style="color:#8a93a0">('+esc(String(a.by||'').split('@')[0])+', '+esc(lt(a.at))+')</span></div>').join('');
+function dfActs(I,D,l,i,ce,wh){const done=l.acts.map((a,ai)=>'<div class="small">✓ '+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':'')+(a.act!=='recount'?' · <b>шалтгаан:</b> '+(a.cause?esc(DF_CZ[a.cause]||a.cause)+(a.cnote?' ('+esc(a.cnote)+')':''):'<i>бичээгүй</i>')+(ce?' <a href="#" data-dfce="'+esc(D.key)+'|'+esc(l.k)+'|'+ai+'" title="Шалтгаан засах">✎</a>':''):'')+(a.resp?' · хариуцагч: '+esc(DF_RESP[a.resp]||a.resp):'')+(a.note?' · '+esc(a.note):'')+(a.docNo?' · '+esc(a.docNo):'')+' <span style="color:#8a93a0">('+esc(String(a.by||'').split('@')[0])+', '+esc(lt(a.at))+')</span></div>').join('');
   const RT={resend:'Олдсон — дахин илгээнэ',lost:'Олдсонгүй (акт)',keep:'Илүү — дэлгүүрт үлдээнэ',back:'Илүү — агуулах руу буцаана',other:'Бусад'};
   const rsH=(l.d<0?l.rs:[]).map(x=>x.st==='sent'?'<div class="small" style="color:#b35c00">🚚 Агуулахаас дахин илгээсэн '+x.q+' ш · <b>'+esc(x.no)+'</b> — '+esc(LOC[D.to]||D.to)+' хүлээн аваагүй ('+esc(lt(x.at))+')</div>':'<div class="small">✓ Агуулахаас дахин илгээсэн '+x.q+' ш · '+esc(x.no)+' — дэлгүүр хүлээн авсан'+(x.g<x.q?' <b class="hot">(тэнд '+(x.q-x.g)+' ш дахин дутуу — тэр илгээмжээр шийдвэрлэнэ)</b>':'')+'</div>').join('')+
     (l.whr&&l.whr.how&&!(l.whr.how==='resend'&&l.rs.length)?'<div class="small">🏬 Агуулахын тэмдэглэл: '+esc(RT[l.whr.how]||l.whr.how)+(l.whr.note?' · '+esc(l.whr.note):'')+'</div>':'');
   if(!l.left)return done+rsH;const b=(act,txt,cls)=>'<button class="btn'+(cls?' '+cls:'')+'" style="min-height:28px;padding:2px 8px;margin:2px 4px 2px 0" data-dfa="'+act+'" data-dfk="'+esc(D.key)+'" data-dfi="'+i+'">'+txt+'</button>';
   // дахин тоолуулж байгаа бол үр дүн
-  const rc=l.acts.filter(a=>a.act==='recount'&&a.task).map(a=>DF.tasks[a.task]).filter(Boolean),last=rc[rc.length-1];let pend='';
+  const rc=l.acts.filter(a=>a.act==='recount'&&a.task).map(a=>DF.tasks[a.task]).filter(t=>t&&t.status!=='cancelled');
+  // өөр (гараар, бүсээр) тооллого: тухайн дэлгүүрт, хүлээн авснаас хойш, энэ код орсон, тоолсон/баталсан
+  if(!rc.length){const ot=Object.values(DF.tasks).filter(t=>t.store===D.to&&['counted','applied'].includes(t.status)&&String(t.countedAt||t.created||'')>=String(D.at)&&(()=>{try{return JSON.parse(t.codes||'[]').some(x=>x[0]===l.code)}catch(e){return false}})()).sort((a,b)=>String(a.countedAt).localeCompare(String(b.countedAt)));if(ot.length)rc.push(ot[ot.length-1])}
+  const last=rc[rc.length-1];let pend='';
   if(last){const st=last.status;if(st==='applied'){let dd=0;try{const rows=JSON.parse((last.res||{}).rows||'[]');const r=rows.find(x=>x[0]===l.code);dd=r?r[4]:0}catch(e){}
-      const ok=l.d<0?dd>0:dd<0;pend='<div class="small" style="margin:2px 0">📋 Тооллого: зөрүү '+(dd>0?'+':'')+dd+' ш (тооллогын баримтаар зассан) — '+(ok?'<b>олдсон</b>':'олдсонгүй')+'</div>'+(ok&&ce?b('recounted:'+Math.min(l.left,Math.abs(dd)),'✓ Тооллогоор шийдсэн ('+Math.min(l.left,Math.abs(dd))+' ш)','pri'):'')}
+      const ok=l.d<0?dd>0:dd<0;DF._cnf=!ok;pend='<div class="small" style="margin:2px 0">📋 Тооллого: зөрүү '+(dd>0?'+':'')+dd+' ш (тооллогын баримтаар зассан) — '+(ok?'<b>олдсон</b>':(l.d>0?'<b>илүү бараа бодитоор байгаа нь батлагдлаа</b> → «✓ хүлээн авах»':'<b>олдсонгүй</b> → агуулах эсвэл хохирол'))+'</div>'+(ok&&ce?b('recounted:'+Math.min(l.left,Math.abs(dd)),'✓ Тооллогоор шийдсэн ('+Math.min(l.left,Math.abs(dd))+' ш)','pri'):'')}
     else pend='<div class="small" style="margin:2px 0">📋 '+esc(LOC[last.store]||last.store)+'-д дахин тоолуулж байна — '+(st==='counted'?'<b>касс тоолсон</b></div>'+(ce?b('cres:'+last.uid,'📋 Тооллогын үр дүнг харах, батлах','pri'):''):'касс тоолоогүй</div>')}
   // QR код уншуулсан (баркодын оронд) → тухайн илгээмжийн дутуу бараатай тааруулж, тоолсныг засна
   if(ce&&D.src==='lpp'&&l.d>0&&dfIsQr(l.k)){const Q=dfQrCands(D,l);return done+rsH+'<div class="small hot" style="margin:2px 0">⛔ Баркод биш — шошгоны <b>QR / DataMatrix (дөрвөлжин) код</b> уншуулсан байна</div>'+(Q.map(x=>b('qr:'+x.k,'🔗 '+esc(x.code)+' '+esc(x.name)+' — энэ барааных','pri')).join('')||'')+b('qr:?','🔗 Аль барааных вэ? (баркод оруулах)')}
   let btn='';if(ce){const P=dfPairs(I,D,l);P.slice(0,3).forEach((p,j)=>{btn+=b('pair:'+j,l.d<0?'🔁 '+esc(LOC[p.X.to]||p.X.to)+'-д илүү гарсан → энд шилжүүлэх':'🔁 '+esc(LOC[p.X.to]||p.X.to)+'-д дутуу → тийш шилжүүлэх','pri')});
     if(!last||last.status==='applied')btn+=b('recount','📋 '+esc(LOC[D.to]||D.to)+'-д дахин тоолуулах');
-    if(D.src==='lpp'){btn+=l.d<0?b('wh','🏬 Агуулахад үлдсэн → дахин илгээх')+b('loss','✖ Хохирол'):b('accept','✓ Агуулахаас ирсэн — хүлээн авах')+b('ret','↩ LPP агуулах руу буцааж өгөх')}
+    if(D.src==='lpp'){const cf=!!(last&&last.status==='applied'&&DF._cnf);DF._cnf=false;btn+=l.d<0?b('wh','🏬 Агуулахад үлдсэн → дахин илгээх',cf?'pri':'')+b('loss','✖ Хохирол'):b('accept','✓ Агуулахаас ирсэн — хүлээн авах',cf?'pri':'')+b('ret','↩ LPP агуулах руу буцааж өгөх')}
     else btn+=l.d<0?b('sender','↩ Илгээгчид үлдсэн (илгээгчид буцааж нэмэх)')+b('loss','✖ Хохирол'):b('sender','✓ Илгээгч илүү явуулсан (илгээгчээс хасах)')+b('ret','↩ Илгээгч рүү буцааж шилжүүлэх')}
   else if(wh&&D.src==='lpp'&&l.d<0)btn=b('wh','🏬 Агуулахад үлдсэн → дахин илгээх');
   return done+rsH+pend+'<div class="small" style="margin:2px 0">Шийдэх: <b>'+l.left+' ш</b></div>'+btn}
-async function dfSave(D,k,act){const ref=db.collection('pos_diff').doc(D.key),cur=await ref.get(),res=cur.exists?JSON.parse(cur.data().res||'{}'):{};(res[k]=res[k]||[]).push(act);
+// ---- Зөрүүний ШАЛТГААН: шийдвэр бүрт (архивт үлдэнэ, «📊 Шалтгааны тайлан»)
+const DF_CAUSE=[['dblscan','Давхар уншуулсан (нэг барааг 2 удаа)'],['qr','QR / DataMatrix код уншуулсан'],['notscan','Уншуулаагүй / тоолохдоо алгассан'],['shipmix','Илгээмж андуурч тоолсон'],['mispack','Агуулах өөр дэлгүүрийн хайрцагт хийсэн'],['whleft','Агуулахад үлдсэн (ачаагүй)'],['whextra','Агуулах илүү / жагсаалтгүй бараа явуулсан'],['transport','Тээвэрлэлтэд алга болсон / гэмтсэн'],['store','Дэлгүүрт алга болсон'],['sender','Илгээгч дэлгүүр буруу явуулсан'],['other','Бусад']];
+const DF_CZ=Object.fromEntries(DF_CAUSE);
+function dfCauseDef(act,l){return {dbl:'dblscan',qr:'qr',pair:'mispack',wh:'whleft',accept:'whextra',ret:l&&l.d>0?'whextra':'sender',same:'shipmix',sender:'sender',recounted:l&&l.d>0?'dblscan':'notscan'}[act]||'other'}
+function dfCauseAsk(def,info){return new Promise(done=>{$('pbox').innerHTML='<h3>Зөрүүний шалтгаан</h3><div class="small">'+info+'</div><div style="margin:8px 0;display:grid;gap:4px">'+DF_CAUSE.map(([k,t])=>'<label style="display:flex;gap:6px;align-items:center"><input type="radio" name="dfcz" value="'+k+'"'+(k===def?' checked':'')+'> '+t+'</label>').join('')+'</div><input id="dfCzN" class="inp" placeholder="Тайлбар (заавал биш) — ж: хайрцаг №12, кассчин Б.Сараа">'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn" id="dfCzX">Болих</button><button class="btn pri" id="dfCzOk">Үргэлжлүүлэх</button></div>';
+  $('pm').classList.remove('hide');$('dfCzX').onclick=()=>{pClose();done(null)};$('dfCzOk').onclick=()=>{const r=document.querySelector('[name=dfcz]:checked'),v={cause:r?r.value:'other',cnote:$('dfCzN').value.trim()};pClose();done(v)}})}
+async function dfCauseEdit(key,k,i){const x=DF.res[key];if(!x)return;let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}const a=(res[k]||[])[i];if(!a)return;
+  const cz=await dfCauseAsk(a.cause||dfCauseDef(a.act),'Шалтгааныг засах: '+esc(DF_ACT[a.act]||a.act)+(a.qty?' · '+a.qty+' ш':''));if(!cz)return;a.cause=cz.cause;a.cnote=cz.cnote;a.czBy=auth.currentUser.email||'';a.czAt=new Date().toISOString();
+  try{await db.collection('pos_diff').doc(key).set({res:JSON.stringify(res)},{merge:true})}catch(e){alert('Алдаа: '+(e.code||e))}}
+function dfCzRows(){const A=$('dfCA').value,B=$('dfCB').value,R=[];Object.values(DF.res).forEach(x=>{let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}Object.entries(res).forEach(([k,L])=>L.forEach(a=>{if(a.act==='recount')return;const d=lt(a.at).slice(0,10);if(A&&d<A||B&&d>B)return;
+  const it=itRow(a.code||k)||{};R.push([lt(a.at),LOC[x.to]||x.to,x.no,x.src==='lpp'?'LPP':'Шилжүүлэг',a.code||((itRow(k)||{}).code)||k,a.name||it.name||'',DF_ACT[a.act]||a.act,+a.qty||0,DF_CZ[a.cause]||'— (бичээгүй)',a.cnote||a.note||'',a.resp?DF_RESP[a.resp]||a.resp:'',String(a.by||'').split('@')[0]])}))});return R.sort((a,b)=>a[0]<b[0]?1:-1)}
+function dfCzDraw(){const R=dfCzRows(),S=new Map();R.forEach(r=>{const o=S.get(r[8])||{n:0,q:0};o.n++;o.q+=r[7];S.set(r[8],o)});
+  $('dfCzS').innerHTML=[...S.entries()].sort((a,b)=>b[1].q-a[1].q).map(([c,o])=>'<span class="chip" style="margin:2px">'+esc(c)+': <b>'+o.q+' ш</b> ('+o.n+')</span>').join('')||'<span class="small">Мэдээлэл алга</span>';
+  xtable('dfCz','dfcz',['Огноо','Дэлгүүр','Баримт','Төрөл','Код','Бараа','Шийдвэр','Тоо','Шалтгаан','Тайлбар','Хариуцагч','Хэн'],R,{noSum:[]})}
+async function dfSave(D,k,act){if(DF._cz&&act.act!=='recount'&&!act.cause){act.cause=DF._cz.cause;act.cnote=DF._cz.cnote}const ref=db.collection('pos_diff').doc(D.key),cur=await ref.get(),res=cur.exists?JSON.parse(cur.data().res||'{}'):{};(res[k]=res[k]||[]).push(act);
   await ref.set({key:D.key,src:D.src,srcId:D.srcId,no:D.no,from:D.from,to:D.to,at:D.at,res:JSON.stringify(res),updated:act.at,updatedBy:act.by},{merge:true})}
 function dfNo(ty,at,uid){return {move:'ШЖ',adj:'ЗӨ',out:'ЗР'}[ty]+'-'+iso(at).replace(/-/g,'').slice(2)+'-'+String(at.getHours()).padStart(2,'0')+String(at.getMinutes()).padStart(2,'0')+'-'+uid.slice(-3).toUpperCase()}
 async function dfDoc(ty,from,to,lines,note,D){const at=new Date(),uid='df'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),no=dfNo(ty,at,uid),prices={};lines.forEach(x=>{const p=(itRow(x[0])||{}).price;if(p)prices[x[0]]=p});
   const doc={uid,no,type:ty,from,to,at:at.toISOString(),note,supplier:'',invoice:'',reason:ty==='out'?'LPP агуулах руу буцаасан':'',file:'',prices:JSON.stringify(prices),lines:JSON.stringify(lines),count:lines.length,qty:lines.reduce((a,x)=>a+x[1],0),costSum:Math.round(lines.reduce((a,x)=>a+(costMap.get(x[0])||0)*x[1],0)),by:auth.currentUser.email||'',saved:at.toISOString(),src:'diff',diff:D.key,...(ty==='move'?{status:'sent'}:{})};
   await db.collection('pos_stock_docs').doc(uid).set(doc);return doc}
-async function dfDo(btn){const D=dfItems().find(x=>x.key===btn.dataset.dfk);if(!D)return;const l=D.lines[+btn.dataset.dfi];if(!l||!l.left)return;const [act,arg]=btn.dataset.dfa.split(':'),by=auth.currentUser.email||'',at=new Date().toISOString(),nm=l.name,short=l.d<0,where=LOC[D.to]||D.to;
+async function dfDo(btn){const D=dfItems().find(x=>x.key===btn.dataset.dfk);if(!D)return;const l=D.lines[+btn.dataset.dfi];if(!l||!l.left)return;const act0=btn.dataset.dfa.split(':')[0];DF._cz=null;
+  if(['pair','recounted','wh','accept','ret','sender','qr'].includes(act0)){const cz=await dfCauseAsk(dfCauseDef(act0,l),esc(D.no)+' · '+esc(l.name)+' ('+(l.d>0?'+':'')+l.d+' ш) → '+esc(DF_ACT[act0]||act0));if(!cz)return;DF._cz=cz}
+  const [act,arg]=btn.dataset.dfa.split(':'),by=auth.currentUser.email||'',at=new Date().toISOString(),nm=l.name,short=l.d<0,where=LOC[D.to]||D.to;
   const qAsk=(t,def)=>{const v=prompt(t,String(def));if(v==null)return null;const q=Math.round(+v);return q>0&&q<=l.left?q:(alert('Тоо 1–'+l.left+' байна'),null)};
   try{
     if(act==='pair'){const p=dfPairs(dfItems(),D,l)[+arg];if(!p)return;const q=Math.min(l.left,p.y.left),from=short?p.X.to:D.to,to=short?D.to:p.X.to;
@@ -937,12 +963,12 @@ function dfLoss(D,l){const c=costMap.has(l.code)?costMap.get(l.code):null,p=(itR
   $('pbox').innerHTML='<h3>✖ Хохирол бүртгэх</h3><div class="small">'+esc(D.no)+' · '+esc(LOC[D.to]||D.to)+' · <b>'+esc(l.name)+'</b> ('+esc(l.code)+')</div>'+
     '<label class="f">Тоо (1–'+l.left+')</label><input id="dfQ" class="inp" type="number" min="1" max="'+l.left+'" value="'+l.left+'">'+
     '<label class="f">Хариуцагч</label><select id="dfR" class="inp"><option value="">— сонгох —</option>'+Object.entries(DF_RESP).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>'+
-    '<label class="f">Тайлбар (заавал) — юу болсон, хэн шалгасан</label><input id="dfN" class="inp" placeholder="ж: хайрцаг ломбо тасарсан ирсэн, жолооч Б.Бат">'+
+    '<label class="f">Шалтгаан</label><select id="dfCz" class="inp">'+DF_CAUSE.map(([k,t])=>'<option value="'+k+'">'+t+'</option>').join('')+'</select>'+'<label class="f">Тайлбар (заавал) — юу болсон, хэн шалгасан</label><input id="dfN" class="inp" placeholder="ж: хайрцаг ломбо тасарсан ирсэн, жолооч Б.Бат">'+
     '<div class="small" style="margin-top:6px">Үнэ: '+(can('cost')&&c!=null?'өртөг '+nfx(c)+' ₮ · ':'')+'кассын үнэ '+nfx(p)+' ₮ / ш</div><div id="dfM" class="small hot" style="min-height:18px"></div>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="dfX">Болих</button><button class="btn pri" id="dfOk">Хохирол батлах</button></div>';
-  $('pm').classList.remove('hide');$('dfX').onclick=pClose;
+  $('pm').classList.remove('hide');$('dfX').onclick=pClose;$('dfR').onchange=()=>{$('dfCz').value={tr:'transport',st:'store',wh:'whleft'}[$('dfR').value]||$('dfCz').value};$('dfCz').value='transport';
   $('dfOk').onclick=async()=>{const q=Math.round(+$('dfQ').value),r=$('dfR').value,n=$('dfN').value.trim();if(!(q>0&&q<=l.left))return $('dfM').textContent='Тоо 1–'+l.left;if(!r)return $('dfM').textContent='Хариуцагчийг сонгоно уу';if(n.length<4)return $('dfM').textContent='Тайлбар бичнэ үү';
-    $('dfOk').disabled=true;try{await dfSave(D,l.k,{act:'loss',qty:q,resp:r,note:n,by:auth.currentUser.email||'',at:new Date().toISOString(),cost:c,cash:p,code:l.code,name:l.name,store:D.to});pClose()}catch(e){$('dfOk').disabled=false;$('dfM').textContent='Алдаа: '+(e.code||e)}}}
+    $('dfOk').disabled=true;try{await dfSave(D,l.k,{act:'loss',qty:q,resp:r,note:n,cause:$('dfCz').value,by:auth.currentUser.email||'',at:new Date().toISOString(),cost:c,cash:p,code:l.code,name:l.name,store:D.to});pClose()}catch(e){$('dfOk').disabled=false;$('dfM').textContent='Алдаа: '+(e.code||e)}}}
 // хохирлын бүртгэл (огноогоор, Excel)
 function dfLossRows(){const A=$('dfLA').value,B=$('dfLB').value,R=[];Object.values(DF.res).forEach(x=>{let res={};try{res=JSON.parse(x.res||'{}')}catch(e){}Object.entries(res).forEach(([k,L])=>L.forEach(a=>{if(a.act!=='loss')return;const d=lt(a.at).slice(0,10);if(A&&d<A||B&&d>B)return;
   R.push([lt(a.at),LOC[x.to]||x.to,x.no,x.src==='lpp'?'LPP':'Шилжүүлэг',a.code||k,a.name||'',a.qty,DF_RESP[a.resp]||a.resp,a.note||'',String(a.by||'').split('@')[0],a.cash?a.cash*a.qty:null,...(can('cost')?[a.cost!=null?Math.round(a.cost*a.qty):null]:[])])}))});return R.sort((a,b)=>a[0]<b[0]?1:-1)}
@@ -959,12 +985,17 @@ async function dfBal(){const box=$('dfBal');box.innerHTML='<span class="small">�
     L.map(g=>'<tr><td><b>'+esc(g.k)+'</b></td><td class="n">'+g.n+'</td><td class="n">'+nfx(g.sent)+'</td><td class="n">'+(g.transit?nfx(g.transit):'')+'</td><td class="n">'+nfx(g.recv)+'</td><td class="n">'+(g.short||'')+'</td><td class="n">'+(g.over||'')+'</td><td class="small">'+esc(rk(g.res))+'</td><td class="n'+(g.open?' hot':'')+'">'+(g.open||'')+'</td><td>'+(g.open?'<span class="chip r">дуусаагүй '+g.open+'</span>':g.transit?'<span class="chip b">замд байна</span>':'<span class="chip">✓ тэнцсэн</span>')+'</td></tr>').join('')+'</tbody></table><div class="small" style="margin-top:6px">Илгээсэн (хүлээн авсан илгээмжүүд) = хүлээн авсан + дутуу − илүү. Дутуу/илүү ширхэг бүр шийдвэртэй бол «тэнцсэн».</div>':'<div class="small">LPP илгээмж алга.</div>'}
 function dfInit(){watchDiff();if(!$('dfA').value){$('dfA').value=DF.a=DF.from;$('dfB').value=DF.b=iso(new Date())}if(!$('dfLA').value){const d=new Date();$('dfLB').value=iso(d);d.setDate(1);$('dfLA').value=iso(d)}
   $('dfSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+['FC','DR','NS'].map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('');$('dfSt').value=DF.st;dfDraw();dfLossDraw()}
-$('dfA').onchange=()=>{DF.a=$('dfA').value;dfDraw()};$('dfB').onchange=()=>{DF.b=$('dfB').value;dfDraw()};$('dfSt').onchange=()=>{DF.st=$('dfSt').value;dfDraw()};$('dfTy').onchange=()=>{DF.ty=$('dfTy').value;dfDraw()};$('dfLGo').onclick=dfLossDraw;$('dfLX').onclick=()=>{dfLossDraw();xtXlsx('dfloss','Hohirol_'+$('dfLA').value+'_'+$('dfLB').value,'Хохирол')};$('dfBalGo').onclick=dfBal;$('nwGo').onclick=nwLoad;['nwSt','nwSu'].forEach(id=>$(id).onchange=nwDraw);$('nwG').onchange=()=>{NW.path=[];nwDraw()};$('nwX').onclick=()=>{if(NW.rows)xtXlsx('nwt','Shine_achaa_'+NW.A+'_'+NW.B,'Шинэ ачаа')};$('dfShX').onclick=()=>{dfDraw();xtXlsx('dfships','LPP_huleen_avalt_'+(DF.a||'')+'_'+(DF.b||''),'Хүлээн авалт')};$('dfMgSt').onchange=()=>{MG.sel=null;MG.use=null;dfMgList()};$('dfMgR').addEventListener('change',e=>{const u=e.target.closest('[data-dfmu]');if(!u)return;u.checked?MG.use.add(u.dataset.dfmu):MG.use.delete(u.dataset.dfmu);dfMgCalc(true)});$('dfMgR').addEventListener('click',e=>{const o=e.target.closest('[data-dfmone]');if(!o)return;MG.use=new Set([o.dataset.dfmone]);dfMgCalc(true)});$('dfMgC').onclick=()=>{MG.use=null;dfMgCalc(false)};$('dfMgXf').onchange=e=>{const f=e.target.files[0];e.target.value='';withBusy?withBusy('Excel уншиж байна…',()=>dfMgXl(f)):dfMgXl(f)};$('dfMg').addEventListener('toggle',()=>{if($('dfMg').open)dfMgList()});
+$('dfA').onchange=()=>{DF.a=$('dfA').value;dfDraw()};$('dfB').onchange=()=>{DF.b=$('dfB').value;dfDraw()};$('dfSt').onchange=()=>{DF.st=$('dfSt').value;dfDraw()};$('dfTy').onchange=()=>{DF.ty=$('dfTy').value;dfDraw()};$('dfLGo').onclick=dfLossDraw;$('dfLX').onclick=()=>{dfLossDraw();xtXlsx('dfloss','Hohirol_'+$('dfLA').value+'_'+$('dfLB').value,'Хохирол')};$('dfBalGo').onclick=dfBal;$('dfCGo').onclick=dfCzDraw;$('dfCX').onclick=()=>{dfCzDraw();xtXlsx('dfcz','Zuruu_shaltgaan_'+$('dfCA').value+'_'+$('dfCB').value,'Шалтгаан')};$('dfCzD').addEventListener('toggle',()=>{if($('dfCzD').open){if(!$('dfCA').value){const d=new Date();$('dfCB').value=iso(d);d.setDate(1);$('dfCA').value=iso(d)}dfCzDraw()}});$('lcOk').onclick=async()=>{const from=$('lcFrom').value,b={};if(!from)return $('lcMsg').textContent='Хүчинтэй огноо сонгоно уу';document.querySelectorAll('[data-lc]').forEach(i=>{const v=Math.round(+i.value);if(v>0)b[i.dataset.lc]=v});
+  const n=movAll.filter(m=>m.src==='lpp'&&m.type==='in'&&iso(new Date(m.recvAt||m.at))>=from).length;
+  if(!confirm('LPP брэндийн өртөг — '+from+'-ээс хойш хүлээн авсан ачаанд:\n'+LPP_BRANDS.map(([k,l])=>l+': '+(b[k]?b[k]+' ₮':'файлын')).join('\n')+'\n\nҮйлчлэх: '+n+' LPP орлого (энэ огнооноос хойш). Өмнөх ачааны үлдэгдэл хуучин өртгөөрөө үлдэнэ.'))return;
+  const H=LPPH.filter(h=>h.from!==from).map(h=>({from:h.from,b:h.b,by:h.by||'',at:h.at||''}));H.push({from,b,by:auth.currentUser.email||'',at:new Date().toISOString()});H.sort((a,c)=>a.from<c.from?-1:1);
+  try{await db.collection('pos_config').doc('lppcost').set({h:H,by:auth.currentUser.email||'',at:new Date().toISOString()});await auditCfg('lppcost',{from,b}).catch(()=>{});$('lcMsg').textContent='✓ Хадгаллаа'}catch(e){$('lcMsg').textContent='Алдаа: '+(e.code||e)}};$('nwGo').onclick=nwLoad;['nwSt','nwSu'].forEach(id=>$(id).onchange=nwDraw);$('nwG').onchange=()=>{NW.path=[];nwDraw()};$('nwX').onclick=()=>{if(NW.rows)xtXlsx('nwt','Shine_achaa_'+NW.A+'_'+NW.B,'Шинэ ачаа')};$('dfShX').onclick=()=>{dfDraw();xtXlsx('dfships','LPP_huleen_avalt_'+(DF.a||'')+'_'+(DF.b||''),'Хүлээн авалт')};$('dfMgSt').onchange=()=>{MG.sel=null;MG.use=null;dfMgList()};$('dfMgR').addEventListener('change',e=>{const u=e.target.closest('[data-dfmu]');if(!u)return;u.checked?MG.use.add(u.dataset.dfmu):MG.use.delete(u.dataset.dfmu);dfMgCalc(true)});$('dfMgR').addEventListener('click',e=>{const o=e.target.closest('[data-dfmone]');if(!o)return;MG.use=new Set([o.dataset.dfmone]);dfMgCalc(true)});$('dfMgC').onclick=()=>{MG.use=null;dfMgCalc(false)};$('dfMgXf').onchange=e=>{const f=e.target.files[0];e.target.value='';withBusy?withBusy('Excel уншиж байна…',()=>dfMgXl(f)):dfMgXl(f)};$('dfMg').addEventListener('toggle',()=>{if($('dfMg').open)dfMgList()});
 document.addEventListener('change',e=>{const c=e.target.closest&&e.target.closest('[data-dfck],[data-dfckall]');if(!c)return;const ck=DF.ck[DF.sel]||(DF.ck[DF.sel]=new Set());
   if(c.dataset.dfck){c.checked?ck.add(c.dataset.dfck):ck.delete(c.dataset.dfck)}else{const D=dfItems().find(x=>x.key===DF.sel);if(D)D.lines.filter(l=>l.left>0&&(DF.lf==='all'||DF.lf==='open'||(DF.lf==='short'?l.d<0:l.d>0))).forEach(l=>c.checked?ck.add(l.k):ck.delete(l.k))}dfDraw()});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-dfa]');if(b){if(b.dataset.dfa==='wh'||dfCan())dfDo(b);return}
   const o=e.target.closest('[data-dfo]');if(o&&!e.target.closest('.xfb')){DF.sel=o.dataset.dfo;DF.lf='open';DF.lim=150;dfDraw();if(DF.sel)setTimeout(()=>{const c=$('dfDetC');if(c)c.scrollIntoView({behavior:'smooth',block:'start'})},50);return}
   const bk=e.target.closest('[data-dfb]');if(bk){if(bk.dataset.dfb==='wh'||dfCan())dfBulk(bk.dataset.dfb);return}
+  const ce=e.target.closest('[data-dfce]');if(ce){e.preventDefault();const p=ce.dataset.dfce.split('|');dfCauseEdit(p[0],p.slice(1,-1).join('|'),+p[p.length-1]);return}
   if(e.target.closest('[data-dfrst]')){DF.st='';DF.ty='';$('dfSt').value='';$('dfTy').value='';$('dfA').value=DF.a=DF.from;$('dfB').value=DF.b=iso(new Date());dfDraw();return}
   if(e.target.closest('[data-dfckn]')){(DF.ck[DF.sel]||new Set()).clear();dfDraw();return}
   const lf=e.target.closest('[data-dflf]');if(lf){DF.lf=lf.dataset.dflf;dfDraw();return}
@@ -1032,10 +1063,10 @@ async function nwLoad(){const A=$('nwA').value,B=$('nwB').value,C=$('nwC').value
     const inP=(typeof movReady!=='undefined'&&movReady)?Promise.resolve(movAll.filter(m=>m.type==='in')):(NW.inC&&Date.now()-NW.inC.t<300000?Promise.resolve(NW.inC.d):db.collection('pos_stock_docs').where('type','==','in').get().then(q=>{const d=q.docs.map(x=>x.data());NW.inC={t:Date.now(),d};return d}));
     NW.open=NW.open||{};const opP=Promise.all(Object.values(LPP_LOC).map(st=>NW.open[st]?null:db.collection('pos_stock_open').doc(st).get().then(o=>{const S=new Set();try{const x=o.data();if(x)JSON.parse(x.d||'[]').forEach(r=>{if(+r[1]>0)S.add(r[0])})}catch(e){}NW.open[st]=S}).catch(()=>{NW.open[st]=new Set()})));
     const [IN0]=await Promise.all([inP,opP,loadPCat().catch(()=>{})]);
-    const IN=IN0.filter(m=>m.status!=='cancel'&&m.to),dd=m=>iso(new Date(m.recvAt||m.at));
+    const IN=IN0.filter(m=>m.status!=='cancel'&&m.to),dd=m=>iso(new Date(m.recvAt||m.at));if(!movReady)lcRebuild(IN);
     const R=IN.filter(m=>dd(m)>=A&&dd(m)<=B),RL=[];
     R.forEach(m=>{const at0=m.recvAt||m.at,at=m.sentAt&&String(m.sentAt)<String(at0)?m.sentAt:at0,lpp=m.src==='lpp';let L=[];try{L=JSON.parse(m.lines||'[]')}catch(e){}
-      L.forEach(x=>{const q=+x[1]||0;if(q<=0)return;const nm=x[2]||nmOf0(x[0]);RL.push({doc:m.no||m.uid,grp:lpp?(m.dname||'LPP'):((m.supplier||'Бусад')+(m.invoice?' · '+m.invoice:'')),sup:lpp?'LPP':(m.supplier||'Бусад'),st:m.to,code:x[0],name:nm,q,at,rat:at0,sold:0,sum:0,cost:0,cn:0,sk:0,pre:false})})});
+      L.forEach(x=>{const q=+x[1]||0;if(q<=0)return;if(lpp)LPPCODES.add(x[0]);const nm=x[2]||nmOf0(x[0]);RL.push({doc:m.no||m.uid,grp:lpp?(m.dname||'LPP'):((m.supplier||'Бусад')+(m.invoice?' · '+m.invoice:'')),sup:lpp?'LPP':(m.supplier||'Бусад'),st:m.to,code:x[0],name:nm,q,at,rat:at0,sold:0,sum:0,cost:0,cn:0,sk:0,pre:false})})});
     if(!RL.length){NW={rows:[],A,B,C};nwDraw();return}
     // өмнө нь байсан эсэх: эхний үлдэгдэл эсвэл энэ хугацаанаас өмнөх орлогод тухайн дэлгүүрт ижил код
     const PRE=new Set();Object.entries(NW.open).forEach(([st,S])=>S.forEach(c=>PRE.add(st+'|'+c)));
@@ -1072,7 +1103,7 @@ document.addEventListener('click',e=>{const r=e.target.closest('[data-nwk]');if(
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
 function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
-  if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
+  if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
@@ -1514,7 +1545,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-zp]');if(!
 function showTab(t,push){if(TAB_RED[t]){try{localStorage.setItem('vivipanel_sub_rep',TAB_RED[t])}catch(e){}t='rep'}if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
   document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   document.querySelectorAll('section[data-panel]').forEach(x=>x.hidden=x.dataset.panel!==t);
-  CURTAB=t;drawSubtabs(t);
+  CURTAB=t;drawSubtabs(t);if(t==='set'){lcDraw();loadPCat().then(lcDraw).catch(()=>{})}
   try{localStorage.setItem('vivipanel_tab',t)}catch(e){}
   if(push&&location.hash!=='#'+t)history.pushState(null,'','#'+t);window.scrollTo(0,0)}
 $('tabs').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab,true)};
@@ -1920,7 +1951,7 @@ async function movXlsx(rows,name){await xlsx();try{await loadPCat()}catch(e){}co
 $('mXlS').onclick=()=>xtXlsx('movs','khodolgoon_barimt_'+$('mD1').value+'_'+$('mD2').value,'Баримтууд');
 $('mXlL').onclick=async()=>{try{await loadPCat()}catch(e){}const {L}=xtData('movs'),keep=new Set(L.map(r=>r[12])),D=movInRange().filter(m=>keep.has(m.uid));await movXlsx(movLinesRows(D),'khodolgoon_baraagaar_'+$('mD1').value+'_'+$('mD2').value)};
 $('mList').addEventListener('click',async e=>{const b=e.target.closest('[data-mxl]');if(!b)return;const d=movDocs.find(x=>x.uid===b.dataset.mxl);if(!d)return;try{await loadPCat()}catch(x){}await movXlsx(movLinesRows([d]),(d.no||d.uid).replace(/[^\w\-А-яӨөҮү]/g,'_'))});
-function watchMov(){db.collection('pos_stock_docs').onSnapshot(s=>{movAll=s.docs.map(d=>d.data()).sort((a,b)=>a.at<b.at?1:-1);movDocs=movAll.filter(m=>m.status!=='cancel');movReady=true;drawMov()},()=>{})}   // цуцалсан шилжүүлэг үлдэгдэлд огт тооцогдохгүй
+function watchMov(){db.collection('pos_stock_docs').onSnapshot(s=>{movAll=s.docs.map(d=>d.data()).sort((a,b)=>a.at<b.at?1:-1);lcRebuild(movAll);movDocs=movAll.filter(m=>m.status!=='cancel');movReady=true;drawMov()},()=>{})}   // цуцалсан шилжүүлэг үлдэгдэлд огт тооцогдохгүй
 const movInRange=()=>{const a=$('mD1').value,b=$('mD2').value;return movAll.filter(m=>{const d=lt(m.at).slice(0,10);return (!a||d>=a)&&(!b||d<=b)})};
 /* ---- Дэлгүүр хооронд шилжүүлгийг самбараас хүлээн авах (rcv_xx эрхтэй хүн өөрийн дэлгүүрийнхийг) ---- */
 const trMine=()=>(can('stock')||can('stock.move')||(ME&&ME.admin))?null:['fc','dr','ns'].filter(k=>can('rcv_'+k)).map(k=>k.toUpperCase());
@@ -2418,7 +2449,8 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-ccan
 async function cntResult(t){await loadPCat().catch(()=>{});const loc=t.store,od=await db.collection('pos_stock_open').doc(loc).get();if(!od.exists)return alert(LOC[loc]+': эхний үлдэгдэл алга');
   const O=od.data(),SD=await salesSince(sDay(O.asOf),loc),C=stockCalc(loc,O,SD,t.countedAt),sys=new Map(C.rows.map(r=>[r.code,r.now]));
   const inTask=new Set(JSON.parse(t.codes||'[]').map(x=>x[0])),cntAll=JSON.parse(t.counts||'[]'),cnt=cntAll.filter(x=>inTask.has(x[0])),ext=cntAll.filter(x=>!inTask.has(x[0])&&x[1]>0);
-  const R=cnt.map(([c,q])=>{const j=itRow(c)||{},y=sys.get(c)||0;return {c,sz:j.size||'',nm:j.name||c,sys:y,q,d:q-y}});
+  let SR=null;if(t.status==='applied'&&t.res){try{SR=typeof t.res.rows==='string'?JSON.parse(t.res.rows):t.res.rows}catch(e){}}
+  const R=SR&&SR.length?SR.map(r=>({c:r[0],sz:r[1]||'',nm:r[7]||(itRow(r[0])||{}).name||r[0],sys:+r[2]||0,q:+r[3]||0,d:+r[4]||0})):cnt.map(([c,q])=>{const j=itRow(c)||{},y=sys.get(c)||0;return {c,sz:j.size||'',nm:j.name||c,sys:y,q,d:q-y}});
   // замд яваа (хүлээн аваагүй) шилжүүлэг: бараа дэлгүүрт ирсэн ч системд нэмэгдээгүй байж болно
   const trans=new Map();movDocs.filter(m=>m.type==='move'&&m.to===loc&&m.status==='sent'&&m.at<=t.countedAt).forEach(m=>JSON.parse(m.lines).forEach(x=>{if(inTask.has(x[0]))trans.set(x[0],(trans.get(x[0])||0)+x[1])}));
   const plus=R.filter(r=>r.d>0),minus=R.filter(r=>r.d<0),sum=R.reduce((a,r)=>a+r.d,0),szs=L=>L.map(r=>(r.sz||r.c)+' '+(r.d>0?'+':'')+r.d).join(', ');
@@ -3300,7 +3332,31 @@ $('lbPrint').onclick=()=>{const W=num0($('lbW').value)||40,H=num0($('lbH').value
   f.onload=()=>{setTimeout(()=>{f.contentWindow.focus();f.contentWindow.print()},300)};f.srcdoc=html;
   auditCfg('labels_print',{by:auth.currentUser.email,count:L.length,codes:LBL.map(l=>l.code)}).catch(()=>{})};
 /* ---- барааны жагсаалт: Smart Excel -> pos_catalog (хэсэгчлэн, өөрчлөгдсөн хэсгийг л бичнэ) ---- */
-let catCostSrc={u:0,p:0},catItems=null,catMeta=null,catCost=null,costMap=new Map(),costInfo='';
+/* LPP бараа (ORION / Network 360, Sinsay·Reserved·Cropp·House·Mohito): ачаагаар авдаг тул нэг ширхэгийн өртөг тогтмол.
+   Өртгийн файлд тухайн код байхгүй бол энэ үнээр тооцно (файлд байвал файлынх). */
+const LPP_UNIT_COST=6500,LPPCODES=new Set();
+const isLppItem=k=>{if(LPPCODES.has(k))return true;const r=typeof itRow==='function'?itRow(k):null;return !!r&&(/orion|network\s*360|lpp/i.test(r.sup||'')||/^(sinsay|reserved|cropp|house|mohito)\b/i.test(r.name||''))};
+// брэнд бүрийн нэгж өртөг (Тохиргоо → «LPP брэндийн нэгж өртөг»): бөглөсөн брэнд → тухайн брэндийн БҮХ бараанд энэ өртөг; хоосон → өртгийн файлынх; файлд ч алга → «Бусад LPP»
+const LPP_BRANDS=[['sinsay','Sinsay'],['reserved','Reserved'],['mohito','Mohito'],['cropp','Cropp'],['house','House'],['other','Бусад LPP (брэнд тодорхойгүй)']];
+/* Өртгийг ОГНООГООР: тохиргоо бүр «хүчинтэй огноо»-той (LPPH). LPP ачаа бүрт хүлээн авсан өдрийнх нь хүчинтэй өртөг ногдоно —
+   хуучин үлдэгдэл хуучин өртгөөрөө үлдэнэ. Нэг код хэд хэдэн ачаагаар ирсэн бол жигнэсэн дундаж. Ачаагаар ороогүй (эхний үлдэгдлийн) бараа — өртгийн файлынх. */
+let LPPH=[{from:'2000-01-01',b:{sinsay:LPP_UNIT_COST}}],LPPC=LPPH[0].b,LCOST=new Map();
+const lppBrandN=nm=>{const m=/^(sinsay|reserved|mohito|cropp|house)\b/i.exec(String(nm||'').trim());return m?m[1].toLowerCase():'other'};
+const lppBrand=k=>{const r=typeof itRow==='function'?itRow(k):null;return lppBrandN(r&&r.name)};
+const lcAt=(br,d)=>{let v=null;for(const h of LPPH){if(h.from<=d&&+h.b[br]>0)v=+h.b[br]}return v};
+function lcRebuild(docs){const M=new Map();(docs||movAll||[]).forEach(m=>{if(m.src!=='lpp'||m.type!=='in'||m.status==='cancel')return;const d=iso(new Date(m.recvAt||m.at));let L=[];try{L=JSON.parse(m.lines||'[]')}catch(e){}
+    L.forEach(x=>{const q=+x[1]||0;if(q<=0)return;LPPCODES.add(x[0]);const c=lcAt(lppBrandN(x[2]||(itRow(x[0])||{}).name),d);const o=M.get(x[0])||{q:0,s:0,n:0};if(c!=null){o.q+=q;o.s+=q*c}else o.n+=q;M.set(x[0],o)})});LCOST=M}
+const lppBrandCost=k=>{const o=LCOST.get(k);if(o&&o.q>0&&!o.n)return o.s/o.q;return null};
+class CostMap extends Map{has(k){return this.get(k)!==undefined}get(k){const o=LCOST.get(k);if(o&&o.q>0){if(!o.n||!super.has(k))return o.s/o.q;const f=super.get(k);return (o.s+f*o.n)/(o.q+o.n)}if(super.has(k))return super.get(k);if(isLppItem(k)){const c=lcAt(lppBrand(k),iso(new Date()));if(c!=null)return c}return undefined}}
+function watchLppCost(){db.collection('pos_config').doc('lppcost').onSnapshot(d=>{const x=d.exists?d.data():null;
+    LPPH=x&&Array.isArray(x.h)&&x.h.length?x.h.slice().sort((a,b)=>a.from<b.from?-1:1):(x&&x.b?[{from:'2000-01-01',b:x.b,by:x.by,at:x.at}]:[{from:'2000-01-01',b:{sinsay:LPP_UNIT_COST}}]);LPPC=LPPH[LPPH.length-1].b;
+    lcRebuild();lcDraw();try{if(typeof drawMov==='function'&&movReady)drawMov()}catch(e){}},()=>{})}
+function lcDraw(){const el=$('lcRows');if(!el)return;const n={};try{(PCAT||[]).forEach(r=>{const k=r[0];if(isLppItem(k)){const b=lppBrand(k);n[b]=(n[b]||0)+1}})}catch(e){}
+  const ed=!!(ME&&ME.admin)||can('cost'),cur=LPPH[LPPH.length-1];if(!$('lcFrom').value)$('lcFrom').value=iso(new Date());
+  el.innerHTML=LPP_BRANDS.map(([k,l])=>'<tr><td><b>'+l+'</b></td><td class="n">'+(+cur.b[k]>0?nfx(+cur.b[k])+' ₮':'<span class="small">файлын</span>')+'</td><td class="n"><input class="inp" style="max-width:140px;text-align:right" type="number" min="0" step="100" data-lc="'+k+'" value="'+(+cur.b[k]>0?+cur.b[k]:'')+'" placeholder="хоосон = файлын"'+(ed?'':' disabled')+'></td><td class="n">'+(n[k]?nfx(n[k]):'')+'</td></tr>').join('');
+  $('lcHist').innerHTML='<table class="t" data-xe="1"><thead><tr><th>Хүчинтэй огноо (энэ өдрөөс хүлээн авсан ачаанд)</th>'+LPP_BRANDS.map(([k,l])=>'<th class="n">'+l.split(' ')[0]+'</th>').join('')+'<th>Хэн, хэзээ</th></tr></thead><tbody>'+LPPH.slice().reverse().map(h=>'<tr><td><b>'+(h.from==='2000-01-01'?'анхны (бүх ачаа)':esc(h.from))+'</b></td>'+LPP_BRANDS.map(([k])=>'<td class="n">'+(+h.b[k]>0?nfx(+h.b[k]):'—')+'</td>').join('')+'<td class="small">'+(h.by?esc(String(h.by).split('@')[0])+', '+esc(lt(h.at)):'')+'</td></tr>').join('')+'</tbody></table>';
+  $('lcOk').disabled=!ed;$('lcFrom').disabled=!ed}
+let catCostSrc={u:0,p:0},catItems=null,catMeta=null,catCost=null,costMap=new CostMap(),costInfo='';
 async function xlsx(){if(!window.XLSX)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');return window.XLSX}
 function allSheets(wb,test){const out=[];for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});for(let h=0;h<Math.min(15,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim()),ix={};row.forEach((k,i)=>{if(k&&!(k in ix))ix[k]=i});const r=test(row,ix);if(r){out.push({rows:a.slice(h+1),ix,sheet:n,col:r});break}}}return out}
 function findSheet(wb,need){for(const n of wb.SheetNames){const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});for(let h=0;h<Math.min(15,a.length);h++){const row=(a[h]||[]).map(x=>x==null?'':String(x).trim());if(need.every(k=>row.includes(k))){const ix={};row.forEach((k,i)=>{if(k&&!(k in ix))ix[k]=i});return {rows:a.slice(h+1),ix,sheet:n}}}}return null}
@@ -3421,7 +3477,7 @@ async function writeChunks(col,rows,metaExtra,prog){
 }
 async function loadCost(){
   try{const m=await db.collection('pos_cost').doc('meta').get();if(!m.exists){costInfo='Өртөг: үүлэнд алга — тайланд өртөг гарахгүй. 2-р талбарт үлдэгдлийн файл («Нэгж өртөг» баганатай) сонгож «Файл шалгах» → «Үүлэнд илгээх» дарна уу.';const el=$('costNow');if(el){el.textContent=costInfo;el.className='small hot'}return}
-    const meta=m.data(),mp=new Map();for(const c of meta.chunks){const d=await db.collection('pos_cost').doc(c.id).get();if(d.exists)JSON.parse(d.data().d).forEach(x=>mp.set(x[0],x[1]))}
+    const meta=m.data(),mp=new CostMap();for(const c of meta.chunks){const d=await db.collection('pos_cost').doc(c.id).get();if(d.exists)JSON.parse(d.data().d).forEach(x=>mp.set(x[0],x[1]))}
     Object.values(costMap).length;costMap.forEach((v,k)=>{if(!mp.has(k))mp.set(k,v)});costMap=mp;costInfo='Өртөг: '+mp.size.toLocaleString('en-US')+' бараа · '+new Date(meta.version).toLocaleString('sv-SE').slice(0,16);
   }catch(e){costInfo='Өртөг уншсангүй: '+(e.code||e.message||e);setTimeout(loadCost,30000)}
   const el=$('costNow');if(el)el.textContent=costInfo;if(typeof drawRep==='function')draw();
