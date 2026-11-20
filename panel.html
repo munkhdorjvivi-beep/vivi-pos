@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="14.8">
+<meta name="vivi-ver" content="14.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -100,6 +100,16 @@ tr.pr:hover td{background:var(--soft);cursor:pointer}
 @media (max-width:640px){.frm{grid-template-columns:1fr}}
 .dfchips{display:inline-flex;gap:4px;flex-wrap:wrap}.dfchips button{border:1px solid #d5dae0;background:#fff;border-radius:16px;padding:4px 12px;cursor:pointer;font:inherit;font-size:13px}.dfchips button[aria-pressed="true"]{background:#1f2937;color:#fff;border-color:#1f2937}
 @media (max-width:820px){input,select,textarea,.inp{font-size:16px!important}}
+/* --- багтаамж (утас, компьютер): хүснэгт дэлгэцээс хэтэрвэл өөрөө хажуу тийш гүйлгэгдэнэ, бусад нь цонхонд багтана --- */
+.xtw{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.xtw>table{min-width:100%}.xtw th,.xtw td{overflow-wrap:normal;word-break:normal}.xtw td{white-space:nowrap}.xtw td:has(>div),.xtw td.wrap{white-space:normal}@media (max-width:820px){.xtw>table{width:max-content}}
+.xfb{white-space:normal;line-height:1.25;min-width:56px}
+main select,main .inp,main input{max-width:100%}
+main textarea{max-width:100%}
+.drng{flex-wrap:wrap;max-width:100%}
+.card,.k{min-width:0;overflow-wrap:anywhere}
+.chc .row{flex-wrap:wrap}.chc .row textarea{flex:1 1 180px;min-width:0}
+@media (max-width:820px){main [style*="display:flex"]{flex-wrap:wrap}#chWrap{grid-template-columns:1fr!important;min-height:0!important}.slf>*,main [style*="display:grid"]>*{min-width:0}.step{padding:10px 8px;gap:8px}.step>*{min-width:0}.frm>*{min-width:0}.two{flex-wrap:wrap}.two input{min-width:0;flex:1 1 120px}main [style*="minmax("]{grid-template-columns:1fr!important}#chList{max-height:32vh;overflow:auto;flex-wrap:nowrap!important}main [style*="flex-direction:column"]{flex-wrap:nowrap}main{padding:10px 8px}.card{padding:10px}.drng input{min-width:0;flex:1 1 130px}.slf{grid-template-columns:1fr!important}}
 </style>
 </head>
 <body>
@@ -1100,6 +1110,10 @@ function nwDraw(){if(!NW.rows){$('nwMsg').textContent='Хугацаагаа со
 document.addEventListener('click',e=>{const r=e.target.closest('[data-nwk]');if(r&&!e.target.closest('.xfb')&&r.closest('#nwT')){const g=$('nwG').value,nx=NWNEXT[g];if(!nx)return;NW.path=(NW.path||[]).concat([{g,k:r.dataset.nwk,from:g}]);$('nwG').value=nx;nwDraw();return}
   const p=e.target.closest('[data-nwp]');if(p){e.preventDefault();const n=+p.dataset.nwp,P=NW.path||[];if(n<P.length){$('nwG').value=P[n].g;NW.path=P.slice(0,n)}nwDraw()}});
 
+
+// хүснэгт бүрийг хажуу тийш гүйлгэх хайрцагт (цонхноос хэтрэхгүй)
+(function(){const wrap=()=>{document.querySelectorAll('main table').forEach(t=>{const p=t.parentElement;if(!p||p.classList.contains('xtw')||p.classList.contains('scroll')||t.closest('.xtw,.scroll'))return;const w=document.createElement('div');w.className='xtw';p.insertBefore(w,t);w.appendChild(t)})};
+  let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;wrap()})}).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',wrap)})();
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
 function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
