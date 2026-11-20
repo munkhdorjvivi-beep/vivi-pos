@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="15.5">
+<meta name="vivi-ver" content="15.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1162,6 +1162,14 @@ document.addEventListener('click',e=>{const r=e.target.closest('[data-nwk]');if(
 // хүснэгт бүрийг хажуу тийш гүйлгэх хайрцагт (цонхноос хэтрэхгүй)
 (function(){const wrap=()=>{document.querySelectorAll('main table').forEach(t=>{const p=t.parentElement;if(!p||p.classList.contains('xtw')||p.classList.contains('scroll')||t.closest('.xtw,.scroll'))return;const w=document.createElement('div');w.className='xtw';p.insertBefore(w,t);w.appendChild(t)})};
   let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;wrap()})}).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',wrap)})();
+
+// ---- Скан хамгаалалт: QR/DataMatrix эсвэл давхар уншилт → 2–3 сек урт дохио + чичиргээ + том улаан бичиг, тоологдохгүй ----
+const isQrScan=v=>{const s=String(v||'').trim();return /:\/\/|^www\.|\/|\x1d/i.test(s)||/^\(?01\)?\d{14}\(?21\)?/.test(s)||(!/\s/.test(s)&&s.length>20)};
+let SAC=null;function scanAlarm(){try{navigator.vibrate&&navigator.vibrate([400,120,400,120,600])}catch(e){}try{SAC=SAC||new(window.AudioContext||window.webkitAudioContext)();if(SAC.state==='suspended')SAC.resume();const t0=SAC.currentTime,g=SAC.createGain();g.gain.value=0.22;g.connect(SAC.destination);for(let i=0;i<10;i++){const o=SAC.createOscillator();o.type='square';o.frequency.value=i%2?520:980;o.connect(g);o.start(t0+i*0.25);o.stop(t0+i*0.25+0.23)}}catch(e){}}
+function scanStop(title,sub){scanAlarm();let t=document.getElementById('scanStop');if(!t){t=document.createElement('div');t.id='scanStop';t.style.cssText='position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:100000;background:#c62828;color:#fff;padding:18px 26px;border-radius:12px;font-size:21px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.35);text-align:center;max-width:92vw';document.body.appendChild(t)}
+  t.innerHTML=title+'<div style="font-size:16px;font-weight:500;margin-top:6px">'+sub+'</div>';t.hidden=false;clearTimeout(scanStop.h);scanStop.h=setTimeout(()=>{t.hidden=true},3500)}
+const SCN={};function scanBad(v,key,dup){const o0=SCN[key]||(SCN[key]={});if(isQrScan(v)||/^\d{1,4}\*/.test(v))o0.v=null;if(isQrScan(v)){scanStop('⛔ QR / DataMatrix (дөрвөлжин) код уншуулсан байна!','Тоологдоогүй. Шошгоны <u>зураасан БАРКОД</u>-ыг уншуулна уу.');return true}
+  if(dup&&!/^\d{1,4}\*/.test(v)){const now=Date.now(),o=SCN[key]||(SCN[key]={});if(o.v===v&&now-o.t<1500){scanStop('⚠ ДАВХАР УНШСАН — тоологдоогүй','Нэг барааг 2 удаа уншуулсан байна. Хэрэв энэ <u>2 дахь ширхэг</u> бол дохио дуусмагц дахин уншуулна уу.');return true}o.v=v;o.t=now}return false}
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
 function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
@@ -1971,7 +1979,7 @@ const mDraw=()=>{const L=movLines||[],ty=$('mTy').value,pr=c=>movPrice[c]!=null?
   $('mPrev').textContent='';$('mUp').disabled=!L.length};
 $('mTy').addEventListener('change',()=>mDraw());
 $('mScanL').addEventListener('input',e=>{const c=e.target.closest('[data-mc]');if(!c)return;const x=movLines[+c.dataset.mc],v=Number(c.value);if(c.value===''||!(v>0))x.length=3;else{x.length=3;x[3]=Math.round(v*100)/100}});
-$('mScan').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('mScan').value.trim(),n=1;$('mScan').value='';if(!v)return;const m=/^(\d{1,4})\*(.+)$/.exec(v);if(m){n=+m[1];v=m[2].trim()}
+$('mScan').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('mScan').value.trim(),n=1;$('mScan').value='';if(!v||scanBad(v,'m',true))return;const m=/^(\d{1,4})\*(.+)$/.exec(v);if(m){n=+m[1];v=m[2].trim()}
   try{await loadPCat()}catch(x){}const it=itRow(v),code=it?it.code:v;
   if(!it){$('mMsg').innerHTML='<span class="hot">'+esc(v)+' — жагсаалтад алга (кодоор нь нэмлээ)</span>'}else $('mMsg').textContent='';
   movLines=movLines||[];if(it)movPrice[code]=it.price;const o=movLines.find(x=>x[0]===code);if(o)o[1]+=n;else movLines.unshift([code,n,it?it.name:'']);mDraw()};
@@ -2047,7 +2055,7 @@ function trViewDraw(){const T=TV,m=T.m,ce=trCanEdit()&&m.status==='sent'&&m.type
   $('tvCx').onclick=()=>trView(m.uid);
   $('pbox').querySelectorAll('[data-tvq]').forEach(i=>i.oninput=()=>{T.L[+i.dataset.tvq][1]=Math.max(0,Math.round(+i.value||0))});
   $('pbox').querySelectorAll('[data-tvd]').forEach(b=>b.onclick=()=>{T.from=$('tvF').value;T.to=$('tvT').value;T.note=$('tvN').value;T.L.splice(+b.dataset.tvd,1);trViewDraw()});
-  $('tvS').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('tvS').value.trim(),n=1;$('tvS').value='';if(!v)return;const mm=/^(\d{1,4})\*(.+)$/.exec(v);if(mm){n=+mm[1];v=mm[2].trim()}
+  $('tvS').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('tvS').value.trim(),n=1;$('tvS').value='';if(!v||scanBad(v,'tv',true))return;const mm=/^(\d{1,4})\*(.+)$/.exec(v);if(mm){n=+mm[1];v=mm[2].trim()}
     try{await loadPCat()}catch(x){}const it=itRow(v),c=it?it.code:v,o=T.L.find(x=>x[0]===c);T.from=$('tvF').value;T.to=$('tvT').value;T.note=$('tvN').value;if(o)o[1]+=n;else T.L.unshift([c,n,it?it.name:'']);trViewDraw();setTimeout(()=>$('tvS').focus(),30)};
   $('tvSave').onclick=async()=>{const from=$('tvF').value,to=$('tvT').value,note=$('tvN').value.trim(),L=T.L.filter(x=>+x[1]>0);if(from===to)return $('tvM').textContent='Хаанаас, хаана ижил байна';if(!L.length)return $('tvM').textContent='Бараа алга — устгах бол «Устгах (цуцлах)»';
     const q=L.reduce((a,x)=>a+x[1],0),ch=[from!==m.from||to!==m.to?'байршил':'',note!==(m.note||'')?'тайлбар':'',JSON.stringify(L)!==m.lines?'бараа '+(m.qty||0)+'→'+q+' ш':''].filter(Boolean).join(', ');if(!ch){trView(m.uid);return}
@@ -2065,7 +2073,7 @@ function trOpen(uid){const m=movDocs.find(x=>x.uid===uid);if(!m||m.status!=='sen
     '<label class="f">Тайлбар (зөрүү гарвал заавал)</label><input id="trN" class="inp"><div id="trM" class="small" style="color:var(--red);min-height:18px;margin-top:4px"></div>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="trAll">Бүгд ирсэн гэж бөглөх</button><button class="btn" id="trX">Болих</button><button class="btn pri" id="trOk">Хүлээн авсныг баталгаажуулах</button></div>';
   $('pm').classList.remove('hide');trTbl();setTimeout(()=>$('trScan').focus(),50);
-  $('trScan').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('trScan').value.trim(),n=1;$('trScan').value='';if(!v)return;const mm=/^(\d{1,4})\*(.+)$/.exec(v);if(mm){n=+mm[1];v=mm[2].trim()}
+  $('trScan').onkeydown=async e=>{if(e.key!=='Enter')return;e.preventDefault();let v=$('trScan').value.trim(),n=1;$('trScan').value='';if(!v||scanBad(v,'tr',true))return;const mm=/^(\d{1,4})\*(.+)$/.exec(v);if(mm){n=+mm[1];v=mm[2].trim()}
     try{await loadPCat()}catch(x){}const it=itRow(v),code=it?it.code:v,ex=TR.exp.find(x=>x[0]===code||x[0]===v),c=ex?ex[0]:code,o=TR.got.get(c)||[c,0,(ex&&ex[2])||(it&&it.name)||''];o[1]+=n;TR.got.set(c,o);
     $('trM').textContent=ex?'':v+' — илгээсэн жагсаалтад алга (илүү)';trTbl()};
   $('trX').onclick=()=>{TR=null;pClose()};

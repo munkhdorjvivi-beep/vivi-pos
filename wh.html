@@ -6238,7 +6238,17 @@ const storeName = k => (WH.storeOf(k, whCfg()) || {}).name || k;
 // ---------- sound ----------
 let AC = null;
 function isQrScan(raw){ const s = String(raw || '').trim(); return /:\/\/|^www\.|\/|\x1d/i.test(s) || /^\(?01\)?\d{14}\(?21\)?/.test(s) || s.length > 20; }
-function qrStop(raw){ if (!isQrScan(raw)) return false; beep('bad'); let t = document.getElementById('qr-stop');
+function alarm(){ try{ navigator.vibrate && navigator.vibrate([400, 120, 400, 120, 600]); }catch(e){}
+  try{ AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); const t0 = AC.currentTime, g = AC.createGain(); g.gain.value = 0.22; g.connect(AC.destination);
+    for (let i = 0; i < 10; i++){ const o = AC.createOscillator(); o.type = 'square'; o.frequency.value = i % 2 ? 520 : 980; o.connect(g); o.start(t0 + i * 0.25); o.stop(t0 + i * 0.25 + 0.23); } }catch(e){} }
+function scanStop(title, sub){ alarm(); let t = document.getElementById('qr-stop');
+  if (!t){ t = document.createElement('div'); t.id = 'qr-stop'; t.style.cssText = 'position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:99999;background:#c62828;color:#fff;padding:18px 26px;border-radius:12px;font-size:21px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.35);text-align:center;max-width:92vw'; document.body.appendChild(t); }
+  t.innerHTML = title + '<div style="font-size:16px;font-weight:500;margin-top:6px">' + sub + '</div>'; t.hidden = false; clearTimeout(scanStop.h); scanStop.h = setTimeout(() => { t.hidden = true; }, 3500); }
+// нэг баркод 1.5 сек дотор дахин уншигдвал — давхар уншилт гэж тооцож ТООЛОХГҮЙ, урт дохио (2 дахь ширхэг бол дохионы дараа дахин уншуулна)
+const DUP_MS = 1500;
+function dupStop(e, st, lk){ const now = Date.now(); if (e === st[lk] && now - st.lastAt < DUP_MS){ scanStop('⚠ ДАВХАР УНШСАН — тоологдоогүй', 'Нэг барааг 2 удаа уншуулсан байна. Хэрэв энэ <u>2 дахь ширхэг</u> бол дохио дуусмагц дахин уншуулна уу.'); return true; } st[lk] = e; st.lastAt = now; return false; }
+function qrStop(raw){ if (!isQrScan(raw)) return false; scanStop('⛔ QR / DataMatrix (дөрвөлжин) код уншуулсан байна!', 'Тоологдоогүй. Шошгоны <u>зураасан БАРКОД</u>-ыг уншуулна уу.'); return true; }
+function qrStopOld(raw){ if (!isQrScan(raw)) return false; let t = document.getElementById('qr-stop');
   if (!t){ t = document.createElement('div'); t.id = 'qr-stop'; t.style.cssText = 'position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:99999;background:#c62828;color:#fff;padding:18px 26px;border-radius:12px;font-size:21px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.35);text-align:center;max-width:92vw'; document.body.appendChild(t); }
   t.innerHTML = '⛔ QR / DataMatrix (дөрвөлжин) код уншуулсан байна!<div style="font-size:16px;font-weight:500;margin-top:6px">Тоологдоогүй. Шошгоны <u>зураасан БАРКОД</u>-ыг уншуулна уу.</div>'; t.hidden = false; clearTimeout(qrStop.h); qrStop.h = setTimeout(() => { t.hidden = true; }, 3500); return true; }
 function beep(kind){
@@ -6786,7 +6796,7 @@ function rcmPick(e){ const L = rcmShips().filter(s => s.status === 'sent'); if (
   const left = s => rcN(decMap(s.l)[e]) - rcN(decMap(s.r)[e]) - ((P[s.id] || {})[e] || 0);
   const has = s => (s.rq || 0) + Object.values(P[s.id] || {}).reduce((a, b) => a + b, 0) > 0, inL = s => decMap(s.l)[e] != null;
   return L.find(s => left(s) > 0) || L.slice().reverse().find(s => inL(s) && has(s)) || L.slice().reverse().find(inL) || L.find(has) || L[0]; }
-function rcmScan(raw){ if (qrStop(raw)) return; const e = WH.eanOf(raw); if (!e) return; const now = Date.now(); if (e === WS.rc.lastE && now - WS.rc.lastAt < 250) return; WS.rc.lastE = e; WS.rc.lastAt = now;
+function rcmScan(raw){ if (qrStop(raw)) return; const e = WH.eanOf(raw); if (!e) return; if (dupStop(e, WS.rc, 'lastE')) return;
   const s = rcmPick(e); if (!s) return; const P = WS.rc.pendM[s.id] || (WS.rc.pendM[s.id] = {}); P[e] = (P[e] || 0) + 1;
   const i = rcmShips().map(x => decMap(x.i)[e]).find(Boolean) || {}, inList = decMap(s.l)[e] != null;
   WS.rc.last.unshift({e, n: i.n || '—', t: new Date().toTimeString().slice(0, 8), sid: s.id, no: s.no}); WS.rc.last = WS.rc.last.slice(0, 30);
@@ -6888,8 +6898,8 @@ async function rcFlush(){
 setInterval(rcFlush, 1500);
 function rcScan(raw){
   if (WS.rc.multi) return rcmScan(raw);
-  if (qrStop(raw)) return; const e = WH.eanOf(raw), s = WS.ships.find(x => x.id === WS.rc.ship); if (!e || !s || s.status !== 'sent') return; const now = Date.now();
-  if (e === WS.rc.lastE && now - WS.rc.lastAt < 250) return; WS.rc.lastE = e; WS.rc.lastAt = now;
+  if (qrStop(raw)) return; const e = WH.eanOf(raw), s = WS.ships.find(x => x.id === WS.rc.ship); if (!e || !s || s.status !== 'sent') return;
+  if (dupStop(e, WS.rc, 'lastE')) return;
   WS.rc.pend[e] = (WS.rc.pend[e] || 0) + 1; const i = decMap(s.i)[e] || {};
   WS.rc.last.unshift({e, n: i.n || '—', t: new Date().toTimeString().slice(0, 8)}); WS.rc.last = WS.rc.last.slice(0, 20);
   $('#rc-lastname').textContent = i.n ? i.n : 'Энэ илгээмжийн жагсаалтад байхгүй баркод (илүү гэж тооцогдоно)'; beep(i.n ? 'ok' : 'extra'); renderRcvCount();

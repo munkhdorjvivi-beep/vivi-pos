@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.4">
+<meta name="vivi-ver" content="7.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -438,9 +438,11 @@ async function cloudConnect(){
   $('co2').onclick=()=>{$('cm2').textContent='Холбогдож байна…';fb.auth.signInWithEmailAndPassword($('ce').value.trim(),$('cp').value).then(close).catch(e=>{$('cm2').textContent='Холбогдсонгүй: '+(e&&e.code||e)})};
 }
 // QR код (шошгоны доод талын дөрвөлжин) уншуулбал хаана — зөвхөн зураасан баркод
+// 2–3 сек урт дохио + чичиргээ (дэлгэц харахгүй байсан ч мэдэгдэнэ)
+let QAC=null;function qrAlarm(){try{navigator.vibrate&&navigator.vibrate([400,120,400,120,600])}catch(e){}try{QAC=QAC||new(window.AudioContext||window.webkitAudioContext)();if(QAC.state==='suspended')QAC.resume();const t0=QAC.currentTime,g=QAC.createGain();g.gain.value=0.22;g.connect(QAC.destination);for(let i=0;i<10;i++){const o=QAC.createOscillator();o.type='square';o.frequency.value=i%2?520:980;o.connect(g);o.start(t0+i*0.25);o.stop(t0+i*0.25+0.23)}}catch(e){}}
 function qrStop(v){const s=String(v||'').trim();if(!(/:\/\/|^www\.|^https?|\x1d/i.test(s)||/^\(?01\)?\d{14}\(?21\)?/.test(s)||(!/\s/.test(s)&&s.length>20)))return false;let t=document.getElementById('qrStop');
   if(!t){t=document.createElement('div');t.id='qrStop';t.style.cssText='position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:99999;background:#c62828;color:#fff;padding:18px 26px;border-radius:12px;font-size:21px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.35);text-align:center;max-width:92vw';document.body.appendChild(t)}
-  t.innerHTML='⛔ QR / DataMatrix (дөрвөлжин) код уншуулсан байна!<div style="font-size:16px;font-weight:500;margin-top:6px">Тоологдоогүй. Шошгоны <u>зураасан БАРКОД</u>-ыг уншуулна уу.</div>';t.hidden=false;clearTimeout(qrStop.h);qrStop.h=setTimeout(()=>{t.hidden=true},3500);return true}
+  qrAlarm();t.innerHTML='⛔ QR / DataMatrix (дөрвөлжин) код уншуулсан байна!<div style="font-size:16px;font-weight:500;margin-top:6px">Тоологдоогүй. Шошгоны <u>зураасан БАРКОД</u>-ыг уншуулна уу.</div>';t.hidden=false;clearTimeout(qrStop.h);qrStop.h=setTimeout(()=>{t.hidden=true},3500);return true}
 function flash(t){$('msg').textContent=t;clearTimeout(flash.h);flash.h=setTimeout(()=>$('msg').textContent='',4000)}
 
 /* ---------- promo engine ----------
