@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="16.8">
+<meta name="vivi-ver" content="16.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -3852,7 +3852,7 @@ async function ckRun(){const a=$('ckA').value,b=$('ckB').value>=a?$('ckB').value
     const T=new Map(),bad=[],dup=[],byId=new Map();
     L.forEach(x=>{const m=String(x.id||'').match(/^([A-Z]+)-(\d+)-(\d+)$/i);if(!m){bad.push([x.id||'(дугааргүй)',x.date,'дугаарын хэлбэр буруу','']);return}
       const k=m[1].toUpperCase()+'-'+m[2],n=+m[3];let t=T.get(k);if(!t)T.set(k,t={k,store:m[1].toUpperCase(),reg:m[2],nums:new Map(),sale:0,ret:0,ns:0,nr:0});
-      if(t.nums.has(n)&&t.nums.get(n)!==x.uid)dup.push([x.id,x.date,'ижил дугаартай 2 өөр баримт','']);t.nums.set(n,x.uid);
+      (byId.get(x.id)||byId.set(x.id,[]).get(x.id)).push(x);t.nums.set(n,x.uid);t.cnt=(t.cnt||0)+1;
       if(x.type==='return'){t.ret+=+x.total||0;t.nr++}else{t.sale+=+x.total||0;t.ns++}
       // дүнгийн тэнцэл
       const ls=(x.lines||[]).reduce((s2,l)=>s2+(+l.sum||0),0),ps=(x.payments||[]).reduce((s2,p)=>s2+(+p.amount||0),0),tot=+x.total||0;
@@ -3860,27 +3860,31 @@ async function ckRun(){const a=$('ckA').value,b=$('ckB').value>=a?$('ckB').value
       if((x.payments||[]).length&&!x.exch&&!(x.payments||[]).some(p=>p.form==='Солилт')&&Math.abs(Math.abs(ps)-Math.abs(tot))>1)bad.push([x.id,x.date,'төлбөрийн нийлбэр '+fmtN(r1(ps))+' ≠ баримтын дүн '+fmtN(r1(tot)),x.cashier||'']);
       if(x.type==='return'&&tot>0)bad.push([x.id,x.date,'буцаалт эерэг дүнтэй ('+fmtN(r1(tot))+') — борлуулалтыг өсгөж харуулна',x.cashier||'']);
       if(x.type==='sale'&&tot<0)bad.push([x.id,x.date,'борлуулалт хасах дүнтэй',x.cashier||''])});
+    // давхар дугаар: агуулга нь ижил бол нэг борлуулалт 2 удаа тоологдсон (дүн өссөн); өөр бол 2 тусдаа борлуулалт, зөвхөн дугаар давхацсан (дүн зөв)
+    const sig=x=>[x.type,x.total,(x.lines||[]).map(l=>l.code+'x'+l.qty+'='+l.sum).sort().join(','),String(x.iso||'').slice(0,16)].join('|');let dupX=0;
+    byId.forEach((A,id)=>{if(A.length<2)return;const same=A.every(x=>sig(x)===sig(A[0]));if(same)dupX+=A.slice(1).reduce((a,x)=>a+(+x.total||0),0);
+      A.forEach((x,i)=>dup.push([id,x.date,(same?(i?'⚠ ДАВХАР ТООЛОГДСОН — ижил агуулга, '+fmtN(Math.round(+x.total||0))+' ₮ илүү':'ижил агуулгатай 2 бичлэг (эх)'):'дугаар давхацсан, '+(i+1)+'/'+A.length+'-р баримт — өөр борлуулалт (дүн зөв)')+' · '+String(x.time||'').slice(0,5)+' · '+fmtN(Math.round(+x.total||0))+' ₮ · '+(x.lines||[]).length+' мөр · v'+(x.ver||'?')+(x.dev?' · '+x.dev:''),x.cashier||'']))});
     // дугаарын тасралт (самбараас устгасан баримтыг тооцохгүй)
     const rows=[...T.values()].sort((x,y)=>x.k.localeCompare(y.k)).map(t=>{const ks=[...t.nums.keys()].sort((x,y)=>x-y),mn=ks[0],mx=ks[ks.length-1],miss=[],del=[];
       for(let n=mn;n<=mx;n++)if(!t.nums.has(n)){const id=t.k+'-'+String(n).padStart(6,'0');(delIds.has(id)?del:miss).push(id)}
       const dv=DEVS.find(d=>d.store===t.store&&String(d.reg)===String(t.reg)&&d.active!==false);
-      return {k:t.k,store:t.store,reg:t.reg,n:ks.length,from:t.k+'-'+String(mn).padStart(6,'0'),to:t.k+'-'+String(mx).padStart(6,'0'),miss,del,sale:t.sale,ret:t.ret,net:t.sale+t.ret,dev:dv}});
+      return {k:t.k,store:t.store,reg:t.reg,n:t.cnt,from:t.k+'-'+String(mn).padStart(6,'0'),to:t.k+'-'+String(mx).padStart(6,'0'),miss,del,sale:t.sale,ret:t.ret,net:t.sale+t.ret,dev:dv}});
     // илгээгээгүй / холбогдоогүй касс
     const now_=Date.now(),devW=DEVS.filter(d=>d.active!==false&&((+d.pending||0)>0||!d.lastSeen||now_-new Date(d.lastSeen)>36*3600000)).map(d=>(STN[d.store]||d.store)+' касс '+d.reg+((+d.pending||0)>0?' — '+d.pending+' баримт илгээгээгүй':'')+(!d.lastSeen||now_-new Date(d.lastSeen)>36*3600000?' — '+Math.round((now_-new Date(d.lastSeen||0))/864e5)+' өдөр холбогдоогүй':''));
     // өдөр × дэлгүүр: «Тойм»-той адил цэвэр борлуулалт
     const day=new Map();L.forEach(x=>{const k=x.date+'|'+x.store;let r=day.get(k);if(!r)day.set(k,r={d:x.date,st:x.store,n:0,sale:0,ret:0});if(x.type==='return')r.ret+=+x.total||0;else{r.sale+=+x.total||0;r.n++}});
     const delR=DEL.filter(x=>x.date>=A&&x.date<=B);
-    CK={a,b,rows,bad:bad.concat(dup),devW,day:[...day.values()].sort((x,y)=>(x.d+x.st).localeCompare(y.d+y.st)),delR,tot:L.reduce((s2,x)=>s2+(+x.total||0),0),n:L.length};ckDraw()})}
+    CK={a,b,dupX,rows,bad:bad.concat(dup),devW,day:[...day.values()].sort((x,y)=>(x.d+x.st).localeCompare(y.d+y.st)),delR,tot:L.reduce((s2,x)=>s2+(+x.total||0),0),n:L.length};ckDraw()})}
 function ckDraw(){const C=CK;if(!C)return;const miss=C.rows.reduce((a,r)=>a+r.miss.length,0),iss=miss+C.bad.length+C.devW.length;
   $('ckSum').innerHTML='<div style="border-radius:10px;padding:10px 12px;margin:4px 0 10px;'+(iss?'background:#fdecec;border:1px solid #f3b9b9;color:#8a1c1c':'background:#e9f7ee;border:1px solid #b6e2c4;color:#14532d')+'">'+
     (iss?'<b>⚠ Анхаарах '+iss+' зүйл</b>':'<b>✓ Бүх баримт бүрэн</b> — касс бүрийн дугаар тасралтгүй, дүн зөв, илгээгээгүй касс алга')+
-    '<div style="margin-top:4px">'+C.a+' → '+C.b+': '+C.n+' баримт · самбарт харагдах цэвэр борлуулалт <b>'+fmtN(Math.round(C.tot))+' ₮</b>'+(C.delR.length?' · самбараас устгасан '+C.delR.length+' баримт ('+fmtN(Math.round(C.delR.reduce((a,x)=>a+(+x.total||0),0)))+' ₮, «🧾 Баримтууд»-аас харна)':'')+'</div>'+
+    '<div style="margin-top:4px">'+C.a+' → '+C.b+': '+C.n+' баримт (буцаалттай) · самбарт харагдах цэвэр борлуулалт <b>'+fmtN(Math.round(C.tot))+' ₮</b>'+(C.delR.length?' · самбараас устгасан '+C.delR.length+' баримт ('+fmtN(Math.round(C.delR.reduce((a,x)=>a+(+x.total||0),0)))+' ₮, «🧾 Баримтууд»-аас харна)':'')+'</div>'+
     (miss?'<div style="margin-top:4px">❗ <b>'+miss+' баримт алга</b> (дугаар тасарсан): '+C.rows.filter(r=>r.miss.length).map(r=>r.miss.slice(0,12).join(', ')+(r.miss.length>12?' … +'+(r.miss.length-12):'')).join('; ')+'</div>':'')+
     (C.devW.length?'<div style="margin-top:4px">📡 '+C.devW.map(esc).join('<br>📡 ')+' → энэ кассын сүүлийн баримтууд самбарт хараахан ороогүй байж болно (интернетэд холбогдоход өөрөө илгээнэ)</div>':'')+
-    (C.bad.length?'<div style="margin-top:4px">🧮 Дүнгийн зөрүүтэй / буруу баримт: <b>'+C.bad.length+'</b> (доорх хүснэгт)</div>':'')+'</div>';
+    (C.bad.length?'<div style="margin-top:4px">🧮 Дүнгийн зөрүүтэй / давхар дугаартай баримт: <b>'+C.bad.length+'</b> мөр (доорх хүснэгт)'+(C.dupX?' · <b>давхар тоологдсон '+fmtN(Math.round(C.dupX))+' ₮</b>':' · давхар дугаартай баримтууд өөр өөр борлуулалт — дүн зөв')+'</div>':'')+'</div>';
   let h='<h3 style="margin:6px 0">Касс бүрээр — дугаарын дараалал</h3><div id="ckTill"></div><h3 style="margin:12px 0 6px">Өдөр × дэлгүүр — самбарт харагдах дүн</h3><div id="ckDay"></div>'+(C.bad.length?'<h3 style="margin:12px 0 6px">Зөрүүтэй баримт</h3><div id="ckBad"></div>':'');$('ckT').innerHTML=h;
   xtable('ckTill','cktill',['Дэлгүүр','Касс №','Баримт','Эхний дугаар','Сүүлийн дугаар','Алга (тасарсан)','Самбараас устгасан','Борлуулалт','Буцаалт','Цэвэр'],C.rows.map(r=>[STN[r.store]||r.store,r.reg,r.n,r.from,r.to,r.miss.length,r.del.length,Math.round(r.sale),Math.round(r.ret),Math.round(r.net)]),{cell:(r,c)=>c===5&&r[5]?'<b class="hot">'+r[5]+'</b>':c===5?'<span style="color:#1b7f3b">0 ✓</span>':esc(String(r[c]))});
-  xtable('ckDay','ckday',['Огноо','Дэлгүүр','Баримт','Борлуулалт','Буцаалт','Цэвэр (самбарт)'],C.day.map(r=>[r.d,STN[r.st]||r.st,r.n,Math.round(r.sale),Math.round(r.ret),Math.round(r.sale+r.ret)]));
+  xtable('ckDay','ckday',['Огноо','Дэлгүүр','Борлуулалтын баримт','Борлуулалт','Буцаалт','Цэвэр (самбарт)'],C.day.map(r=>[r.d,STN[r.st]||r.st,r.n,Math.round(r.sale),Math.round(r.ret),Math.round(r.sale+r.ret)]));
   if(C.bad.length)xtable('ckBad','ckbad',['Баримт','Огноо','Асуудал','Кассчин'],C.bad)}
 async function ckXl(){if(!CK)return alert('Эхлээд «Шалгах» дарна уу');await xlsx();const wb=XLSX.utils.book_new(),add=(n,h,r)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([h,...r]),n);
   add('Касс',['Дэлгүүр','Касс №','Баримт','Эхний','Сүүлийн','Алга','Алга дугаарууд','Устгасан','Борлуулалт','Буцаалт','Цэвэр'],CK.rows.map(r=>[STN[r.store]||r.store,r.reg,r.n,r.from,r.to,r.miss.length,r.miss.join(' '),r.del.length,Math.round(r.sale),Math.round(r.ret),Math.round(r.net)]));

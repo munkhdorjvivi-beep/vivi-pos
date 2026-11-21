@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.6">
+<meta name="vivi-ver" content="7.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -738,7 +738,7 @@ function makeSale(cart,t,pays,change,ebar,type,ref,pre){
   // хариултыг бэлэн мөнгөнөөс хасаж цэвэр дүнг хадгална
   const net=pays.map(p=>({...p}));let ch=change;
   for(const p of net){if(p.form==='Бэлнээр'&&ch>0){const x=Math.min(ch,p.amount);p.tendered=p.amount;p.amount-=x;ch-=x}}
-  const sale={uid:pre&&pre.uid||uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type,ref:ref||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,
+  const sale={uid:pre&&pre.uid||uuid(),ver:APP_VER,dev:typeof DEVID!=='undefined'?DEVID:'',id:n.no,dayNo:n.day,type,ref:ref||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,
     lines,qty:t.qty,base:t.base,discount:t.disc,total:t.total,payments:net,change,ebarimt:!!ebar,synced:false};
   sales.push(sale);store.set('sales',sales);cloudSoon();return sale;
 }
@@ -881,7 +881,7 @@ async function finishReturn(r,reqUid){
     try{await vchRefund(P.voucher,-r.total,info)}catch(e){finishReturn.busy=false;const m=$('rm');if(m)m.textContent='Ваучер: '+(e&&e.message||e);else flash('Ваучер: '+(e&&e.message||e));return false}
     finishReturn.busy=false;r.pay={...P,vBal:info.vBal}}
   const n=nextNo(),d=now();
-  const sale={uid:pre.uid,id:n.no,dayNo:n.day,type:'return',ref:r.ref,refUid:r.refUid||null,refStore:r.refStore||null,refDate:r.refDate||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{...(r.pay||{form:r.form}),amount:r.total}],change:0,ebarimt:false,cust:r.cust||null,refTotal:r.refTotal==null?null:r.refTotal,approvedBy:r.approvedBy||r.decidedBy||null,reason:r.reason,request:reqUid||null,synced:false};
+  const sale={uid:pre.uid,ver:APP_VER,dev:typeof DEVID!=='undefined'?DEVID:'',id:n.no,dayNo:n.day,type:'return',ref:r.ref,refUid:r.refUid||null,refStore:r.refStore||null,refDate:r.refDate||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:r.lines,qty:r.qty,base:r.base,discount:r.base-r.total,total:r.total,payments:[{...(r.pay||{form:r.form}),amount:r.total}],change:0,ebarimt:false,cust:r.cust||null,refTotal:r.refTotal==null?null:r.refTotal,approvedBy:r.approvedBy||r.decidedBy||null,reason:r.reason,request:reqUid||null,synced:false};
   sales.push(sale);store.set('sales',sales);cloudSoon();log('return',{ref:r.ref,total:r.total,why:r.reason,request:reqUid||''});closeModal();printReceipt(sale);return true;
 }
 /* ---------- shift / reports ---------- */
@@ -1202,7 +1202,7 @@ function exchPay(){
     if(used)rp.push({form:'Солилт',amount:-used});if(D<0)rp.push({...fp($('xf').value),amount:D});
     // 1) буцаалт
     const n=nextNo(),d=now();
-    const ret={uid:uuid(),ver:APP_VER,id:n.no,dayNo:n.day,type:'return',ref:x.ref,refUid:x.refUid,refStore:x.refStore||null,refDate:x.refDate||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:x.lines,qty:x.qty,base:x.base,discount:x.base+C,total:-C,payments:rp.length?rp:[{form:'Солилт',amount:0}],change:0,ebarimt:false,reason:'Солилт: '+why,exch:{id,role:'return'},cust,refTotal:x.refTotal==null?null:x.refTotal,approvedBy:x.by||null,synced:false};
+    const ret={uid:uuid(),ver:APP_VER,dev:typeof DEVID!=='undefined'?DEVID:'',id:n.no,dayNo:n.day,type:'return',ref:x.ref,refUid:x.refUid,refStore:x.refStore||null,refDate:x.refDate||null,date:dstr(d),time:tstr(d),iso:d.toISOString(),store:S.user.store,storeName:STORES[S.user.store],stockFrom:STOCK_SRC[S.user.store]||S.user.store,trip:tripNow(),reg:S.user.reg,cashier:S.user.name,cashierId:S.user.uid,shift:S.shift.id,lines:x.lines,qty:x.qty,base:x.base,discount:x.base+C,total:-C,payments:rp.length?rp:[{form:'Солилт',amount:0}],change:0,ebarimt:false,reason:'Солилт: '+why,exch:{id,role:'return'},cust,refTotal:x.refTotal==null?null:x.refTotal,approvedBy:x.by||null,synced:false};
     sales.push(ret);
     // 2) шинэ борлуулалт
     const sale=makeSale(S.cart,t,sp.length?sp:[{form:'Солилт',amount:0}],0,false,'sale',x.ref);sale.exch={id,role:'sale',ret:ret.id};ret.exch.sale=sale.id;Object.assign(sale,{cust,reason:'Солилт: '+why,approvedBy:x.by||null,exchLines:ret.lines,exchRetQty:ret.qty,exchCredit:C,exchRefDate:x.refDate,exchRefTotal:x.refTotal==null?null:x.refTotal});store.set('sales',sales);
