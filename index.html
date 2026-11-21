@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.7">
+<meta name="vivi-ver" content="7.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -189,6 +189,20 @@ let PARTNERS=(()=>{try{return JSON.parse(localStorage.getItem('vivipos_partners'
 </script>
 <script>
 "use strict";
+/* ---------- Нэг компьютер дээр касс ЗӨВХӨН НЭГ цонхонд (7.8) ----------
+   2 цонх/таб зэрэг нээлттэй бол баримтын дугаар давхардаж (DR-1-001173 гэх мэт), илгээгээгүй баримт нөгөө цонхны хуучин
+   өгөгдлөөр дарагдаж алдагдах эрсдэлтэй. Хоёр дахь цонх кассыг огт ачаалахгүй — «өөр цонхонд нээлттэй» гэж харуулна. */
+(function(){const K='vivipos_tablock',rd0=()=>{try{return JSON.parse(localStorage.getItem(K)||'null')}catch(e){return null}},nt=((performance.getEntriesByType&&performance.getEntriesByType('navigation')[0])||{}).type;
+  // ижил цонхыг дахин ачаалахад (F5, шинэчлэл) эзэмшлээ хадгална; «Duplicate tab»-ыг шинэ цонх гэж үзнэ
+  let me=sessionStorage.getItem('vivipos_tabid');const l0=rd0();if(!me||(nt!=='reload'&&l0&&l0.id===me&&Date.now()-l0.t<7000)){me=Math.random().toString(36).slice(2)+Date.now().toString(36);try{sessionStorage.setItem('vivipos_tabid',me)}catch(e){}}
+  const rd=()=>{try{return JSON.parse(localStorage.getItem(K)||'null')}catch(e){return null}},
+    live=l=>l&&l.id!==me&&Date.now()-l.t<7000,wr=()=>{try{localStorage.setItem(K,JSON.stringify({id:me,t:Date.now()}))}catch(e){}};
+  if(live(rd())){window.__VIVI_BLOCKED=true;
+    document.body.innerHTML='<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f3f4f6;font:18px system-ui;padding:20px"><div style="max-width:560px;background:#fff;border-radius:14px;padding:26px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center"><div style="font-size:44px">⚠</div><h2 style="margin:8px 0">Касс өөр цонхонд нээлттэй байна</h2><p style="color:#444;line-height:1.5">Энэ компьютер дээр касс аль хэдийн нээлттэй. Хоёр цонхонд зэрэг ажиллавал баримтын дугаар давхардаж, илгээгээгүй баримт алдагдана.<br><b>Энэ цонхыг хаагаад, нөгөө цонхондоо ажиллана уу.</b></p><p style="color:#888;font-size:14px">Нөгөө цонхыг хаасан бол энэ цонх хэдэн секундэд өөрөө нээгдэнэ.</p><button onclick="window.close()" style="font:inherit;padding:10px 18px;border-radius:10px;border:1px solid #ccc;background:#fff;margin-top:6px">Энэ цонхыг хаах</button></div></div>';
+    setInterval(()=>{if(!live(rd()))location.reload()},2000);throw new Error('VIVI_TAB_LOCK')}
+  wr();setInterval(()=>{const l=rd();if(live(l)){location.reload();return}wr()},2000);
+  window.addEventListener('storage',e=>{if(e.key===K&&live(rd()))location.reload()});
+})();
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
 const fmt=n=>Math.round(n).toLocaleString('en-US');
@@ -728,8 +742,8 @@ async function vchRefund(code,amt,info){const at=now().toISOString();
     const bal=Math.min(v.face,v.balance+amt);info.vBal=bal;
     tx.update(ref,{balance:bal,hist:H.concat([{t:'refund',at,uid:info.uid,id:info.id,ref:info.ref,refUid:info.refUid,store:S.user.store,reg:S.user.reg||'',cashier:S.user.name,amt}]),lastUsed:at,lastStore:S.user.store})})}
 function nextNo(){
-  const k=S.user.store+'-'+S.user.reg;counters[k]=(counters[k]||0)+1;
-  const dk=k+'|'+dstr(now());counters[dk]=(counters[dk]||0)+1;store.set('counters',counters);
+  const k=S.user.store+'-'+S.user.reg,sc=store.get('counters',{});counters[k]=Math.max(counters[k]||0,+sc[k]||0)+1;
+  const dk=k+'|'+dstr(now());counters[dk]=Math.max(counters[dk]||0,+sc[dk]||0)+1;store.set('counters',counters);
   return {no:k+'-'+pad(counters[k],6),day:counters[dk]};
 }
 function makeSale(cart,t,pays,change,ebar,type,ref,pre){
@@ -1545,6 +1559,7 @@ applyDevice();fillCashiers();$('lCash').focus();
 showCat();applyItx();pruneLocal();catLocal();if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});$('lCon').onclick=cloudConnect;$('lBind').onclick=bindStore;window.addEventListener('online',cloudSoon);window.addEventListener('offline',cloudStatus);setInterval(cloudSync,20000);cloudInit();
 </script>
 <script>
+if(window.__VIVI_BLOCKED)throw new Error('VIVI_TAB_LOCK');
 /* ==== VIVI чат: касс ↔ самбар (оффис). Дэлгүүр бүр нэг яриатай.
    Мессеж: pos_chat/{дэлгүүр}/msgs/{id}; хавсралт (зураг, дуу, файл) 600 КБ-аар хэсэглэж pos_chat/{дэлгүүр}/files/{fid_i}-д хадгална.
    Зураг 1600px хүртэл багасгаж JPEG болгоно. Дуу бичлэг 3 мин хүртэл. Нэг файл 8 МБ хүртэл, нэг мессежид 10 хүртэл файл. ==== */
