@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="16.3">
+<meta name="vivi-ver" content="16.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -493,7 +493,7 @@ main textarea{max-width:100%}
 </section>
 <section class="pnl" data-panel="till" hidden>
 <div id="tillMain" style="display:contents">
-  <div class="card" style="grid-column:1/-1"><h2>Кассууд (компьютер) — нэр, касс №</h2><div class="small" style="margin:-4px 0 8px">Тохируулах шаардлагагүй: компьютер бүр үүлэнд холбогдоход дэлгүүртээ чөлөөтэй касс №-ийг өөрөө авч, энд гарч ирнэ (баримтын дугаар давхардахгүйн тулд). Хүсвэл нэр өгч болно. Кассчин нь нэрээрээ нэвтэрдэг — баримт бүрт кассчны нэр бичигдэнэ.</div><div class="scroll" id="cDevs"></div></div>
+  <div class="card" style="grid-column:1/-1"><h2>Кассууд (компьютер) — нэр, касс №</h2><div class="small" style="margin:-4px 0 8px">Тохируулах шаардлагагүй: компьютер бүр үүлэнд холбогдоход дэлгүүртээ чөлөөтэй касс №-ийг өөрөө авч, энд гарч ирнэ (баримтын дугаар давхардахгүйн тулд). Хүсвэл нэр өгч болно. Кассчин нь нэрээрээ нэвтэрдэг — баримт бүрт кассчны нэр бичигдэнэ.</div><div id="devBan" class="hide" style="background:#fdecec;border:1px solid #f3b9b9;color:#8a1c1c;border-radius:10px;padding:8px 10px;margin:0 0 8px;font-size:13.5px"></div><div class="scroll" id="cDevs"></div></div>
   <div class="card"><h2>Явуулын касс — одоогийн аян (байршил)</h2><div class="small">Явуулын касс (YV) хаана, ямар аянд борлуулж байгааг энд бичнэ. Касс бүх баримтад энэ нэрийг тэмдэглэж, тайланд аян бүрээр тусад нь харагдана. Аян дуусахад «Аян дуусгах» дарна.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center"><input id="trN" class="inp" placeholder="Жишээ: Дархан 2026-12" style="flex:1;min-width:220px"><button id="trSave" class="btn pri">Хадгалах</button><button id="trEnd" class="btn">Аян дуусгах</button></div><div id="trMsg" class="small" style="margin-top:6px"></div></div>
   <div class="grid">
   <div class="card"><h2>Ажилтнууд, ПИН (бүх кассад)</h2><div class="scroll" id="cUsers"></div><div style="margin-top:10px"><button id="uNew" class="btn pri">+ Шинэ ажилтан</button></div></div>
@@ -1621,7 +1621,8 @@ const SUBK={stock:{bal:'stock.bal',age:'stock.bal',in:'stock.in',move:'stock.mov
 const subOk=(t,x)=>x[2]?x[2]():(SUBK[t]&&SUBK[t][x[0]]?can(SUBK[t][x[0]]):true);
 /* Анхааруулгын тоо: дэд цэс бүр өөрийн тоотой, үндсэн цэс = харагдах дэд цэсүүдийн нийлбэр. badge('stock','diff',12) */
 const BADGE={};function badge(t,s,n){n=Math.max(0,+n||0);if(BADGE[t+':'+s]===n)return;BADGE[t+':'+s]=n;clearTimeout(badge.t);badge.t=setTimeout(badgeDraw,30)}
-function badgeDraw(){Object.keys(SUBS).forEach(t=>{const vis=(SUBS[t]||[]).filter(x=>{try{return subOk(t,x)}catch(e){return false}}).map(x=>x[0]);let sum=0;
+function badgeDraw(){Object.keys(BADGE).filter(k=>k.endsWith(':_')).forEach(k=>{const t=k.slice(0,-2),n=BADGE[k]||0,b=document.querySelector('#tabs [data-tab="'+t+'"]');if(!b)return;let tn=b.querySelector('.tn');if(!tn){tn=document.createElement('span');tn.className='tn hide';b.appendChild(tn)}tn.textContent=n||'';tn.classList.toggle('hide',!n)});
+  Object.keys(SUBS).forEach(t=>{const vis=(SUBS[t]||[]).filter(x=>{try{return subOk(t,x)}catch(e){return false}}).map(x=>x[0]);let sum=0;
   vis.forEach(k=>{const n=BADGE[t+':'+k]||0;sum+=n;const e=$('sn_'+t+'_'+k);if(e){e.textContent=n||'';e.classList.toggle('hide',!n)}});
   const b=document.querySelector('#tabs [data-tab="'+t+'"]');if(!b)return;let tn=b.querySelector('.tn');if(!tn){tn=document.createElement('span');tn.className='tn hide';b.appendChild(tn)}tn.textContent=sum||'';tn.classList.toggle('hide',!sum)})}
 function drawSubtabs(t){const L=(SUBS[t]||[]).filter(x=>subOk(t,x)),el=$('subtabs');el.classList.toggle('hide',!L.length);if(!L.length){el.innerHTML='';return}
@@ -1729,12 +1730,13 @@ function pdDiag(c,st){const l0=itRow(c);const t=todayIso();
   else{let best=null;pl.forEach(p=>{let u=null;if(p.type==='pct')u=Math.round(l.price*(1-p.pct/100));else if(p.type==='price')u=Math.min(l.price,Math.round(p.price));else if(p.type==='amount')u=Math.max(0,l.price-Math.round(p.amount));else if(p.type==='plist')u=Math.min(l.price,Math.round(plP(p)));if(u!=null&&u<l.price&&(!best||u<best.u))best={u,p}});
     if(best){win=best.p;fin=best.u;msg='<b>«'+esc(best.p.name)+'»</b> хэрэглэгдэнэ → <b>'+fmtN(fin)+' ₮</b> (кассын үнэ '+fmtN(l.price)+' ₮)';pl.filter(p=>p!==best.p&&['pct','price','amount','plist'].includes(p.type)).forEach(p=>{R.find(x=>x.p===p).r='«'+best.p.name+'» илүү хямд үнэ гаргадаг'})}
     else msg='<span class="hot">Урамшуулал орохгүй</span> — кассын үнэ '+fmtN(l.price)+' ₮'+(gift?' (бэлэг болгох боломжтой: «'+esc(gift.name)+'»)':'')}
-  return {l,rows:R,win,msg}}
+  return {l,rows:R,win,msg,fin:pair?l.price:fin}}
 const fmtN=v=>Number(v||0).toLocaleString('en-US').replace(/,/g,' ');
 let pChkT=0;const pChkRun=async()=>{const c=$('pChk').value.trim();if(!c)return $('pChkR').innerHTML='';
   if(!PCAT){$('pChkR').textContent='Барааны жагсаалт ачаалж байна…';try{await loadPCat()}catch(e){}}
   const st=$('pChkSt').value,D=pdDiag(c,st);if(!D.l)return $('pChkR').innerHTML=D.msg;const l=D.l;
   $('pChkR').innerHTML='<div style="background:#f6f7f9;border:1px solid var(--line);border-radius:10px;padding:8px 10px"><b>'+esc(l.name)+'</b> · '+esc(l.code)+(l.bc&&l.bc!==l.code?' / '+esc(l.bc):'')+'<br>Нийлүүлэгч: <b>'+esc(l.sup||'—')+'</b> · бүлэг: '+esc(l.grp||'—')+' · кассын үнэ '+fmtN(l.price)+' ₮'+(st?' · '+esc(STN[st]):' · бүх дэлгүүр')+'<div style="margin-top:6px;font-size:14px">Кассад: '+D.msg+'</div>'+
+    (st?'':'<div style="margin-top:4px">Дэлгүүр бүрээр: '+Object.keys(STN).map(k=>{const x=pdDiag(c,k);return esc(STN[k])+' <b>'+fmtN(x.fin)+' ₮</b>'+(x.win?' <span class="muted">('+esc(x.win.name)+')</span>':'')}).join(' · ')+'</div>')+
     '<table style="margin-top:6px"><thead><tr><th>Урамшуулал</th><th>Энэ бараанд</th></tr></thead><tbody>'+D.rows.map(x=>'<tr><td>'+esc(x.p.name)+' <span class="muted">('+esc(pType(x.p))+')</span></td><td>'+(x.p===D.win?'<b style="color:#1b7f3b">✓ хэрэглэгдэнэ</b>':x.r?'✗ '+esc(x.r):'<span class="muted">—</span>')+'</td></tr>').join('')+'</tbody></table></div>'};
 $('pChk').oninput=()=>{clearTimeout(pChkT);pChkT=setTimeout(pChkRun,250)};$('pChkSt').onchange=pChkRun;
 const pClose=()=>{$('pm').classList.add('hide');$('pbox').innerHTML=''};
@@ -3183,10 +3185,18 @@ $('bkGo').onclick=async()=>{const m=$('bkMsg'),out={exported:new Date().toISOStr
 /* ==== Кассын төхөөрөмжүүд (pos_devices) ==== */
 let DEVS=[];
 function watchDevs(){db.collection('pos_devices').onSnapshot(s=>{DEVS=s.docs.map(d=>d.data());drawDevs()},()=>{})}
+// Анхаарах касс: идэвхтэй боловч ХУУЧИН хувилбартай (шинэ урамшууллын тохиргоог мэдэхгүй — жишээ нь «Бусдыг түр зогсоох») эсвэл 36+ цаг холбогдоогүй (баримт илгээгддэггүй)
+const verN=v=>{const m=String(v||'').match(/(\d+)\.(\d+)/);return m?(+m[1])*1000+(+m[2]):0};
+function devIssues(){const A=DEVS.filter(d=>d.active!==false),mx=Math.max(0,...A.map(d=>verN(d.ver))),now_=Date.now(),R={};
+  A.forEach(d=>{const x=[],age=d.lastSeen?now_-new Date(d.lastSeen):1e15,off=age>36*3600000;
+    // хуучин хувилбар: онлайн байгаа боловч шинэчлэгдээгүй, эсвэл удаан холбогдоогүй (саяхан унтарсан касс дараагийн нээлтэд өөрөө шинэчлэгдэнэ)
+    if(verN(d.ver)&&verN(d.ver)<mx&&(age<30*60000||off))x.push('old');if(off)x.push('off');if(x.length)R[d.dev]=x});return {R,mx}}
 function drawDevs(){const now_=Date.now(),ago=t=>{if(!t)return '';const m=Math.round((now_-new Date(t))/60000);return m<3?'одоо онлайн':m<60?m+' мин өмнө':m<1440?Math.round(m/60)+' цаг өмнө':Math.round(m/1440)+' өдөр өмнө'};
   const L=DEVS.slice().sort((a,b)=>(a.store+a.reg)<(b.store+b.reg)?-1:1),dup=k=>L.filter(x=>x.active!==false&&x.store+'-'+x.reg===k).length>1;
-  xtable('cDevs','devs',['Дэлгүүр','Касс №','Нэр','Сүүлд','Илгээгээгүй','Кассчин','Хувилбар','Бүртгэл','Төлөв',''],L.map(d=>[STN[d.store]||d.store,String(d.reg||''),d.name||'',ago(d.lastSeen),d.pending||0,d.user||'',d.ver||'',d.account||'',d.active===false?'идэвхгүй':dup(d.store+'-'+d.reg)?'ДАВХАР №':'идэвхтэй',d.dev]),
-    {cell:(r,c)=>c===8?'<span class="chip'+(r[8]==='ДАВХАР №'?' r':r[8]==='идэвхгүй'?'':' b')+'">'+r[8]+'</span>':c===4&&r[4]?'<span class="hot">'+r[4]+'</span>':c===3?'<span class="small">'+esc(r[3])+'</span>':c===9?'<button class="btn" data-dev="'+esc(r[9])+'" style="min-height:30px;padding:2px 10px">Засах</button>':esc(r[c]),
+  const {R:IS,mx}=devIssues(),n=Object.keys(IS).length,mv=mx?Math.floor(mx/1000)+'.'+(mx%1000):'';badge('till','_',n);
+  const bn=$('devBan');if(bn){bn.classList.toggle('hide',!n);bn.innerHTML=n?'<b>⚠ '+n+' касс анхаарах</b> — хуучин хувилбартай касс шинэ тохиргоог (жишээ нь Black Friday-ийн «Бусдыг түр зогсоох») мэдэхгүй тул <b>буруу үнээр</b> зарж болно; удаан холбогдоогүй касс баримтаа илгээдэггүй.<br>→ Ашигладаг бол: интернетэд холбоод <b>Ctrl+F5</b> (хувилбар '+mv+' болно). Ашигладаггүй бол: <b>«Засах» → идэвхгүй</b>.':''}
+  xtable('cDevs','devs',['Дэлгүүр','Касс №','Нэр','Сүүлд','Илгээгээгүй','Кассчин','Хувилбар','Бүртгэл','Төлөв',''],L.map(d=>{const x=IS[d.dev]||[];return [STN[d.store]||d.store,String(d.reg||''),d.name||'',ago(d.lastSeen),d.pending||0,d.user||'',d.ver||'',d.account||'',d.active===false?'идэвхгүй':dup(d.store+'-'+d.reg)?'ДАВХАР №':x.length?(x.includes('old')?'ХУУЧИН ХУВИЛБАР':'')+(x.length>1?' · ':'')+(x.includes('off')?'ХОЛБОГДООГҮЙ':''):'идэвхтэй',d.dev]}),
+    {cell:(r,c)=>c===8?'<span class="chip'+(r[8]==='идэвхтэй'?' b':r[8]==='идэвхгүй'?'':' r')+'">'+esc(r[8])+'</span>':c===6&&(IS[r[9]]||[]).includes('old')?'<b class="hot">'+esc(r[6])+'</b> <span class="small hot">→ '+mv+'</span>':c===3&&(IS[r[9]]||[]).includes('off')?'<span class="small hot">'+esc(r[3])+'</span>':c===4&&r[4]?'<span class="hot">'+r[4]+'</span>':c===3?'<span class="small">'+esc(r[3])+'</span>':c===9?'<button class="btn" data-dev="'+esc(r[9])+'" style="min-height:30px;padding:2px 10px">Засах</button>':esc(r[c]),
      after:el=>el.querySelectorAll('[data-dev]').forEach(b=>b.onclick=()=>editDev(b.dataset.dev))})}
 function editDev(id){const d=DEVS.find(x=>x.dev===id);if(!d)return;
   $('pbox').innerHTML='<h2 style="margin:0 0 6px">Касс (компьютер)</h2><div class="small">'+esc(STN[d.store]||d.store)+' · бүртгэл '+esc(d.account||'')+' · хувилбар '+esc(d.ver||'')+'</div>'+
