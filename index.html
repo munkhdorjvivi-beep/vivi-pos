@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.5">
+<meta name="vivi-ver" content="7.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -128,7 +128,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
 <body>
 <div id="top" class="hide">
   <b>VIVI</b><span class="ver">POS <span class="appver"></span></span><span class="tag" id="tStore"></span><span class="tag" id="tCash"></span><span class="tag" id="tShift"></span>
-  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="kfBtn" class="tag chatb hide" title="Нягтлан буцаасан / татгалзсан шилжүүлэг (үйлчлүүлэгчид мөнгө буцаах)" style="background:#c1121f;color:#fff">⚠ Kontrola<span id="kfN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
+  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="kfBtn" class="tag chatb hide" title="Нягтлан буцаасан / татгалзсан шилжүүлэг (үйлчлүүлэгчид мөнгө буцаах)" style="background:#c1121f;color:#fff">⚠ Kontrola<span id="kfN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="offBar" class="hide"></span><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
 </div>
 
 <div id="login">
@@ -140,7 +140,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
   <div id="lMsg" class="small" style="color:var(--red);min-height:18px"></div>
   <button class="pri" style="width:100%;margin-top:8px" id="lGo">Нэвтрэх</button>
   <button class="ghost" style="width:100%;margin-top:8px" id="lZ">🖨 Ээлж хаалтын баримт (Z тайлан) дахин хэвлэх</button>
-  <div style="display:flex;gap:10px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><span id="lCloud" class="small" style="flex:1"></span><button class="ghost hide" id="lBind" style="min-height:40px">Дэлгүүрт бэхлэх</button><button class="ghost hide" id="lCon" style="min-height:40px">Үүлэнд холбох</button></div>
+  <div style="display:flex;gap:10px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><span id="lCloud" class="small" style="flex:1"></span><button id="offBarL" class="hide" style="background:#c1121f;color:#fff;border:0;border-radius:8px;padding:6px 10px;font-weight:700"></button><button class="ghost hide" id="lBind" style="min-height:40px">Дэлгүүрт бэхлэх</button><button class="ghost hide" id="lCon" style="min-height:40px">Үүлэнд холбох</button></div>
 </div>
 
 <div id="shiftopen" class="hide">
@@ -375,6 +375,24 @@ function shiftHandover(){if(!S.shift||!S.user||S.shift.openedBy===S.user.name||(
 // удаан офлайн
 let lastOk=store.get('lastOk',0);
 function offlineNote(){if(!lastOk)return '';const h=(Date.now()-lastOk)/36e5;return h>=2?' · '+Math.floor(h)+' цаг үүлтэй холбогдоогүй — үнэ, урамшуулал шинэчлэгдээгүй байж магадгүй':''}
+
+/* ==== Офлайн хамгаалалт (7.6) ====
+   • Хөтөч хадгалсан өгөгдлийг өөрөө устгахгүй (persistent storage).
+   • Илгээгээгүй баримт 30+ мин үлдвэл улаан мөр: Chrome-ийн өгөгдөл цэвэрлэхгүй байхыг сануулж, НӨӨЦ ФАЙЛ татах товч.
+   • Ээлж хаахад илгээгээгүй баримт байвал нөөц файлыг автоматаар татна (Downloads хавтаст — хөтөч цэвэрлэсэн ч үлдэнэ).
+   Самбар → Борлуулалтын тайлан → ✅ Баримт шалгах → «Кассын нөөц файлаас сэргээх». */
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().then(ok=>log&&log('storage_persist',{ok}))}catch(e){}
+function backupData(){return {kind:'vivipos-backup',v:1,ver:APP_VER,at:now().toISOString(),store:device.store,reg:device.reg,dev:typeof DEVID!=='undefined'?DEVID:'',
+  sales:sales.filter(s=>!s.synced),audit:audit.filter(a=>!a.synced),shiftq,reqq,movq}}
+function backupDl(why){const d=backupData(),n=d.sales.length+d.audit.length+d.shiftq.length+d.reqq.length+d.movq.length;if(!n&&why==='auto')return 0;
+  try{const a=document.createElement('a'),t=now();a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));
+    a.download='VIVI_nooc_'+(device.store||'')+'-'+(device.reg||'')+'_'+dstr(t).replace(/\//g,'-')+'_'+tstr(t).slice(0,5).replace(':','')+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+    log('backup_file',{why,sales:d.sales.length,n});store.set('lastBackup',Date.now())}catch(e){}return d.sales.length}
+function offGuard(){const n=sales.filter(s=>!s.synced).length,el=$('offBar');if(!el)return;const age=lastOk?(Date.now()-lastOk)/60000:1e9,show=n>0&&age>30;
+  el.className=show?'tag':'hide';if(!show){const L=$('offBarL');if(L)L.className='hide';return}el.style.cssText='background:#c1121f;color:#fff;font-weight:700;cursor:pointer';
+  el.innerHTML='⚠ '+n+' баримт илгээгээгүй ('+(age>=120?Math.floor(age/60)+' цаг':Math.round(age)+' мин')+') — Chrome-ийн өгөгдлийг ЦЭВЭРЛЭХГҮЙ! <u>💾 Нөөц татах</u>';el.onclick=()=>{const k=backupDl('manual');flash(k+' баримтын нөөц файл «Downloads» хавтаст хадгалагдлаа')};
+  const L=$('offBarL');if(L){L.className='';L.innerHTML=el.innerHTML;L.onclick=el.onclick}}
+setInterval(offGuard,60000);setTimeout(offGuard,3000);
 function cloudStatus(){
   const n=pending();let t,ok=false;
   if(!fb.ready)t='Үүлгүй · өгөгдөл энэ касс дээр';
@@ -384,7 +402,7 @@ function cloudStatus(){
   else if(n)t='Үүл рүү илгээж байна · '+n;
   else{t='Үүл: бүгд илгээгдсэн';ok=true;lastOk=Date.now();store.set('lastOk',lastOk)}
   if(!ok)t+=offlineNote();
-  $('tSync').textContent=t;$('tSync').className='tag'+(ok?' ok':'');
+  $('tSync').textContent=t;$('tSync').className='tag'+(ok?' ok':'');try{offGuard()}catch(e){}
   $('lCloud').textContent=fb.ready?(fb.user?'Үүлэнд холбогдсон: '+(fb.user.email||''):'Үүлэнд холбоогүй'):'Үүлгүй горим'+(fb.err?' ('+fb.err+')':'');
   // буруу бүртгэл (жишээ нь kasa-online@): дүрэм зөвшөөрөхгүй тул ажилтан, урамшуулал, бараа ачаалагдахгүй — тодорхой анхааруулна
   if(fb.ready&&fb.user&&!accStore(fb.user.email))$('lCloud').innerHTML='<span style="color:var(--red);font-weight:700">⚠ Буруу бүртгэл: '+esc(fb.user.email||'')+'</span><br><span style="color:var(--red)">Кассын бүртгэл яг kasa-fc@, kasa-dr@, kasa-ns@, kasa-on@, kasa-yv@ байх ёстой. Ажилтан, урамшуулал энэ бүртгэлээр ачаалагдахгүй. «Салгах» дараад зөв бүртгэлээр холбоно уу.</span>';
@@ -1007,7 +1025,7 @@ function closeShift(){
     const counted=num($('cc1').value),list=shiftSales(),exp=cashNow(),diff=counted-exp,pm=sumPays(list),cin=opsSum('in'),cout=opsSum('out'),dep=shOps().filter(o=>o.kind==='deposit').reduce((a,o)=>a+o.amount,0);
     const sh={...S.shift,store:S.user.store,reg:S.user.reg,closedBy:S.user.name,closed:now().toISOString(),counted,expected:exp,diff,receipts:list.filter(s=>s.type==='sale').length,total:list.reduce((a,s)=>a+s.total,0),pays:pm,cashSales:cashOf(list),cashIn:cin,cashOut:cout,deposit:dep,ops:shOps()};
     const hist=store.get('shifts',[]);hist.push(sh);store.set('shifts',hist);shiftOut(sh);store.set('shift_'+S.user.store+'-'+S.user.reg,null);
-    log('shift_close',{id:sh.id,counted,expected:exp,diff});
+    log('shift_close',{id:sh.id,counted,expected:exp,diff});try{if(sales.some(s=>!s.synced))backupDl('auto')}catch(e){}
     const body=shiftBody(list,pm,'<tr><td>Тоолсон</td><td class="n">'+fmt(counted)+'</td></tr><tr><td><b>Зөрүү</b></td><td class="n"><b style="color:'+(diff?'var(--red)':'var(--ok)')+'">'+fmt(diff)+'</b></td></tr>');
     {const H=store.get('shifts',[]);const i=H.findIndex(x=>x.id===sh.id&&x.closed===sh.closed);if(i>=0){H[i].zbody=body;H[i].storeName=STORES[S.user.store];store.set('shifts',H.slice(-200))}}
     openModal('<h2>Z тайлан — ээлж хаагдлаа</h2>'+body+'<div class="rowbtn"><button id="zp">Хэвлэх</button><button class="pri" id="zo">Дуусгах</button></div>',true);
@@ -1477,7 +1495,7 @@ function devStop(){try{devListen.u&&devListen.u()}catch(e){}devListen.on=false;D
 function devApply(){const r=DEVDOC&&DEVDOC.reg?String(DEVDOC.reg):'';if(!r||r===String(device.reg))return regNext=null;
   if(S.user&&S.shift){if(regNext!==r){regNext=r;flash('Самбараас касс № '+r+' болгосон — ээлж хаасны дараа хэрэгжинэ')}return}
   const b=device.reg;device={...device,reg:r};store.set('device',device);regNext=null;log('device_reg',{before:b,reg:r,how:'panel'});counterSync(device.store,r);if(S.user)S.user.reg=r;applyDevice()}
-function devBeat(){if(!(fb.ready&&fb.user&&DEVDOC&&navigator.onLine))return;fb.db.collection('pos_devices').doc(DEVID).update({ver:APP_VER,lastSeen:now().toISOString(),pending:pending(),user:S.user?S.user.name:'',account:fb.user.email||''}).catch(()=>{})}
+function devBeat(){if(!(fb.ready&&fb.user&&DEVDOC&&navigator.onLine))return;fb.db.collection('pos_devices').doc(DEVID).update({ver:APP_VER,lastSeen:now().toISOString(),pending:pending(),syncedAt:lastOk?new Date(lastOk).toISOString():null,user:S.user?S.user.name:'',account:fb.user.email||''}).catch(()=>{})}
 setInterval(devBeat,120000);
 $('sGo').onclick=async()=>{
   const busy=await regBusy();
