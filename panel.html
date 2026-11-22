@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="17.0">
+<meta name="vivi-ver" content="17.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1208,7 +1208,7 @@ async function nwLoad(){const T0=performance.now(),TM={};const A=$('nwA').value,
       if(!ret){let left=q;for(const r of ok){if(left<=0)break;const n=Math.min(left,r.q-r.sold);if(n<=0)continue;r.sold+=n;r.sum+=pu*n;if(uc!=null){r.cost+=uc*n;r.cn+=n;r.sk+=pu*n}left-=n}if(left>0){const r=ok[ok.length-1];r.sold+=left;r.sum+=pu*left;if(uc!=null){r.cost+=uc*left;r.cn+=left;r.sk+=pu*left}}}
       else{let left=q;for(const r of ok.slice().reverse()){if(left<=0)break;const n=Math.min(left,r.sold);if(n<=0)continue;r.sold-=n;r.sum-=pu*n;if(uc!=null){r.cost-=uc*n;r.cn-=n;r.sk-=pu*n}left-=n}}})});
     TM.s=performance.now()-T1;const T2=performance.now();NW={rows:RL,A,B,C,ns:S.length};nwDraw();TM.d=performance.now()-T2;TM.t=performance.now()-T0;NW.tm=TM;
-    const m=$('nwMsg');if(m)m.insertAdjacentHTML('beforeend',' <span class="muted">· хугацаа '+(TM.t/1000).toFixed(1)+' сек (орлого, каталог '+(TM.a/1000).toFixed(1)+' · борлуулалт '+(TM.s/1000).toFixed(1)+' · зурах '+(TM.d/1000).toFixed(1)+')</span>')})}
+    const m=$('nwMsg');if(m)m.insertAdjacentHTML('beforeend',' <span class="muted">· хугацаа '+(TM.t/1000).toFixed(1)+' сек (орлого, каталог '+(TM.a/1000).toFixed(1)+' · борлуулалт '+(TM.s/1000).toFixed(1)+' · зурах '+(TM.d/1000).toFixed(1)+(SC.last?'; баримт: кэшээс '+SC.last.cached+', сангаас '+SC.last.fresh+' ('+SC.last.from+'-аас)':'')+')</span>')})}
 const NWG={grp:['Ачаа / нийлүүлэгч',r=>r.grp],doc:['Илгээмж',r=>r.doc],st:['Дэлгүүр',r=>LOC[r.st]||r.st],age:['Хүүхэд / том хүн',r=>catOf(r.name).age],seg:['Эмэгтэй / эрэгтэй / охид / хөвгүүд',r=>catOf(r.name).seg],tg:['Төрлийн бүлэг',r=>catOf(r.name).tg],cat:['Ангилал (төрөл)',r=>catOf(r.name).typ],brand:['Брэнд',r=>slBrand(r.name)||'—'],model:['Загвар',r=>String(r.name).replace(/\s+\d{2,3}(\/\d+)?\s*$/,'')],code:['Бараа (код)',r=>r.code],sup:['Нийлүүлэгч',r=>r.sup]};
 const NWNEXT={grp:'seg',doc:'seg',st:'seg',sup:'seg',age:'seg',seg:'cat',tg:'cat',cat:'model',brand:'seg',model:'code'};
 function nwDraw(){if(!NW.rows){$('nwMsg').textContent='Хугацаагаа сонгоод «Харах» дарна уу';return}NW.path=NW.path||[];
@@ -2243,21 +2243,29 @@ async function scFetch(from,stores){const q=db.collection('pos_sales').where('da
   return (await q.get()).docs.map(d=>d.data()).filter(x=>!stores||stores.includes(x.store))}
 // Өдрийн кэш (утсан дээр хурдан): зөвхөн «битүүмжлэгдсэн» өдрийг хадгална — ИДЭВХТЭЙ бүх касс тэр өдрөөс хойш үүлтэй холбогдож,
 // илгээгээгүй баримтгүй болсон (касс офлайн байсан бол тэр өдрүүд кэшлэгдэхгүй, хоцорч ирсэн баримт ч алдагдахгүй).
-function salesSealed(){const A=DEVS.filter(d=>d.active!==false);if(!A.length)return 0;let m=Infinity;
+// «Унтсан» касс (3+ өдөр холбогдоогүй) битүүмжлэлийг хаахгүй — эс бөгөөс ашиглагдаагүй хуучин касс бүх кэшийг зогсоож, утсан дээр
+// тайлан бүр 2–3 долоо хоногийн баримтыг дахин татдаг байсан. Унтсан касс дахин холбогдвол (хоцорсон баримт илгээж магадгүй)
+// түүний сүүлд харагдсан өдрөөс хойшхи кэшийг устгаж дахин татна.
+const DORM=3*864e5;
+function salesSealed(){const now_=Date.now(),A=DEVS.filter(d=>d.active!==false&&now_-(Date.parse(d.lastSeen||'')||0)<=DORM);if(!DEVS.length)return 0;if(!A.length)return now_;let m=Infinity;
   A.forEach(d=>{const ls=Date.parse(d.lastSeen||'')||0,b=d.syncedAt?Date.parse(d.syncedAt)||0:((+d.pending||0)>0?ls-864e5:ls);if(b<m)m=b});return m===Infinity?0:m}
+function salesWake(){let snap={};try{snap=JSON.parse(localStorage.getItem('vivi_devseen')||'{}')}catch(e){}const now_=Date.now();let from=null;
+  DEVS.forEach(d=>{const p=snap[d.dev],ls=Date.parse(d.lastSeen||'')||0;if(p&&p.at-p.ls>DORM&&ls>p.at){const f=sDay(new Date(p.ls).toISOString());if(!from||f<from)from=f}});
+  return {from,save:()=>{const n={};DEVS.forEach(d=>n[d.dev]={ls:Date.parse(d.lastSeen||'')||0,at:now_});try{localStorage.setItem('vivi_devseen',JSON.stringify(n))}catch(e){}}}}
 async function salesSince(day,loc,o){o=o||{};const stores=loc?scLocs(loc):null,K=d=>'v2|'+(loc||'ALL')+'|'+d;
   if(o.fresh)return scFetch(day,stores);
   let inv=[];try{inv=(await db.collection('pos_audit').where('type','in',['receipt_delete','receipt_restore']).get()).docs.map(d=>d.data())}catch(e){}
+  const wk=DEVS.length?salesWake():{from:null,save:()=>{}};
   const seal=salesSealed(),dEnd=d=>new Date(d.replace(/\//g,'-')+'T23:59:59').getTime()+3600e3;
   let cut=sDay(new Date(Date.now()-3*864e5).toISOString());const days=[];
   for(let t=new Date(day.replace(/\//g,'-')+'T12:00:00');days.length<400;t.setDate(t.getDate()+1)){const d=sDay(t.toISOString());if(d>=cut||dEnd(d)>seal)break;days.push(d)}
   const out=[];let from=days.length?null:day;
-  for(const d of days){const v=await scGet(K(d));if(!v||inv.some(a=>(a.info||{}).date===d&&a.t>v.at)){from=d;break}out.push(...v.docs)}
+  for(const d of days){const v=(wk.from&&d>=wk.from)?null:await scGet(K(d));if(!v||inv.some(a=>(a.info||{}).date===d&&a.t>v.at)){from=d;break}out.push(...v.docs)}
   if(from===null){const last=days[days.length-1];const t=new Date(last.replace(/\//g,'-')+'T12:00:00');t.setDate(t.getDate()+1);from=sDay(t.toISOString())}
   const L=await scFetch(from,stores),at=new Date().toISOString(),by=new Map();
   L.forEach(x=>{let a=by.get(x.date);if(!a)by.set(x.date,a=[]);a.push(x)});
-  days.filter(d=>d>=from).forEach(d=>scSet(K(d),{at,docs:by.get(d)||[]}));
-  return out.concat(L)}
+  days.filter(d=>d>=from).forEach(d=>scSet(K(d),{at,docs:by.get(d)||[]}));wk.save();
+  SC.last={cached:out.length,fresh:L.length,from};return out.concat(L)}
 let stockHead=[],stockAllMode=false;
 async function calcStock(){
   const st=$('sSt').value;$('sMsg').textContent='Тооцоолж байна…';stockRows=[];
@@ -3234,7 +3242,11 @@ const ean=b=>{let s=0;for(let i=0;i<12;i++)s+=(+b[i])*(i%2?3:1);return b+((10-s%
 function newCodes(n){const base=Math.floor(Date.now()/10)%1e10,out=[];for(let k=0;out.length<n;k++){const c=ean('29'+String((base+k)%1e10).padStart(10,'0'));if(!PITX[c]&&!(PCATi&&PCATi.has(c)))out.push(c)}return out}
 async function loadPCat(){if(PCAT)return;$('itMsg').textContent='Барааны жагсаалт ачаалж байна…';
   const m=await db.collection('pos_catalog').doc('meta').get();if(!m.exists)throw new Error('Үүлэнд барааны жагсаалт алга');
-  const rows=[];for(const c of m.data().chunks){const d=await db.collection('pos_catalog').doc(c.id).get();if(d.exists)rows.push(...JSON.parse(d.data().d))}
+  // жагсаалтыг хувилбараар нь төхөөрөмжид хадгална (утсан дээр дахин татахгүй); хэсгүүдийг зэрэг татна
+  const cv='cat|'+(m.data().version||''),prev=localStorage.getItem('vivi_catv');let rows=await scGet(cv);
+  if(!Array.isArray(rows)){rows=[];const D=await Promise.all(m.data().chunks.map(c=>db.collection('pos_catalog').doc(c.id).get()));D.forEach(d=>{if(d.exists)rows.push(...JSON.parse(d.data().d))});
+    scSet(cv,rows);try{localStorage.setItem('vivi_catv',cv);if(prev&&prev!==cv){SC.mem.delete(prev);scDb().then(db_=>db_.transaction('days','readwrite').objectStore('days').delete(prev)).catch(()=>{})}}catch(e){}}
+  SC.mem.delete(cv);
   PCAT=rows;MK=null;PCATi=new Map();rows.forEach((r,i)=>{PCATi.set(r[0],i);if(r[1])PCATi.set(String(r[1]),i)});$('itMsg').textContent='Барааны жагсаалт: '+rows.length.toLocaleString('en-US')+' бараа'}
 const itRow=code=>{const x=PITX[code];if(x)return x;const i=PCATi&&PCATi.get(code);if(i==null)return null;const r=PCAT[i];return {code:r[0],bc:r[1]||'',name:r[2],base:r[3],price:r[4],sup:r[5]||'',grp:r[6]||'',model:r[7]||'',size:r[8]||''}};
 async function itSave(x,note){const by=auth.currentUser.email||'',at=new Date().toISOString(),old=PITX[x.code],hist=(old&&old.hist||[]).concat([{at,by,base:x.base,price:x.price,note}]).slice(-30);
