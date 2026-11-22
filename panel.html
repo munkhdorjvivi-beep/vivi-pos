@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="16.9">
+<meta name="vivi-ver" content="17.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -567,6 +567,8 @@ const money=n=>{n=Math.round(n||0);return Math.abs(n)>=1e9?(n/1e9).toFixed(2).re
 const pad=n=>String(n).padStart(2,'0');
 const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const STORES={FC:'Food city',DR:'Драгон',NS:'Нийслэл',YV:'Явуулын касс'};
+// Утас/таблет: хүнд арын ажил (бүх дэлгүүрийн үлдэгдэл тооцоолж кассууд руу илгээх, сарын хаалт) зөвхөн компьютер дээр ажиллана
+const MOB=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<900);
 let db,auth,unsub=[],sales=[],audit=[],shifts=[],reqs=[],reqOn=false,allSales=[],allAudit=[],allShifts=[],allReqs=[],gSt='';
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Firebase SDK ачаалагдсангүй. Интернэт холболтоо шалгана уу.'));document.head.appendChild(s)})}
 async function init(){
@@ -574,14 +576,16 @@ async function init(){
     if(!window.firebase)for(const m of ['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+FB_VER+'/firebase-'+m+'-compat.js');
     firebase.initializeApp(FB_CONFIG);auth=firebase.auth();db=firebase.firestore();
     // төхөөрөмж дээрх кэш: дахин нээхэд өгөгдөл шууд гарч, зөвхөн өөрчлөгдсөн нь сүлжээгээр ирнэ (утсан дээр хурдан)
-    try{const pr=db.enablePersistence&&db.enablePersistence({synchronizeTabs:true});if(pr&&pr.catch)pr.catch(e=>console.warn('persistence',e&&e.code))}catch(e){}
+    // Утас/таблет: төхөөрөмжийн кэш ашиглахгүй — iPhone-д санах ой дүүрч хуудас унадаг («A problem repeatedly occurred»). Өмнөх кэшийг нэг удаа цэвэрлэнэ.
+    if(MOB){try{if(!localStorage.getItem('vivi_pclr2')&&db.clearPersistence)db.clearPersistence().then(()=>localStorage.setItem('vivi_pclr2','1')).catch(()=>{})}catch(e){}}
+    else try{const pr=db.enablePersistence&&db.enablePersistence({synchronizeTabs:true});if(pr&&pr.catch)pr.catch(e=>console.warn('persistence',e&&e.code))}catch(e){}
     auth.onAuthStateChanged(async u=>{if(!u){ME=null;$('login').classList.remove('hide');$('app').classList.add('hide');return}
       const em=(u.email||'').toLowerCase();let P=null;
       if(em===PANEL_EMAIL)P={owner:true,admin:true,perms:PERM_ALL};
       else{try{const d=await db.collection('pos_panel_users').doc(em).get(),x=d.exists?d.data():null;if(x&&x.active!==false)P={admin:!!x.admin,perms:x.admin?PERM_ALL:(x.perms||[]),name:x.name||''}}catch(e){}}
       if(!P){$('lm').innerHTML='<b>'+esc(u.email||'')+'</b> — хяналтын самбарт орох эрхгүй. Захиралд хандаж, «👤 Хэрэглэгч» цэсэнд имэйлээ нэмүүлнэ үү.';$('lp').value='';auth.signOut();return}
       ME=P;if(!P.owner)db.collection('pos_panel_users').doc(em).update({lastLogin:new Date().toISOString()}).catch(()=>{});
-      $('who').textContent=u.email+(P.name?' · '+P.name:'');applyPerms();$('login').classList.add('hide');$('app').classList.remove('hide');listen();if(stPosP())setTimeout(autoStock,3000);setTimeout(autoClose,6000)});
+      $('who').textContent=u.email+(P.name?' · '+P.name:'');applyPerms();$('login').classList.add('hide');$('app').classList.remove('hide');listen();if(stPosP()&&!MOB)setTimeout(autoStock,3000);if(!MOB)setTimeout(autoClose,6000)});
   }catch(e){$('lm').textContent=e.message||String(e)}
 }
 const APP_VER=document.querySelector('meta[name=vivi-ver]').content;document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS хяналт '+APP_VER;
