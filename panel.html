@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="17.6">
+<meta name="vivi-ver" content="17.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -3888,8 +3888,8 @@ async function ckRun(full){const a=$('ckA').value,b=$('ckB').value>=a?$('ckB').v
     const DS=[...AG.values()].concat(full?[]:PDL.filter(x=>!rawSet.has(x.date)));
     // касс бүр: бүх өдрийн дугаарыг нэгтгэж тасралт хайна
     const T=new Map(),dupIds=[];
-    DS.forEach(D=>{Object.entries(D.tills||{}).forEach(([k,arr])=>{let t=T.get(k);if(!t){const m=k.match(/^([A-Za-z]+)-(\d+)$/)||[0,k,''];T.set(k,t={k,store:m[1].toUpperCase(),reg:m[2],nums:new Set(),day:new Map(),sale:0,ret:0,cnt:0})}
-        arr.forEach(n=>{n=+n;if(t.nums.has(n)&&!(t.day.get(n)===D.date))dupIds.push(k+'-'+String(n).padStart(6,'0'));else{t.nums.add(n);t.day.set(n,D.date)}});const ts=(D.tsum||{})[k];if(ts){t.sale+=+ts[0]||0;t.ret+=+ts[1]||0;t.cnt+=(+ts[2]||0)+(+ts[3]||0)}});
+    DS.forEach(D=>{Object.entries(D.tills||{}).forEach(([k,arr])=>{let t=T.get(k);if(!t){const m=k.match(/^([A-Za-z]+)-(\d+)$/)||[0,k,''];T.set(k,t={k,store:m[1].toUpperCase(),reg:m[2],nums:new Set(),sale:0,ret:0,cnt:0})}
+        arr.forEach(n=>t.nums.add(+n));const ts=(D.tsum||{})[k];if(ts){t.sale+=+ts[0]||0;t.ret+=+ts[1]||0;t.cnt+=(+ts[2]||0)+(+ts[3]||0)}});
       Object.entries(D.dup||{}).forEach(([id,c])=>{if(c>0)dupIds.push(id)});Object.values(D.bad||{}).forEach(b=>bad.push([b[0],b[1],ckBadTxt(b),b[5]||'']))});
     const rows=[...T.values()].sort((x,y)=>x.k.localeCompare(y.k)).map(t=>{const ks=[...t.nums].sort((x,y)=>x-y),mn=ks[0],mx=ks[ks.length-1],miss=[],del=[];
       for(let n=mn;n<=mx;n++)if(!t.nums.has(n)){const id=t.k+'-'+String(n).padStart(6,'0');(delIds.has(id)?del:miss).push(id)}
@@ -3897,7 +3897,7 @@ async function ckRun(full){const a=$('ckA').value,b=$('ckB').value>=a?$('ckB').v
       return {k:t.k,store:t.store,reg:t.reg,n:t.cnt,from:t.k+'-'+String(mn).padStart(6,'0'),to:t.k+'-'+String(mx).padStart(6,'0'),miss,del,sale:t.sale,ret:t.ret,net:t.sale+t.ret,dev:dv}});
     // давхар дугаар: зөвхөн тэдгээр баримтыг татаж агуулгыг тулгана (ижил → 2 удаа тоологдсон, өөр → зөвхөн дугаар давхацсан)
     const dup=[];let dupX=0;const ids=[...new Set(dupIds)],DR=new Map();L.forEach(x=>{if(ids.includes(x.id))(DR.get(x.id)||DR.set(x.id,[]).get(x.id)).push(x)});
-    const need=full?[]:ids;for(let i=0;i<need.length;i+=30){(await db.collection('pos_sales').where('id','in',need.slice(i,i+30)).get()).docs.forEach(d=>{const x=d.data();if(x.date>=A&&x.date<=B){const A3=DR.get(x.id)||DR.set(x.id,[]).get(x.id);if(!A3.some(y=>y.uid===x.uid))A3.push(x)}})}
+    const need=ids.filter(id=>!DR.has(id));for(let i=0;i<need.length;i+=30){(await db.collection('pos_sales').where('id','in',need.slice(i,i+30)).get()).docs.forEach(d=>{const x=d.data();if(x.date>=A&&x.date<=B)(DR.get(x.id)||DR.set(x.id,[]).get(x.id)).push(x)})}
     const sig=x=>[x.type,x.total,(x.lines||[]).map(l=>l.code+'x'+l.qty+'='+l.sum).sort().join(','),String(x.iso||'').slice(0,16)].join('|');
     [...DR.entries()].sort((x,y)=>x[0].localeCompare(y[0])).forEach(([id,A2])=>{if(A2.length<2)return;A2.sort((x,y)=>String(x.iso||'').localeCompare(String(y.iso||'')));const same=A2.every(x=>sig(x)===sig(A2[0]));if(same)dupX+=A2.slice(1).reduce((s2,x)=>s2+(+x.total||0),0);
       A2.forEach((x,i)=>dup.push([id,x.date,(same?(i?'⚠ ДАВХАР ТООЛОГДСОН — ижил агуулга, '+fmtN(Math.round(+x.total||0))+' ₮ илүү':'ижил агуулгатай 2 бичлэг (эх)'):'дугаар давхацсан, '+(i+1)+'/'+A2.length+'-р баримт — өөр борлуулалт (дүн зөв)')+' · '+String(x.time||'').slice(0,5)+' · '+fmtN(Math.round(+x.total||0))+' ₮ · '+(x.lines||[]).length+' мөр · v'+(x.ver||'?')+(x.dev?' · '+x.dev:''),x.cashier||'']))});
