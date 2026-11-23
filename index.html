@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.9">
+<meta name="vivi-ver" content="8.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -226,8 +226,19 @@ const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return dstr(d)};
 const uuid=()=>Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,6);
 const store={
   get(k,d){try{const v=localStorage.getItem('vivipos_'+k);return v?JSON.parse(v):d}catch(e){return d}},
-  set(k,v){try{localStorage.setItem('vivipos_'+k,JSON.stringify(v));return true}catch(e){flash('Анхаар: өгөгдөл хадгалагдсангүй!');return false}}
+  set(k,v){try{jrHook(k,v)}catch(e){}try{localStorage.setItem('vivipos_'+k,JSON.stringify(v));return true}catch(e){flash('Анхаар: өгөгдөл хадгалагдсангүй!');return false}}
 };
+/* ==== 8.0 Журнал ====
+ Компьютерийг шууд унтраахад Chrome localStorage-ийн сүүлийн хэдэн минутын бичлэгийг дискэнд бичиж амжихгүй байж болно
+ (тоолуур буцаж → баримтын дугаар давхардах, хаасан ээлж «амилах», Z-д сүүлийн баримт дутах).
+ Тиймээс илгээгдээгүй баримт, дугаарын тоолуур, хаасан ээлжийг IndexedDB-д шууд (durability:strict) давхар бичиж,
+ дараагийн эхлэлд localStorage-тэй нийлүүлнэ. Илгээгдсэн баримт журналаас устна — журнал үргэлж жижиг. */
+var jr=null,jrSeen=new Map(),jrRec=null;
+function jrHook(k,v){if(!jr)return;
+  if(k==='counters'){if(jr.ok)jr.put('c',v)}
+  else if(k==='sales'&&Array.isArray(v)){const del=[];v.forEach(s=>{if(!s||!s.uid)return;if(s.synced){if(jrSeen.has(s.uid)){jrSeen.delete(s.uid);del.push('s:'+s.uid)}return}
+      const j=JSON.stringify(s);if(jrSeen.get(s.uid)!==j){jrSeen.set(s.uid,j);jr.put('s:'+s.uid,s)}});if(del.length)jr.del(del)}
+  else if(k==='shifts'&&Array.isArray(v))v.slice(-3).forEach(h=>{if(!h||!h.id||!h.closed)return;const j=JSON.stringify(h);if(jrSeen.get('z:'+h.id)!==j){jrSeen.set('z:'+h.id,j);jr.put('z:'+h.id,h)}})}
 /* ---------- users, promos (тохиргоо) ---------- */
 let users=store.get('users',null);
 if(!users){users=[{id:'u0',name:'Админ',role:'admin',pin:'9999',stores:[],active:true}];let n=1;
@@ -347,6 +358,23 @@ async function cloudInit(){
   }catch(e){fb.err=String(e&&e.message||e)}
   cloudStatus();
 }
+jr={db:null,q:Promise.resolve(),
+  open(){if(this.db)return Promise.resolve(this.db);return this.p||(this.p=new Promise((res,rej)=>{try{const r=indexedDB.open('vivipos_j',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{this.db=r.result;res(this.db)};r.onerror=()=>rej(r.error)}catch(e){rej(e)}}))},
+  tx(fn){const run=()=>this.open().then(db=>new Promise(res=>{let t;try{t=db.transaction('kv','readwrite',{durability:'strict'})}catch(e){t=db.transaction('kv','readwrite')}fn(t.objectStore('kv'));t.oncomplete=()=>res(true);t.onerror=t.onabort=()=>res(false)})).catch(()=>false);return this.q=this.q.then(run,run)},
+  put(k,v){let x;try{x=JSON.parse(JSON.stringify(v))}catch(e){return Promise.resolve(false)}return this.tx(s=>s.put(x,k))},
+  del(ks){ks=[].concat(ks);return ks.length?this.tx(s=>ks.forEach(k=>s.delete(k))):Promise.resolve(true)},
+  all(){return this.open().then(db=>new Promise(res=>{const out={},c=db.transaction('kv').objectStore('kv').openCursor();c.onsuccess=()=>{const x=c.result;if(x){out[x.key]=x.value;x.continue()}else res(out)};c.onerror=()=>res(out)})).catch(()=>({}))}};
+// эхлэхэд: журнал ↔ localStorage нийлүүлэх (нэвтрэхээс өмнө дуусна)
+const jrReady=(async()=>{try{const J=await jr.all(),stale=[],rs=[];let cc=false,hz=0;
+  for(const [k,v] of Object.entries(J)){if(!k.startsWith('s:'))continue;if(!v||!v.uid){stale.push(k);continue}
+    const ex=sales.find(s=>s.uid===v.uid);if(!ex){sales.push({...v,synced:false});rs.push(v.id||v.uid)}else if(ex.synced)stale.push(k);else jrSeen.set(v.uid,JSON.stringify(ex))}
+  const c=J.c||{};Object.keys(c).forEach(k=>{if((+c[k]||0)>(+counters[k]||0)){counters[k]=+c[k];cc=true}});
+  const H=store.get('shifts',[]),zk=Object.keys(J).filter(k=>k.startsWith('z:')).sort((a,b)=>((J[a]||{}).closed||'')<((J[b]||{}).closed||'')?1:-1);
+  zk.forEach((k,i)=>{const h=J[k];if(i>=40||!h||!h.id)return stale.push(k);jrSeen.set(k,JSON.stringify(h));if(!H.some(x=>x.id===h.id&&x.closed)){H.push(h);hz++;shiftOut(h)}});
+  if(stale.length)jr.del(stale);
+  jr.ok=true;if(hz)store.set('shifts',H.slice(-200));store.set('counters',counters);store.set('sales',sales);
+  if(rs.length||cc||hz){jrRec={sales:rs,counters:cc,shifts:hz};setTimeout(()=>{try{log('journal_restore',jrRec);if(rs.length)flash('Сүүлд алдагдсан '+rs.length+' баримт сэргээгдлээ — үүл рүү илгээж байна');cloudSoon()}catch(e){}},50)}
+}catch(e){}finally{jr.ok=true}})();
 function pending(){return sales.filter(s=>!s.synced).length+audit.filter(a=>!a.synced).length+shiftq.length+reqq.length+movq.length}
 /* ==== Найдвартай ажиллагаа ====
    1) Санах ой: илгээгдсэн хуучин баримтыг (14 хоногоос өмнөх) энэ компьютерээс цэвэрлэнэ — үүлэнд хадгалагдсан.
@@ -1488,13 +1516,13 @@ var TRIP=(()=>{try{return JSON.parse(localStorage.getItem('vivipos_trip'))||''}c
 // Явуулын кассын баримт бүрт аяны нэр (жишээ «Дархан 2026-12»); бусад дэлгүүрт хоосон
 function tripNow(){return S.user&&S.user.store==='YV'&&TRIP?TRIP:null}
 function header(){$('tStore').textContent=STORES[S.user.store]+(S.user.store==='YV'?' · '+(TRIP||'аян тохируулаагүй'):'')+' · Касс '+S.user.reg+(DEVDOC&&DEVDOC.name?' · '+DEVDOC.name:'');$('tCash').textContent=S.user.name;$('tShift').textContent=S.shift?'Ээлж '+S.shift.id:''}
-$('lGo').onclick=()=>{
+$('lGo').onclick=async()=>{await jrReady;
   const u=users.find(x=>x.id===$('lCash').value);if(!u)return $('lMsg').textContent='Ажилтнаа сонгоно уу';
   if(!device.store)return $('lMsg').textContent='Энэ касс дэлгүүрт бэхлэгдээгүй';
   if(!(u.role==='admin'||!u.stores.length||device.store==='YV'||u.stores.includes(device.store)))return $('lMsg').textContent='Та '+STORES[device.store]+' дэлгүүрт ажиллах эрхгүй';
   if($('lPin').value!==u.pin)return $('lMsg').textContent='ПИН буруу';
   S.user={store:device.store,reg:$('lReg').value,name:u.name,uid:u.id,role:u.role};$('lPin').value='';$('lMsg').textContent='';
-  S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',{});header();permButtons();setTimeout(gdAfterLogin,700);
+  S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',{});counterSync(S.user.store,S.user.reg);header();permButtons();setTimeout(gdAfterLogin,700);
   if(S.shift&&shiftClosedLocal(S.shift.id)){shiftDrop(shiftClosedLocal(S.shift.id),'login_local');return}
   if(S.shift){show('sale');render();$('scan').focus();shiftStaleCheck().then(x=>{if(!x&&shiftGuard())shiftHandover()})}else{show('shiftopen');$('sFloat').select()}
 };
@@ -1509,9 +1537,12 @@ function regChange(){openModal('<h2>Энэ компьютерийн касс №
    Касс № ээлж нээлттэй үед солигдохгүй — ээлж хаасны дараа хэрэгжинэ. */
 var DEVDOC=null,regNext=null;
 // касс № (дахин) авахад тэр дугаарын сүүлийн баримтаас үргэлжлүүлнэ — дугаар давхардахгүй
-async function counterSync(st,reg){if(!(fb.ready&&fb.user&&navigator.onLine))return;try{const k=st+'-'+reg;let mx=counters[k]||0;
-  for(const r of [String(reg),Number(reg)]){const q=await fb.db.collection('pos_sales').where('store','==',st).where('reg','==',r).get();q.docs.forEach(d=>{const m=/-(\d+)$/.exec(d.data().id||'');if(m)mx=Math.max(mx,+m[1])})}
-  if(mx>(counters[k]||0)){counters[k]=mx;store.set('counters',counters)}}catch(e){}}
+async function counterSync(st,reg){if(!(fb.ready&&fb.user&&navigator.onLine))return;const k=st+'-'+reg,t0=+counters[k]||0;let mx=0;
+  const scan=q=>q&&q.docs.forEach(d=>{const x=d.data()||{},m=/-(\d+)$/.exec(x.id||'');if(m&&(x.id||'').startsWith(k+'-'))mx=Math.max(mx,+m[1])});
+  // хамгийн сүүлийн дугаар: id-аар эрэмбэлж 1 баримт (хурдан, хямд)
+  try{scan(await Promise.race([fb.db.collection('pos_sales').where('id','>=',k+'-').where('id','<=',k+'-\uf8ff').orderBy('id','desc').limit(1).get(),new Promise(r=>setTimeout(()=>r(null),6000))]))}
+  catch(e){try{for(const r of [String(reg),Number(reg)])scan(await fb.db.collection('pos_sales').where('store','==',st).where('reg','==',r).get())}catch(e2){}}
+  if(mx>(+counters[k]||0)){counters[k]=mx;store.set('counters',counters);try{log('counter_sync',{k,from:t0,to:mx})}catch(e){}}}
 function devListen(){if(devListen.on||!(fb.ready&&fb.user))return;devListen.on=true;const ref=fb.db.collection('pos_devices').doc(DEVID);
   devListen.u=ref.onSnapshot(async d=>{if(!d.exists){if(!device.store||devListen.claiming)return;devListen.claiming=true;
       // шинэ компьютер: тухайн дэлгүүрт чөлөөтэй хамгийн бага касс №-ийг автоматаар авна (тохиргоо шаардахгүй)
