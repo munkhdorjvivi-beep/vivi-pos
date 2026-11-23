@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="17.3">
+<meta name="vivi-ver" content="17.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -3913,7 +3913,7 @@ async function ckXl(){if(!CK)return alert('Эхлээд «Шалгах» дар�
 
 /* ==== 📦 Өдрийн нэгтгэл (pos_day): Cloud Function «daySum» тооцоолно. Энд — төлөв, анх удаа / дахин тооцоолуулах ==== */
 let dsU=null;function dsStatus(){const el=$('ckDS');if(!el)return;if(dsU)return;dsU=db.collection('pos_config').doc('daysum').onSnapshot(d=>{const x=d.exists?d.data():{};const adm=!!(ME&&ME.admin);
-  el.innerHTML='📦 <b>Өдрийн нэгтгэл</b> (тайлан хурдан ачаалагдахын тулд): '+(x.running?'<span class="chip b">тооцоолж байна… '+esc(String(x.startAt||'').slice(0,16).replace('T',' '))+'</span>':x.doneAt?'сүүлд бүрэн тооцоолсон '+esc(String(x.doneAt).slice(0,16).replace('T',' '))+(x.err?' <span class="hot">алдаа: '+esc(x.err)+'</span>':''):'<span class="muted">хараахан тооцоолоогүй</span>')+
+  el.innerHTML='📦 <b>Өдрийн нэгтгэл</b> (тайлан хурдан ачаалагдахын тулд): '+(x.running?'<span class="chip b">тооцоолж байна… '+esc(x.startAt?new Date(x.startAt).toLocaleString('sv-SE').slice(0,16):'')+'</span>':x.doneAt?'сүүлд бүрэн тооцоолсон '+esc(new Date(x.doneAt).toLocaleString('sv-SE').slice(0,16))+(x.err?' <span class="hot">алдаа: '+esc(x.err)+'</span>':''):'<span class="muted">хараахан тооцоолоогүй</span>')+
     (adm?' <button class="btn" id="dsGo" style="min-height:30px;padding:2px 10px">↻ Дээрх хугацааг дахин тооцоолох</button>':'');
   const b=$('dsGo');if(b)b.onclick=async()=>{const a=$('ckA').value,c=$('ckB').value;if(!a||!c)return;if(!confirm('Өдрийн нэгтгэлийг '+a+' → '+c+' хугацаанд баримтаас бүрэн дахин тооцоолох уу? (хэдэн минут)'))return;
     await db.collection('pos_config').doc('daysum').set({req:true,from:a.replace(/-/g,'/'),to:c.replace(/-/g,'/'),by:auth.currentUser.email||'',at:new Date().toISOString()},{merge:true});try{await auditCfg('daysum_rebuild',{from:a,to:c})}catch(e){}}},()=>{el.innerHTML=''})}
