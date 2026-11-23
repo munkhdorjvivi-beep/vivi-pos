@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.0">
+<meta name="vivi-ver" content="8.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -1529,8 +1529,10 @@ $('lGo').onclick=async()=>{await jrReady;
 $('lPin').onkeydown=e=>{if(e.key==='Enter')$('lGo').click()};$('lZ').onclick=zList;
 // Нэг дэлгүүрт нэг касс № зөвхөн нэг компьютер дээр — давхар бол баримтын дугаар давхардана
 const DEVID=store.get('devid',null)||(()=>{const v=uuid();store.set('devid',v);return v})();
+// өөр компьютер дээрх нээлттэй ээлж: (1) энэ касс № дээр, (2) энэ кассчин (нэг хүн хоёр ээлжтэй бол бэлэн мөнгөний хариуцлага холилдоно)
 async function regBusy(){if(!(fb.ready&&fb.user&&navigator.onLine))return null;
-  try{const r=await fb.db.collection('pos_shifts').where('store','==',S.user.store).get();return r.docs.map(d=>d.data()).find(h=>String(h.reg)===String(S.user.reg)&&!h.closed&&h.dev&&h.dev!==DEVID)||null}catch(e){return null}}
+  try{const r=await fb.db.collection('pos_shifts').where('store','==',S.user.store).get(),L=r.docs.map(d=>d.data()).filter(h=>!h.closed&&h.dev&&h.dev!==DEVID);
+    const reg=L.find(h=>String(h.reg)===String(S.user.reg)),me=L.find(h=>h.openedBy&&h.openedBy===S.user.name);return reg?{...reg,kind:'reg'}:me?{...me,kind:'me'}:null}catch(e){return null}}
 function regChange(){openModal('<h2>Энэ компьютерийн касс №</h2><div class="small">'+esc(STORES[S.user.store])+' дэлгүүрт өөр компьютер ашиглаагүй дугаарыг сонгоно.</div><label>Касс №</label><select id="rgN">'+[1,2,3,4,5,6,7,8,9].map(n=>'<option'+(String(n)===String(S.user.reg)?' selected':'')+'>'+n+'</option>').join('')+'</select><div class="rowbtn"><button id="rgC">Болих</button><button class="pri" id="rgO">Хадгалах</button></div>',true);
   $('rgC').onclick=closeModal;$('rgO').onclick=()=>{const b=device.reg;device={...device,reg:$('rgN').value};store.set('device',device);log('device_reg',{before:b,reg:device.reg});S.user.reg=device.reg;S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);closeModal();applyDevice();header();if(S.shift){show('sale');render()}else flash('Касс № '+device.reg+' болголоо — ээлжээ нээнэ үү')}}
 /* Төхөөрөмжийн бүртгэл (pos_devices): компьютер бүр өөрийгөө бүртгүүлж, самбараас нэр, касс № авна.
@@ -1558,8 +1560,12 @@ function devBeat(){if(!(fb.ready&&fb.user&&DEVDOC&&navigator.onLine))return;fb.d
 setInterval(devBeat,120000);
 $('sGo').onclick=async()=>{
   const busy=await regBusy();
-  if(busy){openModal('<h2>Касс № '+esc(S.user.reg)+' өөр компьютер дээр ажиллаж байна</h2><div>'+esc(STORES[S.user.store])+' · Касс '+esc(S.user.reg)+' — '+esc(busy.openedBy||'')+' '+esc((busy.opened||'').slice(0,16).replace('T',' '))+'-с нээлттэй ээлжтэй.</div><div class="small" style="margin-top:8px">Нэг дугаартай хоёр касс баримтын дугаарыг давхардуулдаг. Энэ компьютерт өөр касс № өгнө үү (админ ПИН).</div><div class="rowbtn"><button id="rbC">Болих</button><button class="pri" id="rbO">Касс № солих</button></div>');
+  if(busy&&busy.kind==='me'){openModal('<h2>'+esc(S.user.name)+' өөр кассанд ээлжтэй байна</h2><div>'+esc(STORES[busy.store]||busy.store||'')+' · Касс '+esc(busy.reg)+' — '+esc(busy.opened?(d=>d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2)+' '+pad(d.getHours(),2)+':'+pad(d.getMinutes(),2))(new Date(busy.opened)):'')+'-с нээлттэй ээлж.</div><div class="small" style="margin-top:8px">Нэг кассчин хоёр кассанд зэрэг ээлж нээвэл бэлэн мөнгөний хариуцлага холилдоно. Эхлээд тэр кассын ээлжээ хаана уу. Тэр компьютер эвдэрсэн, ээлжийг хаах боломжгүй бол админ зөвшөөрнө.</div><div class="rowbtn"><button id="rbC">Болих</button><button id="rbA">Админ зөвшөөрөл</button></div>');
+    $('rbC').onclick=closeModal;$('rbA').onclick=async()=>{if(!await askPin('Хоёр дахь ээлж нээх','admin'))return;closeModal();log('shift_open_override',{other:busy.id,dev:busy.dev});shiftOpenNow()};return}
+  if(busy){openModal('<h2>Касс № '+esc(S.user.reg)+' өөр компьютер дээр ажиллаж байна</h2><div>'+esc(STORES[S.user.store])+' · Касс '+esc(S.user.reg)+' — '+esc(busy.openedBy||'')+' '+esc(busy.opened?(d=>d.getFullYear()+'-'+pad(d.getMonth()+1,2)+'-'+pad(d.getDate(),2)+' '+pad(d.getHours(),2)+':'+pad(d.getMinutes(),2))(new Date(busy.opened)):'')+'-с нээлттэй ээлжтэй.</div><div class="small" style="margin-top:8px">Нэг дугаартай хоёр касс баримтын дугаарыг давхардуулдаг. Энэ компьютерт өөр касс № өгнө үү (админ ПИН).</div><div class="rowbtn"><button id="rbC">Болих</button><button class="pri" id="rbO">Касс № солих</button></div>');
     $('rbC').onclick=closeModal;$('rbO').onclick=async()=>{if(await askPin('Касс № солих','admin'))regChange()};return}
+  shiftOpenNow()};
+function shiftOpenNow(){
   const d=now();S.shift={dev:DEVID,id:S.user.store+'-'+S.user.reg+'-'+d.getFullYear()+pad(d.getMonth()+1,2)+pad(d.getDate(),2)+'-'+pad(d.getHours(),2)+pad(d.getMinutes(),2),opened:d.toISOString(),openedBy:S.user.name,float:num($('sFloat').value)};
   store.set('shift_'+S.user.store+'-'+S.user.reg,S.shift);shiftOut({...S.shift,store:S.user.store,reg:S.user.reg});log('shift_open',{id:S.shift.id,float:S.shift.float});header();show('sale');render();$('scan').focus();
 };
