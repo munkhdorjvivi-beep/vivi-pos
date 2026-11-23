@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="17.1">
+<meta name="vivi-ver" content="17.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -3924,6 +3924,24 @@ async function ckXl(){if(!CK)return alert('Эхлээд «Шалгах» дар�
   document.addEventListener('touchend',e=>{const i=di(e);if(!i)return;const t=e.changedTouches[0];if(Math.abs(t.clientX-tx)>10||Math.abs(t.clientY-ty)>10)return;e.preventDefault();tt=Date.now();open(i)},{capture:true,passive:false});
   document.addEventListener('focusin',e=>{const i=di(e);if(i)i.blur()},true);
   document.addEventListener('click',e=>{const i=di(e);if(!i)return;e.preventDefault();if(Date.now()-tt>600)open(i)},true);
+  // ---- Сонголтын талбар (select): iPhone-ий үндсэн жагсаалт нээгдээд шууд хаагддаг тул мэдрэгчтэй төхөөрөмжид доороос гарах өөрийн жагсаалт ----
+  const ds2=document.createElement('style');ds2.textContent='#dpS .dsl{max-height:min(62vh,520px);overflow:auto;-webkit-overflow-scrolling:touch;margin:4px 0}#dpS .dsl button{display:block;width:100%;text-align:left;font:inherit;font-size:16px;border:0;border-bottom:1px solid #eef0f3;background:#fff;padding:13px 12px;min-height:48px}#dpS .dsl button.s{background:#fdecee;color:#b3262b;font-weight:700}#dpS .dsl button:disabled{opacity:.35}#dpS .dsl i{display:block;font-style:normal;font-size:12.5px;color:#7b8494;padding:10px 12px 4px;background:#f6f7f9}#dpS .dpq{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d6dae1;border-radius:10px;margin:4px 0}#dpS .dph b{font-size:16px}';document.head.appendChild(ds2);
+  const sl=e=>e.target.closest&&e.target.closest('select:not([multiple])'),okSel=x=>x&&!x.disabled&&!(+x.size>1);let sx0=0,sy0=0,st0=0;
+  function openSel(sel){if($('dpS')||$('dpO'))return;sel.blur();const lab=(sel.title||(sel.labels&&sel.labels[0]&&sel.labels[0].textContent)||(sel.previousElementSibling&&sel.previousElementSibling.tagName==='LABEL'?sel.previousElementSibling.textContent:'')||'Сонгох').trim().slice(0,60);
+    const items=[];[...sel.children].forEach(ch=>{if(ch.tagName==='OPTGROUP'){items.push({g:ch.label});[...ch.children].forEach(o=>items.push({o}))}else if(ch.tagName==='OPTION')items.push({o:ch})});
+    const many=items.filter(x=>x.o).length>15,o=document.createElement('div');o.id='dpS';o.className='';o.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(15,20,30,.45);display:flex;align-items:flex-end;justify-content:center';
+    o.innerHTML='<div class="dpc" style="background:#fff;width:min(460px,100%);border-radius:16px 16px 0 0;padding:12px 12px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,.25)"><div class="dph" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b></b><button data-x="1" style="font:inherit;font-size:16px;border:1px solid #d6dae1;background:#fff;border-radius:10px;min-height:44px;padding:0 14px">Болих</button></div>'+(many?'<input class="dpq" placeholder="Хайх…" autocomplete="off">':'')+'<div class="dsl"></div></div>';
+    document.body.appendChild(o);o.querySelector('.dph b').textContent=lab;const box=o.querySelector('.dsl');
+    const draw=q=>{q=(q||'').toLowerCase();box.innerHTML='';items.forEach((x,i)=>{if(x.g!=null){if(!q){const h=document.createElement('i');h.textContent=x.g;box.appendChild(h)}return}if(q&&!x.o.textContent.toLowerCase().includes(q))return;
+      const b=document.createElement('button');b.type='button';b.textContent=x.o.textContent;b.dataset.i=i;if(x.o.disabled)b.disabled=true;if(x.o.selected)b.className='s';box.appendChild(b)});const cur=box.querySelector('.s');if(cur)cur.scrollIntoView({block:'center'})};
+    draw();const qi=o.querySelector('.dpq');if(qi)qi.oninput=()=>draw(qi.value);
+    o.addEventListener('click',e=>{e.stopPropagation();if(e.target===o||e.target.closest('[data-x]'))return o.remove();const b=e.target.closest('.dsl button');if(!b||b.disabled)return;const op=items[+b.dataset.i].o;o.remove();
+      if(op.selected&&sel.value===op.value)return;sel.value=op.value;op.selected=true;sel.dispatchEvent(new Event('input',{bubbles:true}));sel.dispatchEvent(new Event('change',{bubbles:true}))})}
+  document.addEventListener('touchstart',e=>{if(!sl(e))return;const t=e.touches[0];sx0=t.clientX;sy0=t.clientY},{capture:true,passive:true});
+  document.addEventListener('touchend',e=>{const x=sl(e);if(!okSel(x))return;const t=e.changedTouches[0];if(Math.abs(t.clientX-sx0)>10||Math.abs(t.clientY-sy0)>10)return;e.preventDefault();st0=Date.now();openSel(x)},{capture:true,passive:false});
+  document.addEventListener('mousedown',e=>{const x=sl(e);if(okSel(x)&&Date.now()-st0<800)e.preventDefault()},true);
+  document.addEventListener('focusin',e=>{const x=e.target&&e.target.tagName==='SELECT'?e.target:null;if(okSel(x)&&!x.multiple&&Date.now()-st0<800)x.blur()},true);
+  document.addEventListener('click',e=>{const x=sl(e);if(!okSel(x))return;e.preventDefault();if(Date.now()-st0>800)openSel(x)},true);
 })();
 </script>
 </body>

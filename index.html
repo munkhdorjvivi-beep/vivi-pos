@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="7.8">
+<meta name="vivi-ver" content="7.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -378,6 +378,15 @@ async function clockCheck(){if(location.protocol==='file:'||!navigator.onLine)re
 setInterval(clockCheck,30*60e3);setTimeout(clockCheck,4000);
 // өмнөх өдрийн ээлж
 const shiftOld=()=>S.shift&&S.shift.opened&&dstr(new Date(S.shift.opened))!==dstr(now());
+/* ---- 7.9: Хаасан ээлжийг дахин хаахгүй ----
+   Өмнө нь хаасан ээлж (энэ компьютерийн түүх эсвэл үүлэн дэх pos_shifts-т closed) дахин «нээлттэй» гарч ирвэл (жишээ нь 2 цонх зэрэг
+   нээлттэй байсны улмаас) дахин хаахгүй, хуучин зөв Z тайланг устгахгүй. */
+const shiftClosedLocal=id=>store.get('shifts',[]).find(h=>h.id===id&&h.closed)||null;
+async function shiftClosedCloud(id){if(!(fb.ready&&fb.user&&navigator.onLine))return null;try{const d=await Promise.race([fb.db.collection('pos_shifts').doc(id).get(),new Promise(r=>setTimeout(()=>r(null),4000))]);return d&&d.exists&&d.data().closed?d.data():null}catch(e){return null}}
+function shiftDrop(h,why){if(!S.shift)return;const id=S.shift.id;log('shift_stale',{id,why,closed:h&&h.closed||''});store.set('shift_'+S.user.store+'-'+S.user.reg,null);S.shift=null;closeModal();show('shiftopen');
+  openModal('<h2>Энэ ээлж аль хэдийн хаагдсан</h2><div>Ээлж <b>'+esc(id)+'</b> '+(h&&h.closed?esc(new Date(h.closed).toLocaleString('sv-SE').slice(0,16))+'-д ':'')+'хаагдсан байна (Z тайлан хэвлэгдсэн). Дахин хаах шаардлагагүй — шинэ ээлж нээнэ үү.</div><div class="rowbtn"><button id="sdZ">🖨 Хуучин Z дахин хэвлэх</button><button class="pri" id="sdO">Ойлголоо</button></div>',true);
+  $('sdO').onclick=()=>{closeModal();$('sFloat')&&$('sFloat').select()};$('sdZ').onclick=()=>{closeModal();zList()}}
+async function shiftStaleCheck(){if(!S.shift)return false;const h=shiftClosedLocal(S.shift.id)||await shiftClosedCloud(S.shift.id);if(h&&S.shift){shiftDrop(h,'login');return true}return false}
 function shiftGuard(){if(!S.user||!S.shift)return true;
   if(shiftOld()){openModal('<h2>Өмнөх өдрийн ээлж хаагдаагүй байна</h2><div>Ээлж <b>'+esc(S.shift.id)+'</b> '+esc(new Date(S.shift.opened).toLocaleString('sv-SE').slice(0,16))+'-д нээгдсэн. Өдрийн бэлэн мөнгө зөв тооцогдохын тулд эхлээд хуучин ээлжийг хааж (мөнгө тоолж), шинэ ээлж нээнэ үү.</div><div class="rowbtn"><button class="pri" id="sgC">Ээлж хаах</button></div>');$('sgC').onclick=()=>{closeModal();closeShift()};return false}
   return true}
@@ -1004,7 +1013,7 @@ function shiftSave(){store.set('shift_'+S.user.store+'-'+S.user.reg,S.shift);shi
 function shiftBody(list,pm,extra){const ops=shOps(),byK={};ops.forEach(o=>{byK[o.kind]=(byK[o.kind]||0)+(o.type==='out'?-o.amount:o.amount)});
   const tr=(a,b,st)=>'<tr><td>'+a+'</td><td class="n"'+(st?' style="'+st+'"':'')+'>'+b+'</td></tr>';
   return '<table>'+tr('Ээлж',S.shift.id)+tr('Баримтын тоо',list.filter(s=>s.type==='sale').length)+tr('Нийт борлуулалт',fmt(list.reduce((a,s)=>a+s.total,0)))+Object.entries(pm).map(([k,v])=>tr(esc(k),fmt(v))).join('')+
-    '<tr><td colspan="2"><b>Бэлэн мөнгө</b></td></tr>'+tr('Эхний бэлэн мөнгө',fmt(S.shift.float))+tr('Бэлэн борлуулалт (буцаалт хассан)',fmt(cashOf(list)))+Object.entries(byK).map(([k,v])=>tr(esc(CASH_KIND[k]||k),(v>0?'+':'')+fmt(v))).join('')+tr('<b>Кассанд байх ёстой</b>','<b>'+fmt(cashNow())+'</b>')+(extra||'')+'</table>'}
+    '<tr><td colspan="2"><b>Бэлэн мөнгө</b></td></tr>'+tr('Эхний бэлэн мөнгө',fmt(S.shift.float))+tr('Бэлэн борлуулалт (буцаалт хассан)',fmt(cashOf(list)))+Object.entries(byK).map(([k,v])=>tr(esc(CASH_KIND[k]||k),(v>0?'+':'')+fmt(v))).join('')+tr('<b>Кассанд байх ёстой</b>','<b>'+fmt(S.shift.float+cashOf(list)+opsSum('in')-opsSum('out'))+'</b>')+(extra||'')+'</table>'}
 function openCash(){
   if(!S.shift)return;const ops=shOps();
   openModal('<h2>Бэлэн мөнгө — энэ ээлж</h2><div class="tiles"><div class="tile"><div class="l">ЭХНИЙ</div><div class="v">'+fmt(S.shift.float)+'</div></div><div class="tile"><div class="l">БЭЛЭН БОРЛУУЛАЛТ</div><div class="v">'+fmt(cashOf(shiftSales()))+'</div></div><div class="tile"><div class="l">НЭМСЭН / ГАРГАСАН</div><div class="v">+'+fmt(opsSum('in'))+' / −'+fmt(opsSum('out'))+'</div></div><div class="tile y"><div class="l">КАССАНД БАЙХ ЁСТОЙ</div><div class="v">'+fmt(cashNow())+'</div></div></div>'+
@@ -1034,9 +1043,13 @@ function closeShift(){
   if(S.cart.length)return flash('Эхлээд одоогийн баримтаа дуусгана уу');
   openModal('<h2>Ээлж хаах</h2><div class="small">Кассанд байгаа бэлэн мөнгөө тоолж оруулна уу. Системийн дүн дараа нь харагдана.</div><label>Тоолсон бэлэн мөнгө (₮)</label><input id="cc1" inputmode="numeric" autofocus><div class="rowbtn"><button id="cb">Болих</button><button class="pri" id="co1">Хаах</button></div>',true);
   $('cb').onclick=closeModal;
-  $('co1').onclick=()=>{
-    if($('cc1').value.trim()==='')return;
-    const counted=num($('cc1').value),list=shiftSales(),exp=cashNow(),diff=counted-exp,pm=sumPays(list),cin=opsSum('in'),cout=opsSum('out'),dep=shOps().filter(o=>o.kind==='deposit').reduce((a,o)=>a+o.amount,0);
+  $('co1').onclick=async()=>{
+    if($('cc1').value.trim()==='')return;$('co1').disabled=true;
+    {const h=shiftClosedLocal(S.shift.id)||await shiftClosedCloud(S.shift.id);if(h){shiftDrop(h,'close');return}}
+    // Z-д энэ компьютер дээрх баримт + үүлэнд байгаа энэ ээлжийн баримт (уид-аар давхардуулахгүй) — нэг нь дутуу байсан ч Z бүрэн байна
+    let list=shiftSales();try{if(fb.ready&&fb.user&&navigator.onLine){const q=await Promise.race([fb.db.collection('pos_sales').where('shift','==',S.shift.id).get(),new Promise(r=>setTimeout(()=>r(null),5000))]);
+      if(q){const have=new Set(list.map(x=>x.uid)),add=q.docs.map(d=>d.data()).filter(x=>x&&x.uid&&!have.has(x.uid)&&x.shift===S.shift.id);if(add.length){log('shift_close_cloud_add',{id:S.shift.id,n:add.length,sum:add.reduce((a,x)=>a+(+x.total||0),0)});list=list.concat(add)}}}}catch(e){}
+    const counted=num($('cc1').value),exp=S.shift.float+cashOf(list)+opsSum('in')-opsSum('out'),diff=counted-exp,pm=sumPays(list),cin=opsSum('in'),cout=opsSum('out'),dep=shOps().filter(o=>o.kind==='deposit').reduce((a,o)=>a+o.amount,0);
     const sh={...S.shift,store:S.user.store,reg:S.user.reg,closedBy:S.user.name,closed:now().toISOString(),counted,expected:exp,diff,receipts:list.filter(s=>s.type==='sale').length,total:list.reduce((a,s)=>a+s.total,0),pays:pm,cashSales:cashOf(list),cashIn:cin,cashOut:cout,deposit:dep,ops:shOps()};
     const hist=store.get('shifts',[]);hist.push(sh);store.set('shifts',hist);shiftOut(sh);store.set('shift_'+S.user.store+'-'+S.user.reg,null);
     log('shift_close',{id:sh.id,counted,expected:exp,diff});try{if(sales.some(s=>!s.synced))backupDl('auto')}catch(e){}
@@ -1482,7 +1495,8 @@ $('lGo').onclick=()=>{
   if($('lPin').value!==u.pin)return $('lMsg').textContent='ПИН буруу';
   S.user={store:device.store,reg:$('lReg').value,name:u.name,uid:u.id,role:u.role};$('lPin').value='';$('lMsg').textContent='';
   S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',{});header();permButtons();setTimeout(gdAfterLogin,700);
-  if(S.shift){show('sale');render();$('scan').focus();if(shiftGuard())shiftHandover()}else{show('shiftopen');$('sFloat').select()}
+  if(S.shift&&shiftClosedLocal(S.shift.id)){shiftDrop(shiftClosedLocal(S.shift.id),'login_local');return}
+  if(S.shift){show('sale');render();$('scan').focus();shiftStaleCheck().then(x=>{if(!x&&shiftGuard())shiftHandover()})}else{show('shiftopen');$('sFloat').select()}
 };
 $('lPin').onkeydown=e=>{if(e.key==='Enter')$('lGo').click()};$('lZ').onclick=zList;
 // Нэг дэлгүүрт нэг касс № зөвхөн нэг компьютер дээр — давхар бол баримтын дугаар давхардана
