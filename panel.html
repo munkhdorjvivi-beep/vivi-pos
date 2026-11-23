@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="17.7">
+<meta name="vivi-ver" content="17.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -727,12 +727,13 @@ function slInit(){if(!$('slA').value){$('slA').value=$('slB').value=iso(new Date
 function slPend(){$('slGo').classList.toggle('pend',$('slA').value+'|'+$('slB').value!==SL.key)}
 async function slLoad(){const A=$('slA').value,B=$('slB').value>=$('slA').value?$('slB').value:$('slA').value;if(!A)return;
   await withBusy('Борлуулалтын жагсаалт ачаалж байна…',async()=>{await loadPCat().catch(()=>{});try{await loadDept()}catch(e){}
-    const L=(await db.collection('pos_sales').where('date','>=',A.replace(/-/g,'/')).where('date','<=',B.replace(/-/g,'/')).get()).docs.map(d=>d.data()).filter(x=>(x.type==='sale'||x.type==='return')&&x.date>=A.replace(/-/g,'/')&&x.date<=B.replace(/-/g,'/')).sort((a,b)=>a.iso<b.iso?-1:1);
+    // хаагдсан (3+ хоногийн өмнөх) өдрүүд — төхөөрөмжийн кэшээс, сүүлийн өдрүүд — сангаас (2 дахь удаагаас хурдан)
+    const A2=A.replace(/-/g,'/'),B2=B.replace(/-/g,'/'),L=(await salesSince(A2,null)).filter(x=>(x.type==='sale'||x.type==='return')&&x.date>=A2&&x.date<=B2).sort((a,b)=>a.iso<b.iso?-1:1);SL.src=SC.last;
     const out=[];L.forEach(sx=>{const pays=[...new Set((sx.payments||[]).map(p=>p.bank||p.form).filter(Boolean))].join(', '),part=[...new Set((sx.payments||[]).map(p=>p.partner).filter(Boolean))].join(', '),ret=sx.type==='return';
       (sx.lines||[]).forEach(l=>{const it=itRow(l.code)||{},name=l.code==='DELIVERY'?'Хүргэлт':(l.name||it.name||''),sup=l.sup||it.sup||'',grp=l.grp||it.grp||'',q=+l.qty||0,uc=costMap.has(l.code)?costMap.get(l.code):null;
         out.push({s:sx,code:l.code,name,sup,grp,brand:slBrand(name),cat:catOf(name).typ,st:sx.store,stN:sx.storeName||slStN(sx.store),ks:(sx.storeName||slStN(sx.store))+' · касс '+(sx.reg||'')+' · '+(sx.cashier||''),cashier:sx.cashier||'',part,pays,
           base:+l.base||0,unit:q?Math.round((+l.sum||0)/q):0,qty:ret?0:q,ret:ret?-q:0,sum:+l.sum||0,cost:uc==null?null:uc*q,dept:slDeptName({code:l.code,sup,grp,name},sx.store)})})});
-    SL={key:A+'|'+B,lines:out};slOpts();slDraw();slPend()})}
+    SL={key:A+'|'+B,lines:out,src:SC.last};slOpts();slDraw();slPend()})}
 function slFilt(){const v=id=>$(id).value.trim().toLowerCase(),st=$('slSt').value,ks=v('slKs'),pt=v('slPt'),it=v('slIt'),gr=v('slGr'),su=v('slSu'),ca=$('slCa').value,br=v('slBr');
   const has=(a,b)=>!b||String(a||'').toLowerCase().includes(b);
   return SL.lines.filter(x=>(!st||x.st===st)&&has(x.cashier,ks)&&has(x.part,pt)&&(!it||String(x.code).toLowerCase()===it||has(x.name,it))&&has(x.grp,gr)&&has(x.sup,su)&&(!ca||x.cat===ca)&&has(x.brand,br))}
@@ -743,7 +744,7 @@ function slDraw(){if(!SL.key){$('slMsg').textContent='Хугацаагаа со�
     .map(k=>'<div class="k"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
   xtable('slTbl','sl',['№','Баримт','Огноо','Байршил','Харилцагч','Брэнд','Бэлтгэн нийлүүлэгч','Барааны код','Барааны бүлэг','Барааны нэр','Үндсэн үнэ','Касс үнэ','Тоо хэмжээ','Буцаалт','Тасаг','Касс','Нийт дүн','Цэвэр борлуулалт','Төлбөр',...(cc?['Өртөг']:[])],
     F.map((x,i)=>[i+1,x.s.id||'',dIso(x.s.date),x.stN,x.part,x.brand,x.sup,x.code,x.grp,x.name,x.base,x.unit,x.qty||null,x.ret||null,x.dept,x.cashier,x.sum,x.sum,x.pays,...(cc?[x.cost==null?null:Math.round(x.cost*100)/100]:[])]),{noSum:[0,10,11],limit:500});
-  $('slMsg').textContent=SL.key.replace('|',' — ')+' · '+F.length+' / '+SL.lines.length+' мөр'}
+  $('slMsg').textContent=SL.key.replace('|',' — ')+' · '+F.length+' / '+SL.lines.length+' мөр'+(SL.src?' · баримт: кэшээс '+fmtN(SL.src.cached)+', сангаас '+fmtN(SL.src.fresh):'')}
 async function slXlsx(){if(SL.key!==$('slA').value+'|'+$('slB').value)await slLoad();if(!SL.lines.length)return $('slMsg').textContent='Мөр алга';
   await withBusy('Excel бэлдэж байна…',async()=>{if(!window.ExcelJS)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
     const D=xtData('sl'),idx=new Set(D.L.map(r=>r[0]-1)),F=SL.rows.filter((x,i)=>idx.has(i)),cc=can('cost'),N=cc?20:19;
