@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="18.4">
+<meta name="vivi-ver" content="18.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -2059,7 +2059,9 @@ function spForm(id){const ed=id?PLISTS.find(x=>x.id===id):null,p=ed?JSON.parse(J
     const n={...SPF.p,name:$('sp_n').value.trim(),all,stores:all?[]:stores,start:$('sp_a').value,end:$('sp_ne').checked?'':$('sp_b').value};
     if(!n.name)return er('Нэр оруулна уу');if(!all&&!stores.length)return er('Дэлгүүр сонгоно уу («Бүх дэлгүүр» эсвэл нэг нэгээр)');if(!n.start)return er('Эхлэх огноо сонгоно уу');
     if(!$('sp_ne').checked&&!n.end)return er('Дуусах огноо сонгох эсвэл «дуусах огноогүй» тэмдэглэнэ үү');if(n.end&&n.end<n.start)return er('Дуусах огноо эхлэхээс өмнө байна');
-    if(!SPF.take||!Object.keys(SPF.take).length)return er('Excel оруулаад баганаа баталгаажуулна уу («✓ … өөрчлөх»)');
+    // баганаа шалгасан бол «Хадгалах» нь «✓ … авах»-ыг өөрөө дарна (асуулт хариулаагүй бол болохгүй)
+    if(!SPF.take&&$('pm_ok')){if($('pm_ok').disabled)return er('Excel-ийн доорх асуултад хариулна уу ('+($('pm_okm')?$('pm_okm').textContent:'')+')');$('pm_ok').click()}
+    if(!SPF.take||!Object.keys(SPF.take).length)return er('Excel оруулаад баганаа шалгана уу');
     n.prices=SPF.take;n.file=SPF.info&&SPF.info.fname||'';n.col=SPF.info&&SPF.info.col||'';n.n=Object.keys(n.prices).length;n.by=auth.currentUser.email||'';n.at=new Date().toISOString();
     const L=JSON.parse(JSON.stringify(PLISTS)).filter(x=>x.id!==n.id).concat([n]);
     if(!confirm('«'+n.name+'» — '+fmtN(n.n)+' бараа · '+(all?'бүх дэлгүүр':stores.map(x=>STN[x]||x).join(', '))+' · '+n.start+' → '+(n.end||'дуусах огноогүй')+'\n\nТэр өдрөөс эдгээр дэлгүүрийн касс шинэ үнээр зарна. Идэвхтэй урамшуулал (1+1, −% г.м.) шинэ үнээс тооцогдоно. Хадгалах уу?'))return;
