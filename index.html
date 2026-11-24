@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.1">
+<meta name="vivi-ver" content="8.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -97,7 +97,17 @@ tr.sel td{background:#fff8e1}tr.sel td:first-child{box-shadow:inset 4px 0 0 var(
 #exbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:10px 14px;margin-bottom:8px;border-radius:12px;background:#fff4d6;border:2px solid #e8a400;color:#6b4a00;font-size:14px}#exbar .sp{flex:1}#exbar button{min-height:36px;padding:3px 12px}
 .ownonly{display:inline-flex;align-items:center;padding:0 12px;min-height:40px;border-radius:10px;background:#eef6ff;color:var(--blue);font-weight:650;font-size:14px}
 .box.wide{width:min(1240px,100%)}
-tr.ret td{color:var(--red)}tr.hit td{background:#fff7d6}th.own,td.own{background:#eef6ff}.nw{white-space:nowrap}
+tr.ret td{color:var(--red)}
+.htab{width:100%;border-collapse:collapse}.htab th{position:sticky;top:0;background:var(--card);z-index:1;padding:0}.htab td{padding:7px 8px;border-top:1px solid var(--line);vertical-align:top}
+.hfb{font:inherit;font-size:11px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);background:none;border:0;padding:8px;cursor:pointer;width:100%;text-align:inherit;white-space:normal;line-height:1.25;min-height:0}
+.hfb span{opacity:.6;margin-left:2px}.hfb:hover{background:#eef}.hfb.on{color:var(--blue);background:#e1edfa}.hfb.on span{opacity:1}
+tr.hrec{cursor:pointer}tr.hrec:hover td{background:#f3f6fb}tr.hrec.on td{background:#e1edfa;font-weight:600}.hcar{color:var(--mut);display:inline-block;width:12px}
+tr.hdet>td{background:#f8f9fb;padding:6px 10px 10px 26px}.hin{width:100%;border-collapse:collapse;font-size:13px}.hin th{font-size:11px;color:var(--mut);text-align:left;padding:3px 6px;text-transform:uppercase}.hin td{padding:4px 6px;border-top:1px solid var(--line)}.hin tr.hit td{background:#fff3c4}
+.htab tfoot td{border-top:2px solid var(--line);padding:7px 8px}
+.hfpop{position:fixed;z-index:200;width:290px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.25);padding:10px;font-size:13px}
+.hfpop input#hfQ{width:100%;box-sizing:border-box;font:inherit;min-height:34px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin:6px 0}
+.hfs{display:flex;gap:6px;margin-top:6px}.hfs button{font:inherit;font-size:12.5px;flex:1;min-height:32px;border:1px solid var(--line);border-radius:8px;background:var(--soft);cursor:pointer;padding:2px 6px}.hfs .pri{background:var(--red);color:#fff;border-color:var(--red)}
+.hfl{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 6px;margin:4px 0}.hfl label,.hfa{display:block;padding:2px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hfl input,.hfa input{width:auto;min-height:0}tr.hit td{background:#fff7d6}th.own,td.own{background:#eef6ff}.nw{white-space:nowrap}
 .rowbtn{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
 .list{max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:var(--r)}
 .list tr[data-i]:hover td,.list tr[data-id]:hover td{background:var(--soft);cursor:pointer}
@@ -1319,18 +1329,19 @@ const ymd=d=>d.toLocaleDateString('sv-SE');
 async function loadXlsx(){if(!window.XLSX)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('Excel сан ачаалагдсангүй (интернэт хэрэгтэй)'));document.head.appendChild(s)})}
 function openHist(keep){
   if(!S.user)return;const P=perm();if(P.hist==='none')return flash('Танд борлуулалтын түүх харах эрх алга');
-  if(!keep){H.all=P.hist==='store';H.by='';H.d1=H.d2=''}const t=ymd(now());
+  if(!keep){H.all=P.hist==='store';H.by='';H.d1=H.d2='';H.F={};H.open=new Set()}if(!H.view)try{H.view=localStorage.getItem('vivipos_hview')||'rec'}catch(e){H.view='rec'}const t=ymd(now());
   openModal('<h2>Борлуулалтын түүх · '+esc(STORES[S.user.store])+'</h2>'+
   '<div class="hbar"><input type="date" id="h1" value="'+(H.d1||t)+'"><span>—</span><input type="date" id="h2" value="'+(H.d2||t)+'">'+
   [[0,'Өнөөдөр'],[6,'7 хоног'],[29,'30 хоног'],[89,'90 хоног']].map(x=>'<button data-hd="'+x[0]+'">'+x[1]+'</button>').join('')+'</div>'+
   '<div class="hbar"><input id="hq" placeholder="Баркод, модель эсвэл барааны нэрээр хайх" style="flex:1;min-width:240px" autofocus>'+
-  (H.all?'<select id="hc"><option value="">Бүх кассчин</option></select>':'<span class="ownonly">👤 Зөвхөн миний борлуулалт</span><button id="hu">Бүх кассчин (менежерийн ПИН)</button>')+'<select id="ht"><option value="">Борлуулалт + буцаалт</option><option value="sale">Зөвхөн борлуулалт</option><option value="return">Зөвхөн буцаалт</option></select></div>'+
+  (H.all?'<select id="hc"><option value="">Бүх кассчин</option></select>':'<span class="ownonly">👤 Зөвхөн миний борлуулалт</span><button id="hu">Бүх кассчин (менежерийн ПИН)</button>')+'<select id="ht"><option value="">Борлуулалт + буцаалт</option><option value="sale">Зөвхөн борлуулалт</option><option value="return">Зөвхөн буцаалт</option></select><span id="hv" style="display:inline-flex;gap:4px"><button data-hv="rec">🧾 Баримтаар</button><button data-hv="line">📦 Бараагаар</button></span><button id="hcols">⚙ Багана</button></div>'+
   '<div id="hs" class="hsum"></div><div class="list" style="max-height:50vh" id="hl"></div>'+
   '<div class="rowbtn"><span id="hm" class="small" style="flex:1;align-self:center"></span><button id="hx">Excel татах</button><button class="pri" id="hcl">Хаах</button></div>');
   $('mbox').classList.add('wide');$('hcl').onclick=closeModal;$('hx').onclick=histXl;$('hx').classList.toggle('hide',!P.xl);
   if($('hu'))$('hu').onclick=async()=>{H.d1=$('h1').value;H.d2=$('h2').value;if(await askPin('Дэлгүүрийн бүх борлуулалт харах','manager')){H.all=true;H.by=askPin.by;log('history_unlock',{by:H.by});openHist(true)}else openHist(true)};
   if(!$('hc'))$('hq').oninput=histDraw;
   $('mbox').querySelectorAll('[data-hd]').forEach(b=>b.onclick=()=>{const d=now();d.setDate(d.getDate()-(+b.dataset.hd));$('h1').value=ymd(d);$('h2').value=ymd(now());histLoad()});
+  $('mbox').querySelectorAll('[data-hv]').forEach(b=>b.onclick=()=>{H.view=b.dataset.hv;try{localStorage.setItem('vivipos_hview',H.view)}catch(e){}histDraw()});$('hcols').onclick=e=>{e.stopPropagation();histColsUi($('hcols'))};
   $('h1').onchange=$('h2').onchange=histLoad;$('hq').oninput=histDraw;$('ht').onchange=histDraw;if($('hc'))$('hc').onchange=histDraw;
   histLoad();
 }
@@ -1349,37 +1360,82 @@ async function histLoad(){
     catch(e){src='Зөвхөн энэ касс — үүлээс уншиж чадсангүй ('+(e&&e.code||e)+')'}
   }else src='Зөвхөн энэ касс — үүлэнд холбогдоогүй / офлайн';
   if(!$('hl'))return; // цонх хаагдсан
-  H.rows=[];H.src=src;H.range=d0+' – '+d1;
-  [...map.values()].filter(s=>H.all||mine(s)).sort((x,y)=>(x.iso||'')<(y.iso||'')?1:-1).forEach(s=>(s.lines||[]).forEach(l=>{const i=IDX.get(l.code),c=i!=null?CAT[i]:null;
-    H.rows.push({date:s.date,time:(s.time||'').slice(0,5),no:s.id,type:s.type,reg:s.reg,cashier:s.cashier||'',code:l.code,bc:c&&c[1]?String(c[1]):l.code,model:c&&c[7]||'',size:c&&c[8]||'',
-      name:l.name,sup:l.sup||'',base:l.base||0,unit:l.unit||0,qty:l.qty,disc:(l.base||0)*l.qty-l.sum,sum:l.sum,promo:l.pname||''})}));
+  H.rows=[];H.recs=[];H.src=src;H.range=d0+' – '+d1;
+  [...map.values()].filter(s=>H.all||mine(s)).sort((x,y)=>(x.iso||'')<(y.iso||'')?1:-1).forEach(s=>{const typeT=s.type==='return'?'Буцаалт':'Борлуулалт',uid=s.uid||s.id;
+    const L=(s.lines||[]).map(l=>{const i=IDX.get(l.code),c=i!=null?CAT[i]:null;return {uid,date:s.date,time:(s.time||'').slice(0,5),no:s.id,type:s.type,typeT,reg:s.reg,cashier:s.cashier||'',code:l.code,bc:c&&c[1]?String(c[1]):l.code,model:c&&c[7]||'',size:c&&c[8]||'',
+      name:l.name,sup:l.sup||'',base:l.base||0,unit:l.unit||0,qty:l.qty,disc:(l.base||0)*l.qty-l.sum,sum:l.sum,promo:l.pname||''}});
+    H.rows.push(...L);H.recs.push({uid,date:s.date,time:(s.time||'').slice(0,5),no:s.id,type:s.type,typeT,reg:s.reg,cashier:s.cashier||'',nl:L.length,qty:L.reduce((a,l)=>a+(+l.qty||0),0),disc:L.reduce((a,l)=>a+(+l.disc||0),0),
+      sum:s.total!=null?+s.total:L.reduce((a,l)=>a+(+l.sum||0),0),pay:(s.payments||[]).map(p=>p.form+(p.bank?' · '+p.bank:'')+' '+fmt(p.amount||0)).join(', '),lines:L})});
   const cs=[...new Set(H.rows.map(r=>r.cashier))].filter(Boolean).sort((x,y)=>x.localeCompare(y)),cur=$('hc')?$('hc').value:'';
   if($('hc'))$('hc').innerHTML='<option value="">Бүх кассчин</option>'+cs.map(c=>'<option'+(c===cur?' selected':'')+'>'+esc(c)+'</option>').join('');
   histDraw();
 }
-function histRows(){
-  const w=$('hq').value.trim().toLowerCase().split(/\s+/).filter(Boolean),c=$('hc')?$('hc').value:'',t=$('ht').value;
-  return H.rows.filter(r=>(!c||r.cashier===c)&&(!t||r.type===t)&&(!w.length||w.every(x=>(r.code+' '+r.bc+' '+r.model+' '+r.name).toLowerCase().includes(x))));
-}
+/* ---------- Борлуулалтын түүх: баримтаар (дарахад бараа нь), бараагаар; Excel шиг багана (эрэмбэлэх, хайх, утгаар шүүх, багана нуух) ---------- */
+const HCOLS={rec:[['date','Огноо'],['time','Цаг'],['no','Баримт'],['typeT','Төрөл'],['reg','Касс'],['cashier','Кассчин'],['nl','Мөр',1],['qty','Ширхэг',1],['disc','Хөнгөлөлт',1],['sum','Дүн',1],['pay','Төлбөр']],
+  line:[['date','Огноо'],['time','Цаг'],['no','Баримт'],['typeT','Төрөл'],['cashier','Кассчин'],['bc','Баркод'],['model','Модель'],['size','Хэмжээ'],['name','Бараа'],['sup','Нийлүүлэгч'],['promo','Урамшуулал'],['qty','Тоо',1],['base','Үндсэн үнэ',1],['unit','Үнэ',1],['disc','Хөнгөлөлт',1],['sum','Дүн',1]]};
+const HHIDE0={rec:['reg','nl'],line:['time','sup','base']};
+const hfKey=v=>v==null||v===''?'(хоосон)':String(v).replace(/\s+/g,' ').trim();
+const hfCmp=(a,b)=>typeof a==='number'&&typeof b==='number'?a-b:String(a==null?'':a).localeCompare(String(b==null?'':b),'mn',{numeric:true});
+function hHidden(v){try{const x=JSON.parse(localStorage.getItem('vivipos_hcols_'+v));if(Array.isArray(x))return new Set(x)}catch(e){}return new Set(HHIDE0[v])}
+function hCols(){const hid=hHidden(H.view);return HCOLS[H.view].filter(c=>!hid.has(c[0]))}
+function hState(){H.F=H.F||{};return H.F[H.view]=H.F[H.view]||{f:{},sort:null}}
+function hfClose(){const p=$('hfPop');if(p)p.remove()}
+document.addEventListener('click',e=>{if(!e.target.closest||!e.target.closest('#hfPop'))hfClose()});
+function hfPopup(btn,html,bind){hfClose();const box=document.createElement('div');box.id='hfPop';box.className='hfpop';box.innerHTML=html;document.body.appendChild(box);
+  const R=btn.getBoundingClientRect();box.style.left=Math.max(8,Math.min(innerWidth-300,R.left))+'px';box.style.top=Math.min(innerHeight-60,R.bottom+4)+'px';box.onclick=e=>e.stopPropagation();bind(box)}
+function hBase(){const w=$('hq').value.trim().toLowerCase().split(/\s+/).filter(Boolean),c=$('hc')?$('hc').value:'',t=$('ht').value,
+    lm=r=>!w.length||w.every(x=>(r.code+' '+r.bc+' '+r.model+' '+r.name).toLowerCase().includes(x));
+  return H.view==='rec'?H.recs.filter(r=>(!c||r.cashier===c)&&(!t||r.type===t)&&(!w.length||r.lines.some(lm))):H.rows.filter(r=>(!c||r.cashier===c)&&(!t||r.type===t)&&lm(r))}
+function histRows(skip){const st=hState();let L=hBase().filter(r=>Object.entries(st.f).every(([k,set])=>k===skip||!set||set.has(hfKey(r[k]))));
+  if(st.sort&&skip===undefined){const [k,d]=st.sort;L=L.slice().sort((a,b)=>hfCmp(a[k],b[k])*d)}return L}
 function histDraw(){
-  const L=histRows(),rec=new Set(L.map(r=>r.no)),q=L.reduce((a,r)=>a+r.qty,0),sum=L.reduce((a,r)=>a+r.sum,0),dsc=L.reduce((a,r)=>a+r.disc,0);
-  $('hs').innerHTML='<span><b>'+fmt(rec.size)+'</b> баримт</span><span><b>'+fmt(q)+'</b> ширхэг</span><span>Хөнгөлөлт <b>'+fmt(dsc)+'</b> ₮</span><span>Нийт <b>'+fmt(sum)+'</b> ₮</span>';
+  const st=hState(),cols=hCols(),L=histRows(),rec=H.view==='rec',lim=rec?300:400;H.open=H.open||new Set();
+  const q=L.reduce((a,r)=>a+(+r.qty||0),0),sum=L.reduce((a,r)=>a+(+r.sum||0),0),dsc=L.reduce((a,r)=>a+(+r.disc||0),0),nrec=rec?L.length:new Set(L.map(r=>r.no+'|'+r.uid)).size,act=Object.values(st.f).filter(Boolean).length;
+  $('hs').innerHTML='<span><b>'+fmt(nrec)+'</b> баримт</span><span><b>'+fmt(q)+'</b> ширхэг</span><span>Хөнгөлөлт <b>'+fmt(dsc)+'</b> ₮</span><span>Нийт <b>'+fmt(sum)+'</b> ₮</span>'+
+    (act||st.sort?'<button id="hclr" style="min-height:30px;padding:2px 10px">✕ '+(act?act+' багана шүүсэн':'эрэмбэлсэн')+' — арилгах</button>':'');
   $('hm').textContent=(H.all?'Бүх кассчин'+(H.by?' (зөвшөөрсөн: '+H.by+')':''):'Зөвхөн '+S.user.name)+' · '+H.src+' · '+H.range;
-  $('hl').innerHTML=L.length?'<table><thead><tr><th>Огноо</th><th>Баримт</th><th>Баркод · модель</th><th>Бараа</th><th class="n">Тоо</th><th class="n">Үнэ</th><th class="n">Хөнгөлөлт</th><th class="n">Дүн</th></tr></thead><tbody>'+
-    L.slice(0,400).map(r=>'<tr'+(r.type==='return'?' class="ret"':'')+'><td class="nw">'+esc(r.date.slice(5))+' '+esc(r.time)+'</td><td class="nw">'+esc(r.no)+'<div class="small">'+esc(r.cashier)+(r.type==='return'?' · буцаалт':'')+'</div></td><td class="nw">'+esc(r.bc)+'<div class="small">'+esc(r.model)+(r.size?' · '+esc(r.size):'')+'</div></td><td>'+esc(r.name)+(r.promo?'<div class="small">'+esc(r.promo)+'</div>':'')+'</td><td class="n">'+r.qty+'</td><td class="n">'+fmt(r.unit)+(r.base>r.unit?'<div class="small"><s>'+fmt(r.base)+'</s></div>':'')+'</td><td class="n">'+fmt(r.disc)+'</td><td class="n"><b>'+fmt(r.sum)+'</b></td></tr>').join('')+'</tbody></table>'+
-    (L.length>400?'<div class="small" style="padding:8px 12px">Эхний 400 мөрийг харуулав. Бүгдийг Excel-ээр татна уу ('+fmt(L.length)+' мөр).</div>':'')
+  document.querySelectorAll('#hv [data-hv]').forEach(b=>b.classList.toggle('pri',b.dataset.hv===H.view));
+  const cell=(r,c)=>{const v=r[c[0]];return c[2]?fmt(v||0):c[0]==='date'?esc(String(v||'').slice(5)):esc(v==null?'':v)},
+    ln=r=>'<tr'+(r.type==='return'?' class="ret"':'')+'>'+cols.map(c=>'<td class="'+(c[2]?'n':'nw')+'">'+(c[0]==='unit'&&r.base>r.unit?fmt(r.unit)+'<div class="small"><s>'+fmt(r.base)+'</s></div>':c[0]==='sum'?'<b>'+fmt(r.sum)+'</b>':cell(r,c))+'</td>').join('')+'</tr>',
+    w=$('hq').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const body=L.slice(0,lim).map((r,i)=>{if(!rec)return ln(r);const k=r.no+'|'+r.uid,op=H.open.has(k);
+    return '<tr class="hrec'+(r.type==='return'?' ret':'')+(op?' on':'')+'" data-k="'+esc(k)+'">'+cols.map((c,j)=>'<td class="'+(c[2]?'n':'nw')+'">'+(j===0?'<span class="hcar">'+(op?'▾':'▸')+'</span> ':'')+(c[0]==='sum'?'<b>'+fmt(r.sum)+'</b>':cell(r,c))+'</td>').join('')+'</tr>'+
+      (op?'<tr class="hdet"><td colspan="'+cols.length+'"><table class="hin"><thead><tr><th>Баркод · модель</th><th>Бараа</th><th class="n">Тоо</th><th class="n">Үнэ</th><th class="n">Хөнгөлөлт</th><th class="n">Дүн</th></tr></thead><tbody>'+
+        r.lines.map(l=>{const hit=w.length&&w.every(x=>(l.code+' '+l.bc+' '+l.model+' '+l.name).toLowerCase().includes(x));return '<tr'+(hit?' class="hit"':'')+'><td class="nw">'+esc(l.bc)+'<div class="small">'+esc(l.model)+(l.size?' · '+esc(l.size):'')+'</div></td><td>'+esc(l.name)+(l.promo?'<div class="small">'+esc(l.promo)+'</div>':'')+'</td><td class="n">'+l.qty+'</td><td class="n">'+fmt(l.unit)+(l.base>l.unit?'<div class="small"><s>'+fmt(l.base)+'</s></div>':'')+'</td><td class="n">'+fmt(l.disc)+'</td><td class="n"><b>'+fmt(l.sum)+'</b></td></tr>'}).join('')+
+        '</tbody></table>'+(r.pay?'<div class="small" style="margin-top:4px">Төлбөр: '+esc(r.pay)+'</div>':'')+'</td></tr>':'')}).join('');
+  $('hl').innerHTML=H.rows.length?'<table class="htab"><thead><tr>'+cols.map(c=>'<th'+(c[2]?' class="n"':'')+'><button class="hfb'+(st.f[c[0]]?' on':'')+'" data-c="'+c[0]+'">'+esc(c[1])+' <span>'+(st.sort&&st.sort[0]===c[0]?(st.sort[1]>0?'▲':'▼'):'')+(st.f[c[0]]?'⛃':'▾')+'</span></button></th>').join('')+'</tr></thead><tbody>'+body+'</tbody>'+
+    (L.length?'<tfoot><tr>'+cols.map((c,j)=>'<td class="n"><b>'+(j===0?'Нийт':c[2]&&!/^(base|unit)$/.test(c[0])?fmt(L.reduce((a,r)=>a+(+r[c[0]]||0),0)):'')+'</b></td>').join('')+'</tr></tfoot>':'')+'</table>'+
+    (!L.length?'<div class="empty" style="padding:20px">Шүүлтүүрт тохирох '+(rec?'баримт':'мөр')+' алга</div>':'')+(L.length>lim?'<div class="small" style="padding:8px 12px">Эхний '+lim+' '+(rec?'баримт':'мөр')+'. Бүгдийг Excel-ээр татна уу ('+fmt(L.length)+').</div>':'')
     :'<div class="empty" style="padding:30px">Энэ хугацаанд тохирох борлуулалт алга</div>';
+  if($('hclr'))$('hclr').onclick=()=>{st.f={};st.sort=null;histDraw()};
+  $('hl').querySelectorAll('tr.hrec').forEach(tr=>tr.onclick=()=>{const k=tr.dataset.k;H.open.has(k)?H.open.delete(k):H.open.add(k);histDraw()});
+  $('hl').querySelectorAll('.hfb').forEach(b=>b.onclick=e=>{e.stopPropagation();const k=b.dataset.c,cnt=new Map();histRows(k).forEach(r=>{const v=hfKey(r[k]);cnt.set(v,(cnt.get(v)||0)+1)});
+    const vals=[...cnt.keys()].sort(hfCmp),cur=st.f[k],sel=new Set(cur?[...cur].filter(v=>cnt.has(v)):vals);
+    hfPopup(b,'<b>'+esc(b.textContent.replace(/[▾▲▼⛃]/g,'').trim())+'</b><div class="hfs"><button data-s="1">A→Я, 1→9 ▲</button><button data-s="-1">Я→A, 9→1 ▼</button></div><input id="hfQ" placeholder="Хайх…"><label class="hfa"><input type="checkbox" id="hfAll"> (Бүгдийг сонгох)</label><div class="hfl" id="hfL"></div><div class="hfs"><button id="hfC">Арилгах</button><button id="hfO" class="pri">OK</button></div>',box=>{
+      const list=()=>{const q=$('hfQ').value.trim().toLowerCase(),V=vals.filter(v=>!q||v.toLowerCase().includes(q)).slice(0,800);
+        $('hfL').innerHTML=V.map(v=>'<label><input type="checkbox" value="'+esc(v)+'"'+(sel.has(v)?' checked':'')+'> '+esc(v)+' <span class="small">('+cnt.get(v)+')</span></label>').join('');$('hfAll').checked=V.length&&V.every(v=>sel.has(v));
+        $('hfL').querySelectorAll('input').forEach(x=>x.onchange=()=>{x.checked?sel.add(x.value):sel.delete(x.value);$('hfAll').checked=V.every(v=>sel.has(v))});
+        $('hfAll').onchange=()=>{V.forEach(v=>$('hfAll').checked?sel.add(v):sel.delete(v));list()}};
+      $('hfQ').oninput=()=>{const q=$('hfQ').value.trim().toLowerCase();if(q){sel.clear();vals.filter(v=>v.toLowerCase().includes(q)).forEach(v=>sel.add(v))}list()};list();$('hfQ').focus();
+      box.querySelectorAll('[data-s]').forEach(x=>x.onclick=()=>{hfClose();st.sort=[k,+x.dataset.s];histDraw()});
+      $('hfC').onclick=()=>{hfClose();delete st.f[k];histDraw()};$('hfO').onclick=()=>{hfClose();if(sel.size===vals.length)delete st.f[k];else st.f[k]=new Set(sel);histDraw()};
+      $('hfQ').onkeydown=e=>{if(e.key==='Enter')$('hfO').click();if(e.key==='Escape')hfClose()}})});
 }
+function histColsUi(btn){const hid=hHidden(H.view);hfPopup(btn,'<b>Харуулах багана</b><div class="hfl">'+HCOLS[H.view].map(c=>'<label><input type="checkbox" value="'+c[0]+'"'+(hid.has(c[0])?'':' checked')+'> '+esc(c[1])+'</label>').join('')+'</div><div class="hfs"><button id="hfD">Анхны байдал</button><button id="hfO" class="pri">OK</button></div>',box=>{
+  $('hfD').onclick=()=>{try{localStorage.removeItem('vivipos_hcols_'+H.view)}catch(e){}hfClose();histDraw()};
+  $('hfO').onclick=()=>{const h=[...box.querySelectorAll('.hfl input')].filter(x=>!x.checked).map(x=>x.value);if(h.length>=HCOLS[H.view].length)return flash('Дор хаяж нэг багана үлдээнэ үү');try{localStorage.setItem('vivipos_hcols_'+H.view,JSON.stringify(h))}catch(e){}hfClose();histDraw()}})}
 async function histXl(){
   if(!perm().xl)return flash('Excel татах эрх алга');const L=histRows();if(!L.length)return flash('Татах мөр алга');
-  const head=['Огноо','Цаг','Баримтын дугаар','Төрөл','Касс','Кассчин','Баркод','Барааны код','Модель','Барааны нэр','Хэмжээ','Нийлүүлэгч','Үндсэн үнэ','Зарсан үнэ','Тоо','Хөнгөлөлт','Дүн','Урамшуулал'];
-  const A=[head].concat(L.map(r=>[r.date,r.time,r.no,r.type==='return'?'Буцаалт':'Борлуулалт',r.reg,r.cashier,r.bc,r.code,r.model,r.name,r.size,r.sup,r.base,r.unit,r.qty,r.disc,r.sum,r.promo]));
+  const lines=H.view==='rec'?L.flatMap(r=>r.lines):L,head=['Огноо','Цаг','Баримтын дугаар','Төрөл','Касс','Кассчин','Баркод','Барааны код','Модель','Барааны нэр','Хэмжээ','Нийлүүлэгч','Үндсэн үнэ','Зарсан үнэ','Тоо','Хөнгөлөлт','Дүн','Урамшуулал'];
+  const A=[head].concat(lines.map(r=>[r.date,r.time,r.no,r.type==='return'?'Буцаалт':'Борлуулалт',r.reg,r.cashier,r.bc,r.code,r.model,r.name,r.size,r.sup,r.base,r.unit,r.qty,r.disc,r.sum,r.promo]));
+  const RC=HCOLS.rec,RA=H.view==='rec'?[RC.map(c=>c[1])].concat(L.map(r=>RC.map(c=>r[c[0]]))):null;
   const fn='borluulalt_'+S.user.store+'_'+$('h1').value+'_'+$('h2').value;
-  try{await loadXlsx();const ws=XLSX.utils.aoa_to_sheet(A);ws['!cols']=[11,6,18,11,5,16,15,13,14,50,8,24,11,11,6,11,12,22].map(w=>({wch:w}));ws['!autofilter']={ref:'A1:R'+A.length};
-    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Борлуулалт');XLSX.writeFile(wb,fn+'.xlsx')}
+  try{await loadXlsx();const wb=XLSX.utils.book_new();
+    if(RA){const wr=XLSX.utils.aoa_to_sheet(RA);wr['!cols']=[11,6,18,11,5,16,6,8,11,12,30].map(w=>({wch:w}));wr['!autofilter']={ref:'A1:K'+RA.length};XLSX.utils.book_append_sheet(wb,wr,'Баримт')}
+    const ws=XLSX.utils.aoa_to_sheet(A);ws['!cols']=[11,6,18,11,5,16,15,13,14,50,8,24,11,11,6,11,12,22].map(w=>({wch:w}));ws['!autofilter']={ref:'A1:R'+A.length};XLSX.utils.book_append_sheet(wb,ws,RA?'Бараа':'Борлуулалт');XLSX.writeFile(wb,fn+'.xlsx')}
   catch(e){const csv='﻿'+A.map(r=>r.map(v=>{v=v==null?'':String(v);return /[",;\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(',')).join('\n');
     const u=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download=fn+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);flash('Excel сан ачаалагдсангүй — CSV хэлбэрээр татлаа')}
-  log('history_export',{rows:L.length,from:$('h1').value,to:$('h2').value,all:H.all,by:H.by});
+  log('history_export',{rows:lines.length,recs:RA?L.length:null,from:$('h1').value,to:$('h2').value,all:H.all,by:H.by});
 }
 /* ---------- бусад дэлгүүрийн үлдэгдэл (самбараас илгээсэн агшин зураг) ---------- */
 const STK={meta:null,map:null};
