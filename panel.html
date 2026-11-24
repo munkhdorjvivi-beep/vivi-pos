@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="18.9">
+<meta name="vivi-ver" content="19.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -2063,13 +2063,13 @@ async function spMigrate(){try{const d=await db.collection('pos_config').doc('pr
 async function spPut(p,prices){const sz=new TextEncoder().encode(JSON.stringify(prices)).length;if(sz>950000)throw new Error('Жагсаалт хэт том ('+Math.round(sz/1024)+' КБ, нэг жагсаалтад дээд ~950 КБ ≈ 35 000 бараа). Хоёр жагсаалт болгож хуваана уу.');
   const m={...p};delete m.prices;m.live=spLive(m);const b=db.batch();b.set(db.collection('pos_pricelists_p').doc(p.id),{id:p.id,at:p.at||'',prices});b.set(db.collection('pos_pricelists').doc(p.id),m);await b.commit();SPP[p.id]={at:p.at,prices}}
 const spState=p=>{const t=todayIso();return !p.active?'зогсоосон':p.start&&t<p.start?'хүлээгдэж буй':p.end&&t>p.end?'дууссан':'идэвхтэй'};
-/* Загвар: Smart «Барааны ангилал» (ж: «2217L 99X»): m = эхний хэсэг (загвар), mc = бүтнээрээ (загвар+өнгө). Ангилалгүй бол LPP нэрнээс («Sinsay 1570F …»). */
-function spZ(x){const nm=String(x.name||'').trim(),mf=String(x.model==null?'':x.model).trim().replace(/\s+/g,' ').toUpperCase(),f=mf.split(' ')[0];
-  const l=/^(sinsay|reserved|cropp|house|mohito|defacto)\s+(\S+)\s*(.*)$/i.exec(nm);let sz='',c='';
-  if(l){const t=l[3].split(/\s+/).filter(Boolean);if(t.length&&/^(\d{2,3}(\/\d{2,3})?|\d?X{0,3}[SML]|\dXL|X{1,3}L|ONE|\d{1,2}Y|\d{2}-\d{2}|00X)$/i.test(t[t.length-1]))sz=t.pop();
-    if(t.length>1&&!/^(эмэгтэй|эрэгтэй|хүүхэд|хүүхдийн|охид|хөвгүүд|нярай|унисекс|unisex)$/i.test(t[t.length-1]))c=t[t.length-1].toUpperCase()}
-  if(mf&&(/\d/.test(f)||!nm))return {m:f,mc:mf.includes(' ')||!c?mf:f+' '+c,sz};
-  if(!l)return {m:'',mc:'',sz:''};const m=l[2].toUpperCase();return {m,mc:c?m+' '+c:m,sz}}
+/* Загвар: LPP нэрнээс (агуулахын хуваарилалттай ижил: «Sinsay 001DG Комбинзон нярай Цэнхэр 62» → 001DG, «001DG-Цэнхэр», 62). Нэр нь LPP биш бол Smart «Барааны ангилал». Түлхүүр (m, mc) том үсгээр, «-» = зай. */
+function spZ(x){const nm=String(x.name||'').trim(),mf=String(x.model==null?'':x.model).trim().replace(/\s*-\s*|\s+/g,' ').toUpperCase(),f=mf.split(' ')[0];
+  const l=/^(sinsay|reserved|cropp|house|mohito|defacto)\s+(\S+)\s*(.*)$/i.exec(nm);
+  if(l){const t=l[3].split(/\s+/).filter(Boolean);let sz='',g=-1;if(t.length&&/^(\d{2,3}(\/\d{2,3})?|\d?X{0,3}[SML]|\dXL|X{1,3}L|ONE|\d{1,2}Y|\d{2}-\d{2}|00X|U\d{1,2}|\d{1,2}-\d{1,2}[YM]?)$/i.test(t[t.length-1]))sz=t.pop();
+    t.forEach((w,i)=>{if(/^(эмэгтэй|эрэгтэй|хүүхэд|хүүхдийн|охид|охин|хөвгүүд|хүү|нярай|унисекс|unisex|women|men|kids|baby)$/i.test(w))g=i});
+    const c=(g>=0?t.slice(g+1):t.length>1?t.slice(-1):[]).join(' '),m=l[2].toUpperCase();return {m,mc:c?m+' '+c.toUpperCase():m,lb:c?m+'-'+c:m,sz}}
+  if(mf&&(/\d/.test(f)||!nm))return {m:f,mc:mf,lb:mf.replace(' ','-'),sz:''};return {m:'',mc:'',lb:'',sz:''}}
 // жагсаалт доторх үнэ: эхлээд код/баркод, дараа нь загвар (жагсаалтын түлхүүрээр)
 function spV(p,l){const P=p.prices;if(!P)return null;if(P[l.code]!=null)return P[l.code];if(l.bc&&P[l.bc]!=null)return P[l.bc];
   if(p.key==='m'||p.key==='mc'){const it=l.model!=null?l:Object.assign({},itRow(l.code)||{},l),z=spZ(it),k=p.key==='m'?z.m:z.mc;if(k&&P[p.key+':'+k]!=null)return P[p.key+':'+k]}return null}
@@ -2914,7 +2914,7 @@ async function autoStock(){let ch=0;try{if(can('stock')){$('lppFrom').value=awai
 const ST_XH=['Нийлүүлэгч','Брэнд','Бүлэг','Загвар+өнгө','Загвар','Хэмжээ','Нас','Төрөл'];
 // Загвар/өнгө/хэмжээ: каталогт (Smart «Барааны ангилал», «хэмжээ») байхгүй бол LPP нэрнээс («Sinsay 5261F Цамц Эрэгтэй Хөх M») — касс, үнийн жагсаалт яг ижил түлхүүр (spZ) ашиглана
 function stX(r){const it=itRow(r.code)||{},nm=it.name||r.name||'',z=spZ({model:it.model,name:nm}),b=/^(sinsay|reserved|cropp|house|mohito|defacto)\b/i.exec(nm),c=catOf(nm);
-  return [it.sup||'',b?b[1].charAt(0).toUpperCase()+b[1].slice(1).toLowerCase():'',it.grp||'',z.mc,z.m,it.size||z.sz,c.age,c.typ]}
+  return [it.sup||'',b?b[1].charAt(0).toUpperCase()+b[1].slice(1).toLowerCase():'',it.grp||'',z.lb,z.m,it.size||z.sz,c.age,c.typ]}
 function drawStock(){const q=$('sQ').value.trim().toLowerCase(),L=stockRows.filter(r=>!q||r.code.toLowerCase().includes(q)||(r.name||'').toLowerCase().includes(q));
   if(!stockRows.length){$('sTbl').innerHTML='';return}const n=v=>v==null?null:Math.round(v),val=r=>[r.cost==null?null:r.cost,r.cost==null?null:n(r.cost*r.now),r.cash||null,r.cash?n(r.cash*r.now):null];
   const rows=stockAllMode?L.map(r=>[r.code,r.name,...r.loc.map(x=>x||null),r.now,...val(r),...stX(r)]):L.map(r=>[r.code,r.name,r.open,r.inn||null,r.out||null,r.sold||null,r.ret||null,r.adj||null,r.now,...val(r),...stX(r)]);

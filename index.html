@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.8">
+<meta name="vivi-ver" content="8.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -357,12 +357,12 @@ const item=i=>{const x={code:CAT[i][0],bc:CAT[i][1]?String(CAT[i][1]):'',name:CA
    Хэд хэдэн жагсаалтад байвал хамгийн сүүлд эхэлсэн (дараа нь хадгалсан) нь хүчинтэй. */
 let PLISTS=store.get('pricelists',[]);
 /* Загвараар жагсаалт (key m / mc): Smart «Барааны ангилал» («2217L 99X») → m = «2217L», mc = «2217L 99X». Ангилалгүй бол LPP нэрнээс. Жагсаалт дотор код/баркод түрүүлнэ. */
-function spZ(x){const nm=String(x.name||'').trim(),mf=String(x.model==null?'':x.model).trim().replace(/\s+/g,' ').toUpperCase(),f=mf.split(' ')[0];
-  const l=/^(sinsay|reserved|cropp|house|mohito|defacto)\s+(\S+)\s*(.*)$/i.exec(nm);let sz='',c='';
-  if(l){const t=l[3].split(/\s+/).filter(Boolean);if(t.length&&/^(\d{2,3}(\/\d{2,3})?|\d?X{0,3}[SML]|\dXL|X{1,3}L|ONE|\d{1,2}Y|\d{2}-\d{2}|00X)$/i.test(t[t.length-1]))sz=t.pop();
-    if(t.length>1&&!/^(эмэгтэй|эрэгтэй|хүүхэд|хүүхдийн|охид|хөвгүүд|нярай|унисекс|unisex)$/i.test(t[t.length-1]))c=t[t.length-1].toUpperCase()}
-  if(mf&&(/\d/.test(f)||!nm))return {m:f,mc:mf.includes(' ')||!c?mf:f+' '+c,sz};
-  if(!l)return {m:'',mc:'',sz:''};const m=l[2].toUpperCase();return {m,mc:c?m+' '+c:m,sz}}
+function spZ(x){const nm=String(x.name||'').trim(),mf=String(x.model==null?'':x.model).trim().replace(/\s*-\s*|\s+/g,' ').toUpperCase(),f=mf.split(' ')[0];
+  const l=/^(sinsay|reserved|cropp|house|mohito|defacto)\s+(\S+)\s*(.*)$/i.exec(nm);
+  if(l){const t=l[3].split(/\s+/).filter(Boolean);let sz='',g=-1;if(t.length&&/^(\d{2,3}(\/\d{2,3})?|\d?X{0,3}[SML]|\dXL|X{1,3}L|ONE|\d{1,2}Y|\d{2}-\d{2}|00X|U\d{1,2}|\d{1,2}-\d{1,2}[YM]?)$/i.test(t[t.length-1]))sz=t.pop();
+    t.forEach((w,i)=>{if(/^(эмэгтэй|эрэгтэй|хүүхэд|хүүхдийн|охид|охин|хөвгүүд|хүү|нярай|унисекс|unisex|women|men|kids|baby)$/i.test(w))g=i});
+    const c=(g>=0?t.slice(g+1):t.length>1?t.slice(-1):[]).join(' '),m=l[2].toUpperCase();return {m,mc:c?m+' '+c.toUpperCase():m,lb:c?m+'-'+c:m,sz}}
+  if(mf&&(/\d/.test(f)||!nm))return {m:f,mc:mf,lb:mf.replace(' ','-'),sz:''};return {m:'',mc:'',lb:'',sz:''}}
 function spV(p,x){const P=p.prices;if(!P)return null;if(P[x.code]!=null)return P[x.code];if(x.bc&&P[x.bc]!=null)return P[x.bc];
   if(p.key==='m'||p.key==='mc'){const z=spZ(x),k=p.key==='m'?z.m:z.mc;if(k&&P[p.key+':'+k]!=null)return P[p.key+':'+k]}return null}
 function spFor(x){if(!PLISTS.length||!S.user)return null;const st=S.user.store,t=today();let best=null;
