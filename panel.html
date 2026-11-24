@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="18.2">
+<meta name="vivi-ver" content="18.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -24,7 +24,7 @@ header nav.tabs button.on{color:#fff;border-bottom-color:var(--red)}
 /* дэд цэс (VIVI Хяналт шиг): үндсэн цэсний доор цагаан мөр, идэвхтэйг доогуур зураасаар */
 #subtabs{flex:0 0 calc(100% + 32px);box-sizing:border-box;margin:0 -16px -10px;background:#fff;border-bottom:1px solid #e3e6eb;display:flex;gap:2px;padding:0 16px;overflow-x:auto;scrollbar-width:thin}
 #subtabs.hide{display:none}
-[data-rsub][hidden],.card[data-sub][hidden]{display:none!important}
+[data-rsub][hidden],.card[data-sub][hidden],[data-isub][hidden]{display:none!important}
 #subtabs button{font:inherit;font-size:14px;font-weight:600;background:none;border:0;border-bottom:2px solid transparent;padding:11px 14px 9px;color:#6b7280;cursor:pointer;white-space:nowrap}
 #subtabs button:hover{color:#1d2330}
 #subtabs button.on{color:#1d2330;border-bottom-color:#1d2330}
@@ -414,6 +414,7 @@ main textarea{max-width:100%}
     <div id="clHist" class="small" style="margin-top:8px"></div></div>
 </section>
 <section class="pnl" data-panel="items" hidden>
+<div data-isub="cat">
   <div class="card"><h2>Барааны жагсаалт (бүх кассад)</h2>
     <div class="small" id="catNow">Үүлэн дэх жагсаалт: шалгаж байна…</div><div class="small" id="costNow" style="font-weight:650"></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:8px">
@@ -439,9 +440,6 @@ main textarea{max-width:100%}
         <div id="itAct" class="hide" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><select id="itMode" class="inp" style="width:auto"><option value="price">Кассын үнэ = (₮)</option><option value="pct">Үндсэн үнээс −%</option><option value="base">Үндсэн үнэ = (₮)</option><option value="reset">Кассын үнэ = үндсэн үнэ</option></select><input id="itVal" class="inp" style="width:120px" inputmode="numeric"><label class="inl small"><input type="checkbox" id="itKeep" checked> үндсэн үнэ өөрчлөхөд кассын үнийг хадгалах</label><button id="itPr" class="btn pri">Үнэ өөрчлөх</button><span class="small">·</span><input id="itLq" class="inp" style="width:70px" value="1"><button id="itLbl" class="btn">Шошгонд нэмэх</button></div>
         <div class="scroll" id="itRes" style="max-height:320px;overflow:auto;margin-top:8px"></div></div>
     </div>
-    <div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:12px"><b>3. Excel-ээр олон барааны кассын үнэ өөрчлөх</b>
-      <div class="small" style="margin:4px 0 6px">Excel оруулаад аль багана код, аль багана <b>шинэ кассын үнэ</b> болохыг сонгоно. Систем одоогийн үнэтэй тулгаж харуулна. Энэ нь үнийн өөрчлөлт — урамшуулал биш: идэвхтэй урамшуулал (1+1, −% г.м.) шинэ үнээс өөрөө тооцогдоно. Аль дэлгүүрт ямар урамшуулал байхыг «Урамшуулал» цэсэд тохируулна.</div>
-      <input type="file" id="itXf" accept=".xlsx,.xls,.csv"><div id="itXmap"></div><div id="itXmsg" class="small" style="margin-top:6px"></div></div>
     <div style="margin-top:12px"><b>Бүртгэсэн бараа, үнийн өөрчлөлт</b> <span class="small">(касс бүр каталогийн дээр хэрэглэнэ)</span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><input id="itLq2" class="inp" style="width:70px" value="1"><button id="itLbl2" class="btn">Сонгосныг шошгонд нэмэх</button><button id="itOn" class="btn">✓ Идэвхжүүлэх</button><button id="itOff" class="btn warn">⏸ Идэвхгүй болгох / үнийн өөрчлөлт цуцлах</button><button id="itDel" class="btn warn">🗑 Устгах</button></div><div class="small" style="margin-bottom:4px">Мөр бүрийн «Засах» — нэр, модель, хэмжээ, нийлүүлэгч, үнэ, өртөг, төлөв засах. «Идэвхгүй» бараа касс дээр зарагдахгүй (буцаалт хийж болно). «Устгах» — зөвхөн буруу бүртгэсэн шинэ бараанд.</div>
       <div class="scroll" id="itList" style="max-height:360px;overflow:auto"></div></div>
@@ -449,6 +447,15 @@ main textarea{max-width:100%}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0"><span class="small">Хэмжээ (мм):</span><input id="lbW" class="inp" style="width:70px" value="40"><span>×</span><input id="lbH" class="inp" style="width:70px" value="30"><label class="inl small"><input type="checkbox" id="lbBase" checked> хямдарсан бол үндсэн үнийг зурааслах</label><button id="lbPrint" class="btn pri">Шошго хэвлэх</button><button id="lbClr" class="btn">Хоослох</button></div>
       <div class="scroll" id="lbList" style="max-height:280px;overflow:auto"></div></div>
   </div>
+</div>
+<div data-isub="sp" hidden>
+  <div class="card"><h2>💲 Шинэ үнэ (Excel) — дэлгүүрээр</h2>
+    <div class="small" style="margin-bottom:8px">Excel оруулаад аль багана код, аль багана <b>шинэ кассын үнэ</b> болохыг сонгоно; систем одоогийн үнэтэй тулгаж харуулна. Дэлгүүр, хугацааг сонгоно. Тэр хугацаанд сонгосон дэлгүүрийн касс энэ үнийг <b>кассын үнэ</b> болгож зарна — идэвхтэй урамшуулал (1+1, Black Friday −% г.м.) шинэ үнээс өөрөө тооцогдоно. Хугацаа дуусахад эсвэл «Зогсоох» дарахад хуучин үнэ буцна. Нэг бараа хэд хэдэн жагсаалтад байвал хамгийн сүүлд эхэлсэн нь хүчинтэй.</div>
+    <button class="btn pri" id="spNew">+ Шинэ үнийн жагсаалт</button><div id="spForm" style="margin-top:10px"></div>
+    <div class="scroll" id="spList" style="margin-top:12px;max-height:420px;overflow:auto"></div></div>
+  <div class="card" style="margin-top:12px" id="spOldC"><h2>↩ Excel-ээр хийсэн хуучин (бүх дэлгүүрийн) үнийн өөрчлөлт</h2>
+    <div class="small" style="margin-bottom:6px">«Бараа, үнэ» цэсээр Excel-ээр шууд өөрчилсөн кассын үнэ бүх дэлгүүрт хүчинтэй. Цуцалбал бараа бүр өмнөх үнэ рүүгээ (өмнө нь өөрчлөөгүй бол Smart-ын каталогийн үнэ рүү) буцна. Дараа нь дээрх жагсаалтаар зөвхөн хүссэн дэлгүүрт оруулна.</div><div id="spOld"></div></div>
+</div>
 </section>
 <section class="pnl" data-panel="promo" hidden>
   <div class="card"><h2>Урамшуулал, хөнгөлөлт (бүх кассад)</h2>
@@ -1287,7 +1294,7 @@ const SCN={};function scanBad(v,key,dup){const o0=SCN[key]||(SCN[key]={});if(isQ
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
 function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
-  if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
+  if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchPlists();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
@@ -1801,6 +1808,7 @@ const TAB_RED={rcpt:'rcpt',cash:'sh'};
 const TABK=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab);
 /* ==== Дэд цэс: үндсэн цэс бүрийн доорх хуудсууд ==== */
 const SUBS={stock:[['bal','📦 Үлдэгдэл'],['age','⏳ Насжилт'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['lpp','🚚 Агуулах (LPP)',()=>can('wh')||can('whedit')],['rcv','📥 Хүлээн авалт (LPP, шилжүүлэг)',()=>can('wh')||can('whedit')||rcvAnyP()],['zinv','🗂 Тооллого (бүсээр)',()=>can('inv')||can('invadm')],['whset','⚙ LPP тохиргоо',()=>!!(ME&&ME.admin)],['diff','⚠ Зөрүү',()=>dfView()],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
+  items:[['cat','📦 Бараа, үнэ, шошго'],['sp','💲 Шинэ үнэ (Excel, дэлгүүрээр)']],
   rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','📋 Борлуулалтын жагсаалт'],['new','🆕 Шинэ ачааны борлуулалт',()=>can('rep.new')||can('rep.acc')],['rcpt','🧾 Баримтууд'],['chk','✅ Баримт шалгах',()=>can('rcpt')||can('rep.sum')],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
 let CURTAB='';
 const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'vivipanel_sub_'+t)}catch(e){return ''}};
@@ -1815,9 +1823,9 @@ function badgeDraw(){Object.keys(BADGE).filter(k=>k.endsWith(':_')).forEach(k=>{
   const b=document.querySelector('#tabs [data-tab="'+t+'"]');if(!b)return;let tn=b.querySelector('.tn');if(!tn){tn=document.createElement('span');tn.className='tn hide';b.appendChild(tn)}tn.textContent=sum||'';tn.classList.toggle('hide',!sum)})}
 function drawSubtabs(t){const L=(SUBS[t]||[]).filter(x=>subOk(t,x)),el=$('subtabs');el.classList.toggle('hide',!L.length);if(!L.length){el.innerHTML='';return}
   let cur=subGet(t);if(!L.some(x=>x[0]===cur))cur=L[0][0];el.innerHTML=L.map(([k,l])=>'<button data-st="'+k+'"'+(k===cur?' class="on"':'')+'>'+l+'<span class="sn hide" id="sn_'+t+'_'+k+'"></span></button>').join('');badgeDraw();
-  if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0);else if(t==='cash')csSub(cur)}
+  if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0);else if(t==='cash')csSub(cur);else if(t==='items')itSub(cur)}
 function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='fc')setTimeout(fcShow,0);if(k==='z')setTimeout(zInit,0);if(k==='acc')setTimeout(slInit,0);if(k==='new')setTimeout(nwInit,0);if(k==='chk')setTimeout(ckInit,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
-$('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);else if(CURTAB==='cash')csSub(k);window.scrollTo(0,0)};
+$('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);else if(CURTAB==='cash')csSub(k);else if(CURTAB==='items')itSub(k);window.scrollTo(0,0)};
 function csSub(k){document.querySelectorAll('section[data-panel="cash"] [data-csub]').forEach(c=>c.hidden=c.dataset.csub!==k);try{localStorage.setItem('vivipanel_sub_cash',k)}catch(e){}subMark('cash',k);if(k==='z')setTimeout(zInit,0)}
 /* ==== 🧾 Z тайлан: хаасан ээлжүүд (pos_shifts), огнооны хүрээгээр; Excel, A4 хүснэгт, 80 мм Z баримт ==== */
 const Z_KIND={deposit:'Банкинд тушаасан',expense:'Жижиг зардал',other:'Бусад гаргалт',change:'Задгай мөнгө нэмсэн',in_other:'Бусад орлого'};let ZL=[],ZP=[];
@@ -1898,7 +1906,7 @@ $('pNew').onclick=()=>editPromo(null);
 // ---- 🔍 Кассын урамшууллын тооцоог (computePromo) нэг бараанд яг адилхан давтаж, шалтгааныг харуулна ----
 function pdDiag(c,st){const l0=itRow(c);const t=todayIso();
   if(!l0)return {l:null,rows:[],msg:'<span class="hot">Энэ код барааны жагсаалтад (каталог) алга</span> — касс уншуулахад танихгүй, урамшуулал хэрэглэгдэхгүй. «Бараа, үнэ» цэсээр бүртгэнэ үү.'};
-  const l={code:l0.code,bc:String(l0.bc||''),name:l0.name,sup:l0.sup||'',grp:l0.grp||'',base:+l0.base||0,price:+(l0.price!=null&&l0.price!==''?l0.price:l0.base)||0};
+  const l={code:l0.code,bc:String(l0.bc||''),name:l0.name,sup:l0.sup||'',grp:l0.grp||'',base:+l0.base||0,price:+(l0.price!=null&&l0.price!==''?l0.price:l0.base)||0};{const sp=st?spFor(l,st):null;if(sp){l.p0=l.price;l.price=sp.v;l.spn=sp.p.name}}
   const S=x=>new Set(x||[]),inC=(arr)=>{const C=S(arr);return C.has(l.code)||(l.bc&&C.has(l.bc))};
   const plP=p=>{if(p.type!=='plist'||!p.prices)return null;const v=p.prices[l.code]!=null?p.prices[l.code]:(l.bc&&p.prices[l.bc]!=null?p.prices[l.bc]:null);return v};
   const base=p=>p.type==='plist'?plP(p)!=null:(!(p.age&&p.age.length)||p.age.includes(catOf(l.name).age))&&(p.all||(p.suppliers||[]).includes(l.sup)||(p.groups||[]).includes(l.grp)||inC(p.codes));
@@ -1926,7 +1934,7 @@ const fmtN=v=>Number(v||0).toLocaleString('en-US').replace(/,/g,' ');
 let pChkT=0;const pChkRun=async()=>{const c=$('pChk').value.trim();if(!c)return $('pChkR').innerHTML='';
   if(!PCAT){$('pChkR').textContent='Барааны жагсаалт ачаалж байна…';try{await loadPCat()}catch(e){}}
   const st=$('pChkSt').value,D=pdDiag(c,st);if(!D.l)return $('pChkR').innerHTML=D.msg;const l=D.l;
-  $('pChkR').innerHTML='<div style="background:#f6f7f9;border:1px solid var(--line);border-radius:10px;padding:8px 10px"><b>'+esc(l.name)+'</b> · '+esc(l.code)+(l.bc&&l.bc!==l.code?' / '+esc(l.bc):'')+'<br>Нийлүүлэгч: <b>'+esc(l.sup||'—')+'</b> · бүлэг: '+esc(l.grp||'—')+' · кассын үнэ '+fmtN(l.price)+' ₮'+(st?' · '+esc(STN[st]):' · бүх дэлгүүр')+'<div style="margin-top:6px;font-size:14px">Кассад: '+D.msg+'</div>'+
+  $('pChkR').innerHTML='<div style="background:#f6f7f9;border:1px solid var(--line);border-radius:10px;padding:8px 10px"><b>'+esc(l.name)+'</b> · '+esc(l.code)+(l.bc&&l.bc!==l.code?' / '+esc(l.bc):'')+'<br>Нийлүүлэгч: <b>'+esc(l.sup||'—')+'</b> · бүлэг: '+esc(l.grp||'—')+' · кассын үнэ '+fmtN(l.price)+' ₮'+(l.spn?' <span class="chip">💲 «'+esc(l.spn)+'» ('+fmtN(l.p0)+' ₮-өөс)</span>':'')+(st?' · '+esc(STN[st]):' · бүх дэлгүүр')+'<div style="margin-top:6px;font-size:14px">Кассад: '+D.msg+'</div>'+
     (st?'':'<div style="margin-top:4px">Дэлгүүр бүрээр: '+Object.keys(STN).map(k=>{const x=pdDiag(c,k);return esc(STN[k])+' <b>'+fmtN(x.fin)+' ₮</b>'+(x.win?' <span class="muted">('+esc(x.win.name)+')</span>':'')}).join(' · ')+'</div>')+
     '<table style="margin-top:6px"><thead><tr><th>Урамшуулал</th><th>Энэ бараанд</th></tr></thead><tbody>'+D.rows.map(x=>'<tr><td>'+esc(x.p.name)+' <span class="muted">('+esc(pType(x.p))+')</span></td><td>'+(x.p===D.win?'<b style="color:#1b7f3b">✓ хэрэглэгдэнэ</b>':x.r?'✗ '+esc(x.r):'<span class="muted">—</span>')+'</td></tr>').join('')+'</tbody></table></div>'};
 $('pChk').oninput=()=>{clearTimeout(pChkT);pChkT=setTimeout(pChkRun,250)};$('pChkSt').onchange=pChkRun;
@@ -1988,23 +1996,76 @@ function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),
       '<div style="margin-top:8px"><button class="btn pri" id="pm_ok" type="button" disabled></button> <span class="small" id="pm_okm"></span></div>';
     const upd=()=>{const ch=k=>{const x=document.querySelector('input[name="pmq_'+k+'"]:checked');return x?x.value==='1':null},miss=Q.filter(q=>ch(q[0])==null),take={};
       R.down.forEach(x=>take[x.c]=x.v);if(ch('up'))R.up.forEach(x=>take[x.c]=x.v);if(ch('same'))R.same.forEach(x=>take[x.c]=x.v);if(ch('nocat'))R.nocat.forEach(x=>take[x.c]=x.v);
-      const n=Object.keys(take).length;$('pm_ok').textContent='✓ '+fmtN(n)+' барааны '+(PR?'кассын үнийг өөрчлөх':'үнийг урамшуулалд оруулах');$('pm_ok').disabled=!!miss.length||!n;
+      const n=Object.keys(take).length;$('pm_ok').textContent=o.okLbl?o.okLbl(fmtN(n)):'✓ '+fmtN(n)+' барааны '+(PR?'кассын үнийг өөрчлөх':'үнийг урамшуулалд оруулах');$('pm_ok').disabled=!!miss.length||!n;
       $('pm_okm').textContent=miss.length?'Дээрх '+miss.length+' асуултад хариулна уу':'Баганууд: код = '+L(cc)+', шинэ үнэ = '+L(pc);return take};
     $('pm_r').querySelectorAll('input[type=radio]').forEach(x=>x.onchange=upd);upd();
     $('pm_ok').onclick=()=>{const take=upd();o.onOk(take,{fname,col:L(pc),lbl:!!($('pm_lbl')&&$('pm_lbl').checked)})}};
   draw()}
-// «Бараа, үнэ»: Excel-ээр олон барааны кассын үнэ өөрчлөх — 400-аар багцалж бичнэ
-async function itPriceBulk(take,info){const codes=Object.keys(take),m=$('itXmsg');
-  if(!confirm(codes.length+' барааны кассын үнийг өөрчлөх үү?\n('+info.fname+', '+info.col+' багана)\n\nИдэвхтэй урамшуулал (1+1, −% г.м.) шинэ үнээс тооцогдоно.'))return;
-  const by=auth.currentUser.email||'',at=new Date().toISOString(),note='Excel: '+info.fname+' ('+info.col+')';let n=0;
-  try{for(let i=0;i<codes.length;i+=400){const b=db.batch();
-      codes.slice(i,i+400).forEach(c=>{const x=itRow(c);if(!x)return;const old=PITX[x.code],price=take[c],base=Math.max(Math.round(+x.base||0),price),hist=(old&&old.hist||[]).concat([{at,by,base,price,note}]).slice(-30);
-        b.set(db.collection('pos_items').doc(x.code),{code:x.code,bc:x.bc||'',name:x.name,model:x.model||'',size:x.size||'',sup:x.sup||'',grp:x.grp||'',base,price,active:true,isNew:old?!!old.isNew:false,created:old&&old.created||at,updated:at,by,hist});n++;
-        if(info.lbl)lblAdd({...x,base,price},1)});
-      await b.commit();m.textContent='Хадгалж байна… '+n+' / '+codes.length}
-    await auditCfg('price_change_excel',{by,file:info.fname,col:info.col,n});
-    m.innerHTML='<span class="chip">✓ '+fmtN(n)+' барааны кассын үнэ өөрчлөгдлөө</span> Кассууд автоматаар авна. Буцаах бол доорх жагсаалтаас сонгоод «⏸ … үнийн өөрчлөлт цуцлах».';$('itXmap').innerHTML='';$('itXf').value=''}
-  catch(e){m.innerHTML='<span class="hot">Алдаа ('+n+' хадгалсан): '+esc(e.code||e.message||e)+'</span>'}}
+/* ==== 💲 Шинэ үнэ (Excel) — дэлгүүрээр, хугацаатай ====
+   pos_config/pricelists {list:[{id,name,all,stores,start,end,active,prices:{код:үнэ},file,col,n,by,at}]}
+   Касс: тухайн дэлгүүр, өдөрт хүчинтэй жагсаалтын үнэ = КАССЫН ҮНЭ. Идэвхтэй урамшуулал (1+1, −% г.м.) энэ үнээс тооцогдоно.
+   Нэг код хэд хэдэн жагсаалтад байвал хамгийн сүүлд эхэлсэн (дараа нь хадгалсан) нь хүчинтэй. */
+let PLISTS=[],SPF=null;
+function watchPlists(){db.collection('pos_config').doc('pricelists').onSnapshot(d=>{PLISTS=d.exists&&Array.isArray(d.data().list)?d.data().list:[];if(CURTAB==='items')spDraw()},()=>{})}
+const spState=p=>{const t=todayIso();return !p.active?'зогсоосон':p.start&&t<p.start?'хүлээгдэж буй':p.end&&t>p.end?'дууссан':'идэвхтэй'};
+function spFor(l,st,day){const t=day||todayIso();let best=null;
+  for(const p of PLISTS){if(!p.active||(p.start&&t<p.start)||(p.end&&t>p.end))continue;if(!p.all&&!(st&&(p.stores||[]).includes(st)))continue;
+    const v=p.prices&&(p.prices[l.code]!=null?p.prices[l.code]:(l.bc&&p.prices[l.bc]!=null?p.prices[l.bc]:null));if(v==null)continue;
+    if(!best||(p.start||'')>(best.p.start||'')||((p.start||'')===(best.p.start||'')&&(p.at||'')>(best.p.at||'')))best={p,v:Math.round(v)}}
+  return best}
+function itSub(k){document.querySelectorAll('section[data-panel="items"] [data-isub]').forEach(c=>c.hidden=c.dataset.isub!==k);try{localStorage.setItem('vivipanel_sub_items',k)}catch(e){}subMark('items',k);if(k==='sp')spDraw()}
+function spOldDraw(){const el=$('spOld');if(!el)return;const G=new Map();Object.values(PITX).forEach(x=>{const h=(x.hist||[]).slice(-1)[0];if(!h||!/^Excel: /.test(h.note||''))return;const k=h.note;const g=G.get(k)||G.set(k,{k,n:0,at:h.at,by:h.by,codes:[]}).get(k);g.n++;g.codes.push(x.code);if(h.at>g.at)g.at=h.at});
+  const L=[...G.values()].sort((a,b)=>(b.at||'').localeCompare(a.at||''));
+  el.innerHTML=L.length?'<table class="xt"><thead><tr><th>Excel</th><th class="n">Бараа</th><th>Хэзээ</th><th>Хэн</th><th></th></tr></thead><tbody>'+L.map((g,i)=>'<tr><td>'+esc(g.k.replace(/^Excel: /,''))+'</td><td class="n">'+fmtN(g.n)+'</td><td>'+esc(lt(g.at))+'</td><td>'+esc((g.by||'').split('@')[0])+'</td><td><button class="btn warn" data-spo="'+i+'" style="min-height:28px;padding:1px 10px">↩ Цуцлах</button></td></tr>').join('')+'</tbody></table>':'<div class="small">Excel-ээр шууд өөрчилсөн үнэ алга.</div>';
+  el.querySelectorAll('[data-spo]').forEach(b=>b.onclick=()=>spOldUndo(L[+b.dataset.spo]))}
+async function spOldUndo(g){if(!confirm('«'+g.k.replace(/^Excel: /,'')+'» — '+g.n+' барааны үнийг өмнөх үнэ рүү буцаах уу? (бүх дэлгүүрт)'))return;
+  const by=auth.currentUser.email||'',at=new Date().toISOString(),m=$('spOld');let n=0;
+  try{for(let i=0;i<g.codes.length;i+=400){const b=db.batch();g.codes.slice(i,i+400).forEach(c=>{const x=PITX[c];if(!x)return;const H=x.hist||[],prev=H.length>1?H[H.length-2]:null,ref=db.collection('pos_items').doc(c);
+        if(prev&&!/^Excel: /.test(prev.note||'')||x.isNew&&prev)b.set(ref,{...x,base:Math.round(prev.base),price:Math.round(prev.price),updated:at,by,hist:H.concat([{at,by,base:prev.base,price:prev.price,note:'цуцалсан: '+g.k}]).slice(-30)});
+        else if(x.isNew)b.update(ref,{active:false,updated:at,by});else b.delete(ref);n++});
+      await b.commit();m.insertAdjacentHTML('afterbegin','<div class="small">'+n+' / '+g.codes.length+'…</div>')}
+    await auditCfg('price_change_excel_undo',{by,note:g.k,n});alert('✓ '+n+' барааны үнэ буцлаа. Кассууд автоматаар авна.')}
+  catch(e){alert('Алдаа ('+n+' буцаасан): '+(e.code||e.message||e))}
+  setTimeout(spOldDraw,800)}
+function spDraw(){spOldDraw();if(!$('spList'))return;const L=PLISTS.slice().sort((a,b)=>(b.start||'').localeCompare(a.start||'')||(b.at||'').localeCompare(a.at||''));
+  xtable('spList','plists',['Нэр','Дэлгүүр','Эхлэх','Дуусах','Бараа','Төлөв','Файл','Хэн','Хадгалсан',''],L.map(p=>[p.name,p.all?'Бүх дэлгүүр':(p.stores||[]).map(x=>STN[x]||x).join(', '),p.start||'',p.end||'дуусах огноогүй',Object.keys(p.prices||{}).length,spState(p),(p.file||'')+(p.col?' ('+p.col+')':''),(p.by||'').split('@')[0],lt(p.at),p.id]),
+    {cell:(r,c)=>c===9?'<button class="btn" data-spx="'+esc(r[9])+'" style="min-height:28px;padding:1px 10px">⬇ Excel</button> <button class="btn" data-spt="'+esc(r[9])+'" style="min-height:28px;padding:1px 10px">'+(r[5]==='зогсоосон'?'▶ Идэвхжүүлэх':'⏸ Зогсоох')+'</button> <button class="btn" data-spe="'+esc(r[9])+'" style="min-height:28px;padding:1px 10px">Засах</button>':c===5?'<span class="chip'+(r[5]==='идэвхтэй'?'':' r')+'">'+r[5]+'</span>':typeof r[c]==='number'?nfx(r[c]):esc(r[c]==null?'':r[c]),
+     after:el=>{el.querySelectorAll('[data-spt]').forEach(b=>b.onclick=()=>spToggle(b.dataset.spt));el.querySelectorAll('[data-spe]').forEach(b=>b.onclick=()=>spForm(b.dataset.spe));el.querySelectorAll('[data-spx]').forEach(b=>b.onclick=()=>spXl(b.dataset.spx))}});
+  if(!L.length)$('spList').innerHTML='<div class="small">Одоогоор үнийн жагсаалт алга. «+ Шинэ үнийн жагсаалт» дарна уу.</div>'}
+async function spSave(list,act,info){const sz=new TextEncoder().encode(JSON.stringify(list)).length;if(sz>950000)throw new Error('Үнийн жагсаалтууд хэт том ('+Math.round(sz/1024)+' КБ, дээд ~950 КБ). Дууссан жагсаалтыг устгана уу.');
+  await db.collection('pos_config').doc('pricelists').set({list,updated:new Date().toISOString(),by:auth.currentUser.email||''});await auditCfg(act,info)}
+async function spToggle(id){const L=JSON.parse(JSON.stringify(PLISTS)),p=L.find(x=>x.id===id);if(!p)return;if(!confirm('«'+p.name+'» — '+(p.active?'зогсоох (касс хуучин үнээр зарна)':'дахин идэвхжүүлэх')+' үү?'))return;
+  p.active=!p.active;try{await spSave(L,'pricelist_toggle',{by:auth.currentUser.email,id,name:p.name,active:p.active})}catch(e){alert('Алдаа: '+(e.code||e.message||e))}}
+async function spXl(id){const p=PLISTS.find(x=>x.id===id);if(!p)return;await xlsx();
+  const A=[['Код','Нэр','Нийлүүлэгч','Үндсэн үнэ','Кассын үнэ (каталог)','Шинэ үнэ','%']].concat(Object.entries(p.prices||{}).map(([c,v])=>{const r=itRow(c)||{},cur=+(r.price!=null&&r.price!==''?r.price:r.base)||0;return [c,r.name||'',r.sup||'',+r.base||0,cur,v,cur?Math.round((v-cur)/cur*100):'']}));
+  const ws=XLSX.utils.aoa_to_sheet(A);ws['!cols']=[16,46,24,11,12,11,6].map(w=>({wch:w}));ws['!autofilter']={ref:'A1:G'+A.length};const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Үнэ');XLSX.writeFile(wb,'une_'+(p.name||'jagsaalt').replace(/[^\wА-Яа-яӨөҮүЁё-]+/g,'_')+'.xlsx')}
+function spForm(id){const ed=id?PLISTS.find(x=>x.id===id):null,p=ed?JSON.parse(JSON.stringify(ed)):{id:'sp'+Date.now(),name:'',all:false,stores:[],start:'',end:'',active:true,prices:{}};SPF={p,take:ed?{...ed.prices}:null,info:ed?{fname:ed.file,col:ed.col}:null};
+  const nend=ed?!ed.end:false;
+  $('spForm').innerHTML='<div style="border:1px solid var(--blue);border-radius:10px;padding:12px;background:#f8fbff"><b>'+(ed?'Үнийн жагсаалт засах':'Шинэ үнийн жагсаалт')+'</b>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:8px"><div><label class="f">Нэр *</label><input id="sp_n" class="inp" value="'+esc(p.name)+'" placeholder="ж: LPP том хүн 11.25"></div>'+
+    '<div><label class="f">Эхлэх огноо *</label><input id="sp_a" class="inp" type="date" value="'+esc(p.start)+'"></div><div><label class="f">Дуусах огноо</label><input id="sp_b" class="inp" type="date" value="'+esc(p.end)+'"'+(nend?' disabled':'')+'><label class="inl small"><input type="checkbox" id="sp_ne"'+(nend?' checked':'')+'> дуусах огноогүй (зогсоох хүртэл)</label></div></div>'+
+    '<label class="f" style="margin-top:8px">Дэлгүүр * <span class="small">(аль дэлгүүрийн кассад энэ үнэ хүчинтэй вэ)</span></label><div class="chk"><label><input type="checkbox" id="sp_all"'+(p.all?' checked':'')+'> <b>Бүх дэлгүүр</b></label>'+Object.entries(STN).map(([k,v])=>'<label><input type="checkbox" name="sp_st" value="'+esc(k)+'"'+((p.stores||[]).includes(k)?' checked':'')+(p.all?' disabled':'')+'> '+esc(v)+'</label>').join('')+'</div>'+
+    '<label class="f" style="margin-top:8px">Excel *</label><input type="file" id="sp_f" accept=".xlsx,.xls,.csv"> <span class="small" id="sp_fm">'+(ed?'Одоогийн: '+fmtN(Object.keys(p.prices).length)+' бараа ('+esc(ed.file||'')+') — шинэ файл сонговол солигдоно':'')+'</span><div id="sp_map"></div>'+
+    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+(ed?'<button class="btn warn" id="sp_del">🗑 Устгах</button>':'')+'<span style="flex:1"></span><button class="btn" id="sp_c">Болих</button><button class="btn pri" id="sp_ok">Хадгалах</button></div><div id="sp_msg" class="small hot" style="margin-top:6px"></div></div>';
+  $('sp_ne').onchange=()=>{$('sp_b').disabled=$('sp_ne').checked;if($('sp_ne').checked)$('sp_b').value=''};
+  $('sp_all').onchange=()=>document.querySelectorAll('input[name=sp_st]').forEach(x=>{x.disabled=$('sp_all').checked;if($('sp_all').checked)x.checked=false});
+  $('sp_c').onclick=()=>{$('spForm').innerHTML='';SPF=null};
+  $('sp_f').onchange=async()=>{const f=$('sp_f').files[0];if(!f)return;$('sp_fm').textContent='Уншиж байна…';
+    try{if(!PCAT)await loadPCat();await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});$('sp_fm').textContent='';SPF.take=null;
+      plMap(wb,f.name,{mode:'price',box:'sp_map',okLbl:n=>'✓ '+n+' барааны шинэ үнийг энэ жагсаалтад авах',onOk:(take,info)=>{SPF.take=take;SPF.info=info;$('sp_map').innerHTML='';$('sp_fm').innerHTML='✓ <b>'+fmtN(Object.keys(take).length)+'</b> бараа сонгогдлоо ('+esc(info.fname)+', '+info.col+' багана)'+(info.lbl?' · шошгонд нэмсэн':'')}})}
+    catch(e){$('sp_fm').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
+  if(ed)$('sp_del').onclick=async()=>{if(!confirm('«'+ed.name+'» үнийн жагсаалтыг устгах уу? Касс хуучин үнээр зарна.'))return;try{await spSave(PLISTS.filter(x=>x.id!==ed.id),'pricelist_delete',{by:auth.currentUser.email,id:ed.id,name:ed.name});$('spForm').innerHTML=''}catch(e){$('sp_msg').textContent='Алдаа: '+(e.code||e.message||e)}};
+  $('sp_ok').onclick=async()=>{const er=m=>$('sp_msg').textContent=m,stores=[...document.querySelectorAll('input[name=sp_st]:checked')].map(x=>x.value),all=$('sp_all').checked;
+    const n={...SPF.p,name:$('sp_n').value.trim(),all,stores:all?[]:stores,start:$('sp_a').value,end:$('sp_ne').checked?'':$('sp_b').value};
+    if(!n.name)return er('Нэр оруулна уу');if(!all&&!stores.length)return er('Дэлгүүр сонгоно уу («Бүх дэлгүүр» эсвэл нэг нэгээр)');if(!n.start)return er('Эхлэх огноо сонгоно уу');
+    if(!$('sp_ne').checked&&!n.end)return er('Дуусах огноо сонгох эсвэл «дуусах огноогүй» тэмдэглэнэ үү');if(n.end&&n.end<n.start)return er('Дуусах огноо эхлэхээс өмнө байна');
+    if(!SPF.take||!Object.keys(SPF.take).length)return er('Excel оруулаад баганаа баталгаажуулна уу («✓ … өөрчлөх»)');
+    n.prices=SPF.take;n.file=SPF.info&&SPF.info.fname||'';n.col=SPF.info&&SPF.info.col||'';n.n=Object.keys(n.prices).length;n.by=auth.currentUser.email||'';n.at=new Date().toISOString();
+    const L=JSON.parse(JSON.stringify(PLISTS)).filter(x=>x.id!==n.id).concat([n]);
+    if(!confirm('«'+n.name+'» — '+fmtN(n.n)+' бараа · '+(all?'бүх дэлгүүр':stores.map(x=>STN[x]||x).join(', '))+' · '+n.start+' → '+(n.end||'дуусах огноогүй')+'\n\nТэр өдрөөс эдгээр дэлгүүрийн касс шинэ үнээр зарна. Идэвхтэй урамшуулал (1+1, −% г.м.) шинэ үнээс тооцогдоно. Хадгалах уу?'))return;
+    try{er('Хадгалж байна…');await spSave(L,ed?'pricelist_edit':'pricelist_create',{by:n.by,id:n.id,name:n.name,n:n.n,stores:n.all?'all':n.stores,start:n.start,end:n.end,file:n.file,col:n.col});$('spForm').innerHTML='';SPF=null}
+    catch(e){er('Алдаа: '+(e.code||e.message||e))}}}
+
 function plMsg(r){return '<b>'+r.n+'</b> бараа уншлаа'+(r.skip?' · '+r.skip+' мөр алгассан (гарчиг эсвэл буруу)':'')+(r.dup?' · <span class="hot">'+r.dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'. Жишээ: '+Object.entries(r.m).slice(0,3).map(x=>esc(x[0])+' → '+x[1].toLocaleString('en-US')+' ₮').join(', ')}
 /* Excel-ээс код унших: том файлыг (жишээ нь Smart-ын 190 000 мөртэй) арын урсгалд (Web Worker) уншина — хуудас гацахгүй.
    Хэд хэдэн хуудас кодтой бол аль хуудсыг авахыг хэрэглэгчээр сонгуулна (бүх хуудсыг нийлүүлж авахгүй). */
@@ -3507,7 +3568,7 @@ function editDev(id){const d=DEVS.find(x=>x.dev===id);if(!d)return;
    pos_items/{код}: самбараас бүртгэсэн шинэ бараа эсвэл үнийн өөрчлөлт — бүх касс каталогийн дээр хэрэглэнэ.
    pos_itemcost/{код}: өртөг (зөвхөн самбар). Код: дотоод EAN-13 «29…». Шошго: Code 128 баркод. */
 let PITX={},PCAT=null,PCATi=null,LBL=[];
-function watchItems(){db.collection('pos_items').onSnapshot(s=>{PITX={};s.docs.forEach(d=>{const x=d.data();if(x&&x.code)PITX[x.code]=x});drawItems()},()=>{});
+function watchItems(){db.collection('pos_items').onSnapshot(s=>{PITX={};s.docs.forEach(d=>{const x=d.data();if(x&&x.code)PITX[x.code]=x});drawItems();if(CURTAB==='items')spOldDraw()},()=>{});
   db.collection('pos_itemcost').onSnapshot(s=>{s.docs.forEach(d=>{const x=d.data();if(x&&x.code&&x.cost>0)costMap.set(x.code,x.cost)})},()=>{})}
 const ean=b=>{let s=0;for(let i=0;i<12;i++)s+=(+b[i])*(i%2?3:1);return b+((10-s%10)%10)};
 function newCodes(n){const base=Math.floor(Date.now()/10)%1e10,out=[];for(let k=0;out.length<n;k++){const c=ean('29'+String((base+k)%1e10).padStart(10,'0'));if(!PITX[c]&&!(PCATi&&PCATi.has(c)))out.push(c)}return out}
@@ -3556,9 +3617,7 @@ $('itPr').onclick=async()=>{const codes=itSel('itck2'),m=$('itMsg');if(!codes.le
       await itSave(x,{price:'кассын үнэ '+val,pct:'үндсэн үнээс −'+val+'%',base:'үндсэн үнэ '+val,reset:'кассын үнэ = үндсэн'}[mode]);n++}
     await auditCfg('price_change',{by:auth.currentUser.email,codes,mode,val});m.innerHTML='<span class="chip">'+n+' барааны үнэ өөрчлөгдлөө</span> Кассууд автоматаар авна.';itSearch()}
   catch(e){m.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}};
-$('itXf').onchange=async()=>{const f=$('itXf').files[0];if(!f)return;$('itXmsg').textContent='Уншиж байна…';
-  try{if(!PCAT)await loadPCat();await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});$('itXmsg').textContent='';plMap(wb,f.name,{mode:'price',box:'itXmap',onOk:itPriceBulk})}
-  catch(e){$('itXmsg').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
+$('spNew').onclick=()=>spForm(null);
 $('itLbl').onclick=()=>{const q=Math.max(1,Math.round(num0($('itLq').value)||1));itSel('itck2').forEach(c=>{const x=itRow(c);if(x)lblAdd(x,q)})};
 $('itLbl2').onclick=()=>{const q=Math.max(1,Math.round(num0($('itLq2').value)||1));itSel('itck').forEach(c=>{const x=PITX[c];if(x)lblAdd(x,q)})};
 $('itOff').onclick=async()=>{const codes=itSel('itck');if(!codes.length||!confirm(codes.length+' бараа: үнийн өөрчлөлтийг цуцлах (шинэ бараа бол касс дээр идэвхгүй болно) уу?'))return;

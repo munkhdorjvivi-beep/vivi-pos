@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.3">
+<meta name="vivi-ver" content="8.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -297,7 +297,10 @@ function activePromos(){const st=S.user&&S.user.store;return promos.filter(p=>pr
 function plPrice(p,l){if(p.type!=='plist'||!p.prices)return null;const v=p.prices[l.code]!=null?p.prices[l.code]:(l.bc&&p.prices[l.bc]!=null?p.prices[l.bc]:null);return v}
 // урамшууллын кодын жагсаалтыг Set болгож кэшлэнэ (WeakMap — объектод талбар нэмэхгүй, хадгалахад орохгүй)
 const PSET=new WeakMap();function pset(p,k,arr){let m=PSET.get(p);if(!m){m={};PSET.set(p,m)}return m[k]||(m[k]=new Set(arr||[]))}
-function promoBase(p,l){if(p.type==='plist')return plPrice(p,l)!=null;if(p.all)return true;const C=pset(p,'cd',p.codes);return !!(p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||C.has(l.code)||(l.bc&&C.has(l.bc)))}
+// насны ангилал барааны нэрээс (самбарын catOf-той ижил дүрэм): Хүүхэд / Том хүн / Тодорхойгүй
+const ageOf=n=>{n=String(n||'');return /нярай|охид|охины|хөвгүүд|хөвгүүн|хүүхэд|хүүхдийн/i.test(n)?'Хүүхэд':/эмэгтэй|эрэгтэй|unisex|унисекс/i.test(n)?'Том хүн':'Тодорхойгүй'};
+const promoAge=(p,l)=>!(p.age&&p.age.length)||p.age.includes(ageOf(l.name));
+function promoBase(p,l){if(p.type==='plist')return plPrice(p,l)!=null;if(!promoAge(p,l))return false;if(p.all)return true;const C=pset(p,'cd',p.codes);return !!(p.suppliers.includes(l.sup)||p.groups.includes(l.grp)||C.has(l.code)||(l.bc&&C.has(l.bc)))}
 // Үл хамаарах: тодорхой код, нийлүүлэгч; «өөр урамшуулалтай бараа» (жишээ нь Black Friday −50% нь 1+1, тусгай үнэтэй бараанд хэрэглэгдэхгүй)
 function promoMatch(p,l){if(!promoBase(p,l))return false;
   // том жагсаалтыг (мянга мянган код) Set болгож хурдан шалгана
@@ -348,7 +351,16 @@ async function catSync(meta){
   }catch(e){fb.err='каталог: '+(e&&e.code||e.message||e)}
   finally{catSync.run=false;cloudStatus()}
 }
-const item=i=>({code:CAT[i][0],bc:CAT[i][1]?String(CAT[i][1]):'',name:CAT[i][2],base:CAT[i][3],price:CAT[i][4],sup:SUP[CAT[i][5]],grp:GRP[CAT[i][6]],model:CAT[i][7]||'',size:CAT[i][8]||''});
+const item=i=>{const x={code:CAT[i][0],bc:CAT[i][1]?String(CAT[i][1]):'',name:CAT[i][2],base:CAT[i][3],price:CAT[i][4],sup:SUP[CAT[i][5]],grp:GRP[CAT[i][6]],model:CAT[i][7]||'',size:CAT[i][8]||''};
+  const sp=spFor(x);if(sp){x.p0=x.price;x.price=sp.v;x.spn=sp.p.name}return x};
+/* 💲 Самбарын «Шинэ үнэ (Excel)»: энэ дэлгүүр, өнөөдөрт хүчинтэй жагсаалтын үнэ = кассын үнэ (урамшуулал үүнээс тооцогдоно).
+   Хэд хэдэн жагсаалтад байвал хамгийн сүүлд эхэлсэн (дараа нь хадгалсан) нь хүчинтэй. */
+let PLISTS=store.get('pricelists',[]);
+function spFor(x){if(!PLISTS.length||!S.user)return null;const st=S.user.store,t=today();let best=null;
+  for(const p of PLISTS){if(!p.active||(p.start&&t<p.start)||(p.end&&t>p.end))continue;if(!p.all&&!(p.stores||[]).includes(st))continue;
+    const v=p.prices&&(p.prices[x.code]!=null?p.prices[x.code]:(x.bc&&p.prices[x.bc]!=null?p.prices[x.bc]:null));if(v==null)continue;
+    if(!best||(p.start||'')>(best.p.start||'')||((p.start||'')===(best.p.start||'')&&(p.at||'')>(best.p.at||'')))best={p,v:Math.round(v)}}
+  return best}
 /* ---------- state ---------- */
 let S={user:null,shift:null,cart:[],sel:-1,fromPark:null};
 let sales=store.get('sales',[]), parked=store.get('parked',[]), audit=store.get('audit',[]), counters=store.get('counters',{});
@@ -497,6 +509,7 @@ function cloudListen(){
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
   fb.db.collection('pos_catalog').doc('meta').onSnapshot(d=>{if(d.exists)catSync(d.data())},e=>{fb.err='каталог: '+(e&&e.code||e);cloudStatus()});
   const rqFrom=new Date(Date.now()-30*864e5).toISOString(),rqSt=curAcc();(rqSt?fb.db.collection('pos_requests').where('store','==',rqSt):fb.db.collection('pos_requests').where('created','>=',rqFrom)).onSnapshot(s=>{requests=s.docs.map(d=>d.data()).filter(r=>(r.created||'')>=rqFrom);applyPayFix();if($('rqs')&&$('pq')&&!$('pq').value)openReturn()},e=>{fb.err=e&&e.code||String(e);cloudStatus()});
+  fb.db.collection('pos_config').doc('pricelists').onSnapshot(d=>{PLISTS=d.exists&&Array.isArray(d.data().list)?d.data().list:[];store.set('pricelists',PLISTS)},()=>{});
   ['promos','users','settings'].forEach(k=>{const ref=fb.db.collection('pos_config').doc(k);ref.onSnapshot(d=>{
     if(d.metadata&&d.metadata.hasPendingWrites)return;
     if(!d.exists){ref.set({list:JSON.parse(JSON.stringify(cfgList(k))),updated:now().toISOString(),by:'анхны тохиргоо'}).catch(()=>{});return}
