@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="19.1">
+<meta name="vivi-ver" content="19.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1893,10 +1893,14 @@ const STOCK_SRC={ON:'FC'}; // онлайн дэлгүүрийн борлуула
 const todayIso=()=>iso(new Date());
 function pOn(p,t){return p.active&&!(p.start&&t<p.start)&&!(p.end&&t>p.end)}
 function pState(p){const t=todayIso();if(!p.active)return ['Зогсоосон','r'];if(p.start&&t<p.start)return ['Эхлээгүй'+(p.solo?' · '+p.start.slice(5).split('-').reverse().join('.')+'-нд эхэлж, бусдыг түр зогсооно':''),'b'];if(p.end&&t>p.end)return ['Дууссан','r'];
-  const solo=promos.find(q=>q!==p&&q.solo&&pOn(q,t));if(solo&&!p.solo)return ['Түр зогссон — «'+solo.name+'» дуустал ('+(solo.end?solo.end.slice(5).split('-').reverse().join('.'):'хугацаагүй')+')'+(((solo.excl||[]).length||(solo.exSup||[]).length||!solo.all)?' · үл хамаарах бараанд хүчинтэй':''),'b'];
+  // «бусдыг зогсоох» нь зөвхөн ДАВХЦАЖ буй дэлгүүрт хамаарна (касс ч ингэж тооцдог): Black Friday зөвхөн Драгон → 1+1 бусад дэлгүүрт идэвхтэй хэвээр
+  const sts=x=>(x.stores||[]).length?x.stores:null,ov=q=>{const A=sts(p),B=sts(q);return !A&&!B?'all':!A?B:!B?A:A.filter(x=>B.includes(x))},
+    stn=L=>L.map(x=>STN[x]||x).join(', '),rest=L=>{const A=sts(p)||Object.keys(STN);const r=A.filter(x=>!L.includes(x));return r.length?' · '+stn(r)+'-д идэвхтэй':''};
+  const solo=!p.solo&&promos.find(q=>q!==p&&q.solo&&pOn(q,t)&&ov(q).length);
+  if(solo){const o=ov(solo),all=o==='all';return [(all?'Түр зогссон':'Түр зогссон: '+stn(o))+' — «'+solo.name+'» дуустал ('+(solo.end?solo.end.slice(5).split('-').reverse().join('.'):'хугацаагүй')+')'+(all?'':rest(o))+(((solo.excl||[]).length||(solo.exSup||[]).length||!solo.all)?' · үл хамаарах бараанд хүчинтэй':''),'b']}
   // Ирээдүйд эхлэх «бусдыг зогсоох» урамшуулал байвал хэзээ түр зогсохыг урьдчилан харуулна
-  const d=x=>x?x.slice(5).split('-').reverse().join('.'):'',nx=!p.solo&&promos.filter(q=>q!==p&&q.solo&&q.active&&q.start&&q.start>t&&(!q.end||q.end>=t)&&(!p.end||p.end>=q.start)).sort((x,y)=>x.start<y.start?-1:1)[0];
-  return ['Идэвхтэй'+(p.solo?' · бусдыг зогсоосон':'')+(nx?' · '+d(nx.start)+'–'+(nx.end?d(nx.end):'…')+' түр зогсоно («'+nx.name+'»)':''),'']}
+  const d=x=>x?x.slice(5).split('-').reverse().join('.'):'',nx=!p.solo&&promos.filter(q=>q!==p&&q.solo&&q.active&&q.start&&q.start>t&&(!q.end||q.end>=t)&&(!p.end||p.end>=q.start)).filter(q=>ov(q).length).sort((x,y)=>x.start<y.start?-1:1)[0];
+  return ['Идэвхтэй'+(p.solo?' · бусдыг зогсоосон':'')+(nx?' · '+d(nx.start)+'–'+(nx.end?d(nx.end):'…')+' түр зогсоно'+(ov(nx)==='all'?'':' ('+stn(ov(nx))+')')+' («'+nx.name+'»)':''),'']}
 function pType(p){return p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):p.type==='gift'?(p.auto?'Бэлэг · автоматаар 0 ₮':'Бэлэг · кассчин сонгоно'):p.type==='plist'?'Үнийн жагсаалт · '+Object.keys(p.prices||{}).length+' бараа':p.type==='price'?'Тогтмол үнэ '+Number(p.price).toLocaleString('en-US').replace(/,/g,' ')+' ₮':p.type==='amount'?'−'+Number(p.amount).toLocaleString('en-US').replace(/,/g,' ')+' ₮':'−'+p.pct+'%'}
 function pScope(p){if(p.type==='plist')return Object.keys(p.prices||{}).length+' бараа (Excel)';const x=[],ag=p.age&&p.age.length?' · зөвхөн '+p.age.join(', '):'';if((p.excl||[]).length)x.push((p.excl||[]).length+' код');if((p.exSup||[]).length)x.push(p.exSup.join(', '));if(p.exOther)x.push('өөр урамшуулалтай бараа');const xs=x.length?' · үл хамаарах: '+x.join(', '):'';if(p.all)return 'Бүх бараа'+ag+xs;const a=[];if(p.suppliers.length)a.push('Нийлүүлэгч: '+p.suppliers.join(', '));if(p.groups.length)a.push('Бүлэг: '+p.groups.join(', '));if(p.codes.length)a.push(p.codes.length+' барааны код');return (a.join(' · ')||'—')+ag+xs}
 function watchPromos(){db.collection('pos_config').doc('promos').onSnapshot(d=>{promos=d.exists&&Array.isArray(d.data().list)?d.data().list:[];drawPromos();try{prFill();calDraw()}catch(e){}},e=>{$('cPromo').innerHTML='<span class="hot">Алдаа: '+esc(e.code||e)+'</span>'})}
