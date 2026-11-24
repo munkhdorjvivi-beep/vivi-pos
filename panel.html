@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="19.0">
+<meta name="vivi-ver" content="19.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1977,21 +1977,25 @@ function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),
   const anM=({hr,cc,pc,kc,key})=>{const a=SH[si].a,f=n=>fmtN(Math.round(n)),IX=new Map();
     (PCAT||[]).forEach(r=>{const z=spZ({model:r[7],name:r[2]}),k=key==='m'?z.m:z.mc;if(!k)return;const cur=+(r[4]!=null&&r[4]!==''?r[4]:r[3])||0;(IX.get(k)||IX.set(k,[]).get(k)).push({code:r[0],name:r[2],size:r[8]||'',cur})});
     const G=new Map();let bad=0,xmis=0,emp=0;
+    // файлд баркодын багана байвал: аль SKU нь энэ файлд (ж: Нийслэлийн үлдэгдэл) байгааг тоолно — каталогийн бусад SKU-тай харьцуулна
+    const H0=(a[hr]||[]).map(v=>v==null?'':String(v).trim()),bcI=[/^(код|барааны код|баркод|баар код|ean|barcode|code)$/i,/баркод|barcode|ean/i].reduce((r,re)=>r>=0?r:H0.findIndex((h,j)=>j!==cc&&j!==pc&&re.test(h)),-1);
     a.slice(hr+1).forEach(r=>{if(!r)return;let c=r[cc],v=r[pc];if(c==null||c==='')return;if(v==null||v===''){emp++;return}const z=spZ({model:String(c)}),k=key==='m'?z.m:z.mc;
       v=typeof v==='number'?v:Number(String(v==null?'':v).replace(/[\s,₮]/g,''));if(!k||!isFinite(v)||v<=0){bad++;return}v=Math.round(v);
-      const g=G.get(k)||G.set(k,{c:key+':'+k,k,vs:new Set(),xk:new Set()}).get(k);g.vs.add(v);if(kc>=0&&typeof r[kc]==='number')g.xk.add(Math.round(r[kc]))});
+      const g=G.get(k)||G.set(k,{c:key+':'+k,k,vs:new Set(),xk:new Set(),fc:new Set()}).get(k);g.vs.add(v);if(bcI>=0&&r[bcI]!=null&&r[bcI]!=='')g.fc.add(typeof r[bcI]==='number'?String(Math.round(r[bcI])):String(r[bcI]).trim());if(kc>=0&&typeof r[kc]==='number')g.xk.add(Math.round(r[kc]))});
     const R={down:[],same:[],up:[],nocat:[],conf:[]};
-    G.forEach(g=>{const S=IX.get(g.k)||[],vs=[...g.vs];g.v=Math.min(...vs);g.vmax=Math.max(...vs);g.skus=S;g.n=S.length;g.name=S[0]?S[0].name:'';const cs=S.map(x=>x.cur);g.cmin=cs.length?Math.min(...cs):null;g.cmax=cs.length?Math.max(...cs):null;
+    G.forEach(g=>{const S=IX.get(g.k)||[],vs=[...g.vs];g.inF=S.filter(x=>g.fc.has(x.code)).length;g.ext=bcI>=0?S.filter(x=>!g.fc.has(x.code)):[];g.v=Math.min(...vs);g.vmax=Math.max(...vs);g.skus=S;g.n=S.length;g.name=S[0]?S[0].name:'';const cs=S.map(x=>x.cur);g.cmin=cs.length?Math.min(...cs):null;g.cmax=cs.length?Math.max(...cs):null;
       if(g.xk.size&&S.some(x=>!g.xk.has(x.cur)))xmis++;
       if(!S.length){R.nocat.push(g);return}if(vs.length>1){R.conf.push(g);return}
       if(cs.some(x=>x<g.v))R.up.push(g);else if(cs.every(x=>x===g.v))R.same.push(g);else R.down.push(g)});
     const ns=L2=>L2.reduce((t,g)=>t+g.n,0),Q=[];
     if(R.up.length)Q.push(['up','Зарим SKU-ийн үнэ ӨСНӨ (шинэ > одоогийн)',R.up.length]);
     if(R.conf.length)Q.push(['conf','Нэг загварт Excel-д өөр өөр үнэ байна — оруулбал хамгийн БАГА үнийг авна',R.conf.length]);
-    const tb=(L2,lim)=>'<table class="xt" style="font-size:12px;margin-top:4px"><thead><tr><th>Загвар</th><th class="n">SKU</th><th>Нэр (жишээ)</th><th class="n">Одоогийн кассын үнэ</th><th class="n">Шинэ үнэ</th><th class="n">%</th></tr></thead><tbody>'+
-      L2.slice(0,lim).map(g=>'<tr><td><b>'+esc(g.k)+'</b></td><td class="n">'+(g.n||'—')+'</td><td>'+esc((g.name||'—').slice(0,46))+'</td><td class="n">'+(g.cmin==null?'—':f(g.cmin)+(g.cmax!==g.cmin?' – '+f(g.cmax):''))+'</td><td class="n"><b>'+f(g.v)+(g.vmax!==g.v?' … '+f(g.vmax):'')+'</b></td><td class="n">'+(g.cmax?Math.round((g.v-g.cmax)/g.cmax*100)+'%':'')+'</td></tr>').join('')+'</tbody></table>'+(L2.length>lim?'<div class="small">… '+(L2.length-lim)+' загвар</div>':'');
+    const FB=bcI>=0,tb=(L2,lim)=>'<table class="xt" style="font-size:12px;margin-top:4px"><thead><tr><th>Загвар</th>'+(FB?'<th class="n">Файлд SKU</th>':'')+'<th class="n">Каталогт SKU (үнэ авна)</th><th>Нэр (жишээ)</th><th class="n">Одоогийн кассын үнэ</th><th class="n">Шинэ үнэ</th><th class="n">%</th></tr></thead><tbody>'+
+      L2.slice(0,lim).map(g=>'<tr><td><b>'+esc(g.k)+'</b></td>'+(FB?'<td class="n">'+g.inF+'</td>':'')+'<td class="n">'+(g.n||'—')+(FB&&g.n>g.inF?' <span class="hot">(+'+(g.n-g.inF)+')</span>':'')+'</td><td>'+esc((g.name||'—').slice(0,46))+'</td><td class="n">'+(g.cmin==null?'—':f(g.cmin)+(g.cmax!==g.cmin?' – '+f(g.cmax):''))+'</td><td class="n"><b>'+f(g.v)+(g.vmax!==g.v?' … '+f(g.vmax):'')+'</b></td><td class="n">'+(g.cmax?Math.round((g.v-g.cmax)/g.cmax*100)+'%':'')+'</td></tr>').join('')+'</tbody></table>'+(L2.length>lim?'<div class="small">… '+(L2.length-lim)+' загвар</div>':'');
     $('pm_r').innerHTML='<div style="line-height:1.7">Excel-д <b>'+fmtN(G.size)+'</b> загвар → каталогт <b>'+fmtN(G.size-R.nocat.length)+'</b> загвар олдсон, нийт <b>'+fmtN(ns(R.down)+ns(R.same)+ns(R.up)+ns(R.conf))+'</b> SKU'+
       '<br>✅ Хямдарна: <b>'+fmtN(R.down.length)+'</b> загвар (<b>'+fmtN(ns(R.down))+'</b> SKU)'+
+      (FB?(()=>{const T=R.down.concat(R.up,R.conf),inF=T.reduce((t,g)=>t+g.inF,0),X=T.flatMap(g=>g.ext);return '<br>ℹ Энэ файлд эдгээр загварын <b>'+fmtN(inF)+'</b> SKU байна; каталогт нийт <b>'+fmtN(inF+X.length)+'</b> SKU — '+(X.length?'<b class="hot">'+fmtN(X.length)+'</b> SKU нь энэ файлд алга (өөр хэмжээ/өнгө: бусад дэлгүүрт, дууссан эсвэл ирээгүй). Загвараар бол тэдэнд ч шинэ үнэ хүчинтэй. Зөвхөн файлын SKU-д бол дээр <b>«Баркод / код»</b>-ыг сонгоно уу.'+
+        '<details><summary class="small hot">Файлд алга SKU ('+fmtN(X.length)+')</summary><table class="xt" style="font-size:12px"><thead><tr><th>Код</th><th>Нэр</th><th class="n">Кассын үнэ</th></tr></thead><tbody>'+X.slice(0,200).map(x=>'<tr><td>'+esc(x.code)+'</td><td>'+esc(x.name)+'</td><td class="n">'+f(x.cur)+'</td></tr>').join('')+'</tbody></table></details>':'бүгд энэ файлд байна.')})():'')+
       '<br>➖ Үнэ өөрчлөгдөхгүй: <b>'+fmtN(R.same.length)+'</b> загвар — хөндөхгүй'+
       (R.nocat.length?'<br><span class="hot">⚠ Каталогт олдоогүй загвар: <b>'+fmtN(R.nocat.length)+'</b> — алгасна</span>':'')+
       (xmis?'<br><span class="hot">⚠ Excel-ийн «одоогийн кассын үнэ» системийнхээс өөр загвар: <b>'+fmtN(xmis)+'</b></span>':'')+
