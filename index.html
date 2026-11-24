@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.5">
+<meta name="vivi-ver" content="8.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -509,7 +509,13 @@ function cloudListen(){
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
   fb.db.collection('pos_catalog').doc('meta').onSnapshot(d=>{if(d.exists)catSync(d.data())},e=>{fb.err='каталог: '+(e&&e.code||e);cloudStatus()});
   const rqFrom=new Date(Date.now()-30*864e5).toISOString(),rqSt=curAcc();(rqSt?fb.db.collection('pos_requests').where('store','==',rqSt):fb.db.collection('pos_requests').where('created','>=',rqFrom)).onSnapshot(s=>{requests=s.docs.map(d=>d.data()).filter(r=>(r.created||'')>=rqFrom);applyPayFix();if($('rqs')&&$('pq')&&!$('pq').value)openReturn()},e=>{fb.err=e&&e.code||String(e);cloudStatus()});
-  fb.db.collection('pos_config').doc('pricelists').onSnapshot(d=>{PLISTS=d.exists&&Array.isArray(d.data().list)?d.data().list:[];store.set('pricelists',PLISTS)},()=>{});
+  // 💲 шинэ үнийн жагсаалт: зөвхөн идэвхтэй (live) жагсаалтын мэдээлэл + үнэ (архив татахгүй); хуучин хадгалалт (pos_config/pricelists)-ийг шилжилтийн үед нэмж уншина
+  let PLN=[],PLO=[];const PLC={},plSet=()=>{PLISTS=PLN.concat(PLO.filter(o=>!PLN.some(x=>x.id===o.id)));store.set('pricelists',PLISTS)};
+  fb.db.collection('pos_pricelists').where('live','==',true).onSnapshot(async q=>{const out=[];
+    for(const d of q.docs){const m=d.data();let pr=PLC[m.id]&&PLC[m.id].at===m.at?PLC[m.id].prices:null;
+      if(!pr){const old=PLISTS.find(x=>x.id===m.id&&x.at===m.at);if(old&&old.prices)pr=old.prices;else try{const x=await fb.db.collection('pos_pricelists_p').doc(m.id).get();pr=x.exists?x.data().prices||{}:{}}catch(e){continue}PLC[m.id]={at:m.at,prices:pr}}
+      out.push({...m,prices:pr})}PLN=out;plSet()},()=>{});
+  fb.db.collection('pos_config').doc('pricelists').onSnapshot(d=>{PLO=d.exists&&Array.isArray(d.data().list)?d.data().list:[];plSet()},()=>{});
   ['promos','users','settings'].forEach(k=>{const ref=fb.db.collection('pos_config').doc(k);ref.onSnapshot(d=>{
     if(d.metadata&&d.metadata.hasPendingWrites)return;
     if(!d.exists){ref.set({list:JSON.parse(JSON.stringify(cfgList(k))),updated:now().toISOString(),by:'анхны тохиргоо'}).catch(()=>{});return}
