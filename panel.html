@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="18.5">
+<meta name="vivi-ver" content="18.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -2005,8 +2005,22 @@ function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),
    pos_config/pricelists {list:[{id,name,all,stores,start,end,active,prices:{код:үнэ},file,col,n,by,at}]}
    Касс: тухайн дэлгүүр, өдөрт хүчинтэй жагсаалтын үнэ = КАССЫН ҮНЭ. Идэвхтэй урамшуулал (1+1, −% г.м.) энэ үнээс тооцогдоно.
    Нэг код хэд хэдэн жагсаалтад байвал хамгийн сүүлд эхэлсэн (дараа нь хадгалсан) нь хүчинтэй. */
-let PLISTS=[],SPF=null;
-function watchPlists(){db.collection('pos_config').doc('pricelists').onSnapshot(d=>{PLISTS=d.exists&&Array.isArray(d.data().list)?d.data().list:[];if(CURTAB==='items')spDraw()},()=>{})}
+/* Хадгалалт: pos_pricelists/{id} — жагсаалтын мэдээлэл (үнэгүй, жижиг), pos_pricelists_p/{id} — үнүүд.
+   Касс зөвхөн live==true (идэвхтэй, дуусаагүй) жагсаалтыг татна — архив хэчнээн өссөн ч касс удаашрахгүй. */
+let PLISTS=[],SPF=null,SPP={},spMig=false;
+const spLive=p=>!!p.active&&(!p.end||p.end>=todayIso());
+async function spPrices(id,at){if(SPP[id]&&(!at||SPP[id].at===at))return SPP[id].prices;const d=await db.collection('pos_pricelists_p').doc(id).get();const pr=d.exists?d.data().prices||{}:{};SPP[id]={at,prices:pr};return pr}
+function watchPlists(){db.collection('pos_pricelists').onSnapshot(async q=>{const M=q.docs.map(d=>d.data());
+    for(const p of M){if(spLive(p))try{p.prices=await spPrices(p.id,p.at)}catch(e){}}
+    PLISTS=M;if(CURTAB==='items')spDraw();
+    // хугацаа нь дууссан жагсаалтыг архивт (касс татахаа болино)
+    M.filter(p=>p.live&&!spLive(p)).forEach(p=>db.collection('pos_pricelists').doc(p.id).update({live:false}).catch(()=>{}))},()=>{});
+  if(!spMig){spMig=true;spMigrate()}}
+// өмнөх хувилбар (pos_config/pricelists нэг баримтад бүгд) → тусдаа баримт руу нэг удаа шилжүүлнэ
+async function spMigrate(){try{const d=await db.collection('pos_config').doc('pricelists').get();const L=d.exists&&Array.isArray(d.data().list)?d.data().list:[];if(!L.length)return;
+  for(const p of L)await spPut(p,p.prices||{});await db.collection('pos_config').doc('pricelists').set({list:[],migrated:new Date().toISOString(),n:L.length});await auditCfg('pricelist_migrate',{n:L.length})}catch(e){console.warn('pricelist migrate',e)}}
+async function spPut(p,prices){const sz=new TextEncoder().encode(JSON.stringify(prices)).length;if(sz>950000)throw new Error('Жагсаалт хэт том ('+Math.round(sz/1024)+' КБ, нэг жагсаалтад дээд ~950 КБ ≈ 35 000 бараа). Хоёр жагсаалт болгож хуваана уу.');
+  const m={...p};delete m.prices;m.live=spLive(m);const b=db.batch();b.set(db.collection('pos_pricelists_p').doc(p.id),{id:p.id,at:p.at||'',prices});b.set(db.collection('pos_pricelists').doc(p.id),m);await b.commit();SPP[p.id]={at:p.at,prices}}
 const spState=p=>{const t=todayIso();return !p.active?'зогсоосон':p.start&&t<p.start?'хүлээгдэж буй':p.end&&t>p.end?'дууссан':'идэвхтэй'};
 function spFor(l,st,day){const t=day||todayIso();let best=null;
   for(const p of PLISTS){if(!p.active||(p.start&&t<p.start)||(p.end&&t>p.end))continue;if(!p.all&&!(st&&(p.stores||[]).includes(st)))continue;
@@ -2032,14 +2046,13 @@ function spDraw(){spOldDraw();if(!$('spList'))return;const L=PLISTS.slice().sort
     {cell:(r,c)=>c===9?'<button class="btn" data-spx="'+esc(r[9])+'" style="min-height:28px;padding:1px 10px">⬇ Excel</button> <button class="btn" data-spt="'+esc(r[9])+'" style="min-height:28px;padding:1px 10px">'+(r[5]==='зогсоосон'?'▶ Идэвхжүүлэх':'⏸ Зогсоох')+'</button> <button class="btn" data-spe="'+esc(r[9])+'" style="min-height:28px;padding:1px 10px">Засах</button>':c===5?'<span class="chip'+(r[5]==='идэвхтэй'?'':' r')+'">'+r[5]+'</span>':typeof r[c]==='number'?nfx(r[c]):esc(r[c]==null?'':r[c]),
      after:el=>{el.querySelectorAll('[data-spt]').forEach(b=>b.onclick=()=>spToggle(b.dataset.spt));el.querySelectorAll('[data-spe]').forEach(b=>b.onclick=()=>spForm(b.dataset.spe));el.querySelectorAll('[data-spx]').forEach(b=>b.onclick=()=>spXl(b.dataset.spx))}});
   if(!L.length)$('spList').innerHTML='<div class="small">Одоогоор үнийн жагсаалт алга. «+ Шинэ үнийн жагсаалт» дарна уу.</div>'}
-async function spSave(list,act,info){const sz=new TextEncoder().encode(JSON.stringify(list)).length;if(sz>950000)throw new Error('Үнийн жагсаалтууд хэт том ('+Math.round(sz/1024)+' КБ, дээд ~950 КБ). Дууссан жагсаалтыг устгана уу.');
-  await db.collection('pos_config').doc('pricelists').set({list,updated:new Date().toISOString(),by:auth.currentUser.email||''});await auditCfg(act,info)}
-async function spToggle(id){const L=JSON.parse(JSON.stringify(PLISTS)),p=L.find(x=>x.id===id);if(!p)return;if(!confirm('«'+p.name+'» — '+(p.active?'зогсоох (касс хуучин үнээр зарна)':'дахин идэвхжүүлэх')+' үү?'))return;
-  p.active=!p.active;try{await spSave(L,'pricelist_toggle',{by:auth.currentUser.email,id,name:p.name,active:p.active})}catch(e){alert('Алдаа: '+(e.code||e.message||e))}}
-async function spXl(id){const p=PLISTS.find(x=>x.id===id);if(!p)return;await xlsx();
-  const A=[['Код','Нэр','Нийлүүлэгч','Үндсэн үнэ','Кассын үнэ (каталог)','Шинэ үнэ','%']].concat(Object.entries(p.prices||{}).map(([c,v])=>{const r=itRow(c)||{},cur=+(r.price!=null&&r.price!==''?r.price:r.base)||0;return [c,r.name||'',r.sup||'',+r.base||0,cur,v,cur?Math.round((v-cur)/cur*100):'']}));
+async function spToggle(id){const p=PLISTS.find(x=>x.id===id);if(!p)return;if(!confirm('«'+p.name+'» — '+(p.active?'зогсоох (касс хуучин үнээр зарна)':'дахин идэвхжүүлэх')+' үү?'))return;
+  const a=!p.active;try{await db.collection('pos_pricelists').doc(id).update({active:a,live:spLive({...p,active:a})});await auditCfg('pricelist_toggle',{by:auth.currentUser.email,id,name:p.name,active:a})}catch(e){alert('Алдаа: '+(e.code||e.message||e))}}
+async function spXl(id){const p=PLISTS.find(x=>x.id===id);if(!p)return;await xlsx();const pr=await spPrices(p.id,p.at);
+  const A=[['Код','Нэр','Нийлүүлэгч','Үндсэн үнэ','Кассын үнэ (каталог)','Шинэ үнэ','%']].concat(Object.entries(pr||{}).map(([c,v])=>{const r=itRow(c)||{},cur=+(r.price!=null&&r.price!==''?r.price:r.base)||0;return [c,r.name||'',r.sup||'',+r.base||0,cur,v,cur?Math.round((v-cur)/cur*100):'']}));
   const ws=XLSX.utils.aoa_to_sheet(A);ws['!cols']=[16,46,24,11,12,11,6].map(w=>({wch:w}));ws['!autofilter']={ref:'A1:G'+A.length};const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Үнэ');XLSX.writeFile(wb,'une_'+(p.name||'jagsaalt').replace(/[^\wА-Яа-яӨөҮүЁё-]+/g,'_')+'.xlsx')}
-function spForm(id){const ed=id?PLISTS.find(x=>x.id===id):null,p=ed?JSON.parse(JSON.stringify(ed)):{id:'sp'+Date.now(),name:'',all:false,stores:[],start:'',end:'',active:true,prices:{}};SPF={p,take:ed?{...ed.prices}:null,info:ed?{fname:ed.file,col:ed.col}:null};
+async function spForm(id){const ed=id?PLISTS.find(x=>x.id===id):null;let edp=null;if(ed)try{edp=await spPrices(ed.id,ed.at)}catch(e){return alert('Алдаа: '+(e.code||e.message||e))}
+  const p=ed?{...JSON.parse(JSON.stringify(ed)),prices:edp}:{id:'sp'+Date.now(),name:'',all:false,stores:[],start:'',end:'',active:true,prices:{}};SPF={p,take:ed?{...edp}:null,info:ed?{fname:ed.file,col:ed.col}:null};
   const nend=ed?!ed.end:false;
   $('spForm').innerHTML='<div style="border:1px solid var(--blue);border-radius:10px;padding:12px;background:#f8fbff"><b>'+(ed?'Үнийн жагсаалт засах':'Шинэ үнийн жагсаалт')+'</b>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:8px"><div><label class="f">Нэр *</label><input id="sp_n" class="inp" value="'+esc(p.name)+'" placeholder="ж: LPP том хүн 11.25"></div>'+
@@ -2054,7 +2067,7 @@ function spForm(id){const ed=id?PLISTS.find(x=>x.id===id):null,p=ed?JSON.parse(J
     try{if(!PCAT)await loadPCat();await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});$('sp_fm').textContent='';SPF.take=null;
       plMap(wb,f.name,{mode:'price',box:'sp_map',okLbl:n=>'✓ '+n+' барааны шинэ үнийг энэ жагсаалтад авах',onOk:(take,info)=>{SPF.take=take;SPF.info=info;$('sp_map').innerHTML='';$('sp_fm').innerHTML='✓ <b>'+fmtN(Object.keys(take).length)+'</b> бараа сонгогдлоо ('+esc(info.fname)+', '+info.col+' багана)'+(info.lbl?' · шошгонд нэмсэн':'')}})}
     catch(e){$('sp_fm').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
-  if(ed)$('sp_del').onclick=async()=>{if(!confirm('«'+ed.name+'» үнийн жагсаалтыг устгах уу? Касс хуучин үнээр зарна.'))return;try{await spSave(PLISTS.filter(x=>x.id!==ed.id),'pricelist_delete',{by:auth.currentUser.email,id:ed.id,name:ed.name});$('spForm').innerHTML=''}catch(e){$('sp_msg').textContent='Алдаа: '+(e.code||e.message||e)}};
+  if(ed)$('sp_del').onclick=async()=>{if(!confirm('«'+ed.name+'» үнийн жагсаалтыг устгах уу? Касс хуучин үнээр зарна.'))return;try{const b=db.batch();b.delete(db.collection('pos_pricelists').doc(ed.id));b.delete(db.collection('pos_pricelists_p').doc(ed.id));await b.commit();await auditCfg('pricelist_delete',{by:auth.currentUser.email,id:ed.id,name:ed.name});$('spForm').innerHTML=''}catch(e){$('sp_msg').textContent='Алдаа: '+(e.code||e.message||e)}};
   $('sp_ok').onclick=async()=>{const er=m=>$('sp_msg').textContent=m,stores=[...document.querySelectorAll('input[name=sp_st]:checked')].map(x=>x.value),all=$('sp_all').checked;
     const n={...SPF.p,name:$('sp_n').value.trim(),all,stores:all?[]:stores,start:$('sp_a').value,end:$('sp_ne').checked?'':$('sp_b').value};
     if(!n.name)return er('Нэр оруулна уу');if(!all&&!stores.length)return er('Дэлгүүр сонгоно уу («Бүх дэлгүүр» эсвэл нэг нэгээр)');if(!n.start)return er('Эхлэх огноо сонгоно уу');
@@ -2063,9 +2076,8 @@ function spForm(id){const ed=id?PLISTS.find(x=>x.id===id):null,p=ed?JSON.parse(J
     if(!SPF.take&&$('pm_ok')){if($('pm_ok').disabled)return er('Excel-ийн доорх асуултад хариулна уу ('+($('pm_okm')?$('pm_okm').textContent:'')+')');$('pm_ok').click()}
     if(!SPF.take||!Object.keys(SPF.take).length)return er('Excel оруулаад баганаа шалгана уу');
     n.prices=SPF.take;n.file=SPF.info&&SPF.info.fname||'';n.col=SPF.info&&SPF.info.col||'';n.n=Object.keys(n.prices).length;n.by=auth.currentUser.email||'';n.at=new Date().toISOString();
-    const L=JSON.parse(JSON.stringify(PLISTS)).filter(x=>x.id!==n.id).concat([n]);
     if(!confirm('«'+n.name+'» — '+fmtN(n.n)+' бараа · '+(all?'бүх дэлгүүр':stores.map(x=>STN[x]||x).join(', '))+' · '+n.start+' → '+(n.end||'дуусах огноогүй')+'\n\nТэр өдрөөс эдгээр дэлгүүрийн касс шинэ үнээр зарна. Идэвхтэй урамшуулал (1+1, −% г.м.) шинэ үнээс тооцогдоно. Хадгалах уу?'))return;
-    try{er('Хадгалж байна…');await spSave(L,ed?'pricelist_edit':'pricelist_create',{by:n.by,id:n.id,name:n.name,n:n.n,stores:n.all?'all':n.stores,start:n.start,end:n.end,file:n.file,col:n.col});$('spForm').innerHTML='';SPF=null}
+    try{er('Хадгалж байна…');const pr=n.prices;delete n.prices;await spPut(n,pr);await auditCfg(ed?'pricelist_edit':'pricelist_create',{by:n.by,id:n.id,name:n.name,n:n.n,stores:n.all?'all':n.stores,start:n.start,end:n.end,file:n.file,col:n.col});$('spForm').innerHTML='';SPF=null}
     catch(e){er('Алдаа: '+(e.code||e.message||e))}}}
 
 function plMsg(r){return '<b>'+r.n+'</b> бараа уншлаа'+(r.skip?' · '+r.skip+' мөр алгассан (гарчиг эсвэл буруу)':'')+(r.dup?' · <span class="hot">'+r.dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'. Жишээ: '+Object.entries(r.m).slice(0,3).map(x=>esc(x[0])+' → '+x[1].toLocaleString('en-US')+' ₮').join(', ')}
@@ -2594,14 +2606,14 @@ async function calcStock(){
   const st=$('sSt').value;$('sMsg').textContent='Тооцоолж байна…';stockRows=[];
   try{await loadPCat().catch(()=>{});const nmOf=c=>{const x=itRow(c);return x?x.name:''},cash=c=>{const x=itRow(c);return x?x.price:0};
     if(st==='ALL'){stockAllMode=true;const A=await stockAll();if(!A.SS.length){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">Эхний үлдэгдэл алга.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
-      stockHead=['Код','Нэр',...A.SS.map(x=>LOC[x]),'Нийт','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
+      stockHead=['Код','Нэр',...A.SS.map(x=>LOC[x]),'Нийт','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн',...ST_XH];
       negSrc={sales:A.sales,R:A.R,O:A.O,locs:A.SS};
       stockRows=[...A.M.entries()].map(([c,v])=>{const t=v.reduce((a,b)=>a+b,0),k=costMap.get(c);return {code:c,name:nmOf(c),loc:v,now:t,cost:k==null?null:k,cash:cash(c)}});
       $('sMsg').textContent='Бүх байршил · '+A.SS.map(x=>LOC[x]+' ('+lt(A.O[x].asOf)+'-аас)').join(' · ')}
     else{stockAllMode=false;const od=await db.collection('pos_stock_open').doc(st).get();if(!od.exists){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">'+LOC[st]+': эхний үлдэгдэл хадгалаагүй байна.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
       const O=od.data(),asOf=O.asOf,SD=await salesSince(sDay(asOf),st),C=stockCalc(st,O,SD);
       negSrc={sales:SD,R:{[st]:C},O:{[st]:O},locs:[st]};
-      stockHead=['Код','Нэр','Эхний','Орлого','Зарлага','Борлуулсан','Буцаалт','Тооллогын зөрүү','Одоо','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн'];
+      stockHead=['Код','Нэр','Эхний','Орлого','Зарлага','Борлуулсан','Буцаалт','Тооллогын зөрүү','Одоо','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн',...ST_XH];
       stockRows=C.rows.map(r=>({...r,name:r.name||nmOf(r.code),cost:costMap.has(r.code)?costMap.get(r.code):null,cash:cash(r.code)}));
       $('sMsg').textContent=LOC[st]+' · эхний үлдэгдэл '+lt(asOf)+' · '+C.ns+' баримт тооцсон'}
     stockRows.sort((a,b)=>a.now-b.now||a.code.localeCompare(b.code));
@@ -2839,9 +2851,13 @@ setTimeout(()=>{if($('agSt')&&!$('agSt').options.length){$('agSt').innerHTML='<o
 async function autoStock(){let ch=0;try{if(can('stock')){$('lppFrom').value=await lppFrom();ch=await lppSync(false)}}catch(e){}try{const m=await db.collection('pos_stock_view').doc('meta').get();const v=m.exists?m.data().version:'';
   $('sPubM').textContent=v?'Кассууд дахь үлдэгдэл: '+lt(v)+'-ийн байдлаар':'Кассууд руу үлдэгдэл хараахан илгээгээгүй';
   if(!v||ch||Date.now()-new Date(v)>60*60e3)publishStock(true)}catch(e){}}
+// барааны мэдээлэл (каталогоос): нийлүүлэгч, брэнд, бүлэг, загвар+өнгө (Smart «Барааны ангилал»), загвар, хэмжээ, нас, төрөл — шүүх, Excel-д
+const ST_XH=['Нийлүүлэгч','Брэнд','Бүлэг','Загвар+өнгө','Загвар','Хэмжээ','Нас','Төрөл'];
+function stX(r){const it=itRow(r.code)||{},nm=it.name||r.name||'',mc=(it.model||'').trim(),b=/^(sinsay|reserved|cropp|house|mohito)\b/i.exec(nm),c=catOf(nm);
+  return [it.sup||'',b?b[1].charAt(0).toUpperCase()+b[1].slice(1).toLowerCase():'',it.grp||'',mc,mc.split(/\s+/)[0]||'',it.size||'',c.age,c.typ]}
 function drawStock(){const q=$('sQ').value.trim().toLowerCase(),L=stockRows.filter(r=>!q||r.code.toLowerCase().includes(q)||(r.name||'').toLowerCase().includes(q));
   if(!stockRows.length){$('sTbl').innerHTML='';return}const n=v=>v==null?null:Math.round(v),val=r=>[r.cost==null?null:r.cost,r.cost==null?null:n(r.cost*r.now),r.cash||null,r.cash?n(r.cash*r.now):null];
-  const rows=stockAllMode?L.map(r=>[r.code,r.name,...r.loc.map(x=>x||null),r.now,...val(r)]):L.map(r=>[r.code,r.name,r.open,r.inn||null,r.out||null,r.sold||null,r.ret||null,r.adj||null,r.now,...val(r)]);
+  const rows=stockAllMode?L.map(r=>[r.code,r.name,...r.loc.map(x=>x||null),r.now,...val(r),...stX(r)]):L.map(r=>[r.code,r.name,r.open,r.inn||null,r.out||null,r.sold||null,r.ret||null,r.adj||null,r.now,...val(r),...stX(r)]);
   const ni=stockHead.indexOf(stockAllMode?'Нийт':'Одоо');
   // тоон дээр дарахад тухайн бараа, байршлын бүх хөдөлгөөн (баримт, хэн, хэзээ, эх баримт…)
   const KC=['open','in','out','sold','ret','adj'],st0=$('sSt').value,lk=(x,c)=>{if(x[c]==null||x[c]===0&&c!==2)return null;if(stockAllMode){const k=c-2;return k>=0&&k<negSrc.locs.length?negSrc.locs[k]+'|all':c===ni?'*|all':null}return c>=2&&c<=7?st0+'|'+KC[c-2]:c===ni?st0+'|all':null};
