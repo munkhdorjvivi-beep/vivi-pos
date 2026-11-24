@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="18.1">
+<meta name="vivi-ver" content="18.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -439,6 +439,9 @@ main textarea{max-width:100%}
         <div id="itAct" class="hide" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><select id="itMode" class="inp" style="width:auto"><option value="price">Кассын үнэ = (₮)</option><option value="pct">Үндсэн үнээс −%</option><option value="base">Үндсэн үнэ = (₮)</option><option value="reset">Кассын үнэ = үндсэн үнэ</option></select><input id="itVal" class="inp" style="width:120px" inputmode="numeric"><label class="inl small"><input type="checkbox" id="itKeep" checked> үндсэн үнэ өөрчлөхөд кассын үнийг хадгалах</label><button id="itPr" class="btn pri">Үнэ өөрчлөх</button><span class="small">·</span><input id="itLq" class="inp" style="width:70px" value="1"><button id="itLbl" class="btn">Шошгонд нэмэх</button></div>
         <div class="scroll" id="itRes" style="max-height:320px;overflow:auto;margin-top:8px"></div></div>
     </div>
+    <div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:12px"><b>3. Excel-ээр олон барааны кассын үнэ өөрчлөх</b>
+      <div class="small" style="margin:4px 0 6px">Excel оруулаад аль багана код, аль багана <b>шинэ кассын үнэ</b> болохыг сонгоно. Систем одоогийн үнэтэй тулгаж харуулна. Энэ нь үнийн өөрчлөлт — урамшуулал биш: идэвхтэй урамшуулал (1+1, −% г.м.) шинэ үнээс өөрөө тооцогдоно. Аль дэлгүүрт ямар урамшуулал байхыг «Урамшуулал» цэсэд тохируулна.</div>
+      <input type="file" id="itXf" accept=".xlsx,.xls,.csv"><div id="itXmap"></div><div id="itXmsg" class="small" style="margin-top:6px"></div></div>
     <div style="margin-top:12px"><b>Бүртгэсэн бараа, үнийн өөрчлөлт</b> <span class="small">(касс бүр каталогийн дээр хэрэглэнэ)</span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><input id="itLq2" class="inp" style="width:70px" value="1"><button id="itLbl2" class="btn">Сонгосныг шошгонд нэмэх</button><button id="itOn" class="btn">✓ Идэвхжүүлэх</button><button id="itOff" class="btn warn">⏸ Идэвхгүй болгох / үнийн өөрчлөлт цуцлах</button><button id="itDel" class="btn warn">🗑 Устгах</button></div><div class="small" style="margin-bottom:4px">Мөр бүрийн «Засах» — нэр, модель, хэмжээ, нийлүүлэгч, үнэ, өртөг, төлөв засах. «Идэвхгүй» бараа касс дээр зарагдахгүй (буцаалт хийж болно). «Устгах» — зөвхөн буруу бүртгэсэн шинэ бараанд.</div>
       <div class="scroll" id="itList" style="max-height:360px;overflow:auto"></div></div>
@@ -1934,16 +1937,18 @@ async function readPl(f){await xlsx();const wb=XLSX.read(await fileBuf(f),{type:
   a.forEach(r=>{if(!r)return;let c=r[0],v=r[1];if(c==null||v==null||v===''){if(c!=null)skip++;return}c=typeof c==='number'?String(Math.round(c)):String(c).trim();v=typeof v==='number'?v:Number(String(v).replace(/[\s,₮]/g,''));
     if(!/^[0-9A-Za-z\-]+$/.test(c)||!isFinite(v)||v<0){skip++;return}if(m[c]!=null)dup++;m[c]=Math.round(v)});
   return {m,skip,dup,n:Object.keys(m).length}}
-/* Үнийн жагсаалтын Excel: хуудас, гарчгийн мөр, код ба урамшууллын үнийн баганыг ГАРААР сонгоно (автоматаар таамаглана, хэрэглэгч шалгана).
-   Системийн одоогийн кассын үнэтэй тулгаж: хямдрах / өөрчлөгдөхгүй / өндөр (кассад хэрэглэгдэхгүй) / каталогт алга гэж ангилна. */
-function plMap(wb,fname){const box=$('e_plmap'),L=n=>XLSX.utils.encode_col(n);
+/* Excel-ээр олон барааны шинэ үнэ: хуудас, гарчгийн мөр, код ба шинэ үнийн баганыг ГАРААР сонгоно (систем таамаглана, хэрэглэгч шалгана).
+   Системийн одоогийн кассын үнэтэй тулгаж ангилна. Юу ч урьдчилан тэмдэглэгдээгүй — эргэлзээтэй бүлэг бүрийг хэрэглэгч өөрөө сонгоно.
+   mode 'price' — «Бараа, үнэ»: кассын үнийг өөрчилнө (идэвхтэй урамшуулал 1+1, −% г.м. шинэ үнээс тооцогдоно).
+   mode 'promo' — урамшууллын үнийн жагсаалт. */
+function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),L=n=>XLSX.utils.encode_col(n),PR=o.mode==='price';
   const SH=wb.SheetNames.map(n=>({n,a:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null})}));
   let si=SH.reduce((b,x,i)=>x.a.length>SH[b].a.length?i:b,0);
   const hdrRow=a=>{let best=0,bs=-1;a.slice(0,15).forEach((r,i)=>{const n=(r||[]).filter(v=>typeof v==='string'&&v.trim()&&isNaN(+v)).length;if(n>bs){bs=n;best=i}});return best};
-  const guess=(hd,re,not)=>{const i=hd.findIndex((h,j)=>h&&re.test(String(h))&&!(not||[]).includes(j));return i};
+  const guess=(hd,re,not)=>hd.findIndex((h,j)=>h&&re.test(String(h))&&!(not||[]).includes(j));
   const draw=(keep)=>{const a=SH[si].a,hr=keep&&keep.hr!=null?keep.hr:hdrRow(a),hd=(a[hr]||[]).map(v=>v==null?'':String(v)),nc=Math.max(...a.slice(0,50).map(r=>(r||[]).length),hd.length);
     let cc=keep&&keep.cc!=null?keep.cc:guess(hd,/^(код|барааны код|баркод|баар код|ean|barcode|code)$/i);if(cc<0)cc=guess(hd,/код|баркод|ean|barcode/i);if(cc<0)cc=0;
-    let pc=keep&&keep.pc!=null?keep.pc:guess(hd,/хямдрал|hyamdral|урамшуул|шинэ|shine|promo|акц|sale/i,[cc]);
+    let pc=keep&&keep.pc!=null?keep.pc:guess(hd,/хямдрал|hyamdral|урамшуул|шинэ|shine|promo|акц|sale|new/i,[cc]);
     if(pc<0){for(let j=nc-1;j>=0;j--){if(j!==cc&&a.slice(hr+1,hr+30).some(r=>r&&typeof r[j]==='number')){pc=j;break}}}
     let kc=keep&&keep.kc!=null?keep.kc:guess(hd,/кассын үнэ|kasiin une/i,[cc,pc]);
     const opt=(sel,none)=>(none?'<option value="-1"'+(sel<0?' selected':'')+'>— (байхгүй)</option>':'')+Array.from({length:nc},(_,j)=>'<option value="'+j+'"'+(j===sel?' selected':'')+'>'+L(j)+(hd[j]?' — '+esc(hd[j].slice(0,40)):'')+'</option>').join('');
@@ -1951,35 +1956,55 @@ function plMap(wb,fname){const box=$('e_plmap'),L=n=>XLSX.utils.encode_col(n);
       '<span class="small">Хуудас</span><select id="pm_s">'+SH.map((x,i)=>'<option value="'+i+'"'+(i===si?' selected':'')+'>'+esc(x.n)+' ('+x.a.length+' мөр)</option>').join('')+'</select>'+
       '<span class="small">Гарчгийн мөр</span><input id="pm_h" type="number" min="1" value="'+(hr+1)+'" style="max-width:90px">'+
       '<span class="small"><b>Код / баркод</b></span><select id="pm_c">'+opt(cc)+'</select>'+
-      '<span class="small"><b>Урамшууллын (шинэ) үнэ</b> — касс энэ үнээр зарна</span><select id="pm_p">'+opt(pc)+'</select>'+
-      '<span class="small">Одоогийн кассын үнэ (зөвхөн тулгах, заавал биш)</span><select id="pm_k">'+opt(kc,1)+'</select></div>'+
-      '<label class="inl" style="margin-top:6px"><input type="checkbox" id="pm_x" checked> Үнэ буураагүй мөрийг оруулахгүй (шинэ үнэ ≥ системийн кассын үнэ)</label><div id="pm_r" style="margin-top:8px"></div></div>';
+      '<span class="small"><b>'+(PR?'Шинэ кассын үнэ':'Урамшууллын (шинэ) үнэ')+'</b> — касс энэ үнээр зарна</span><select id="pm_p">'+opt(pc)+'</select>'+
+      '<span class="small">Одоогийн кассын үнэ (зөвхөн тулгах, заавал биш)</span><select id="pm_k">'+opt(kc,1)+'</select></div><div id="pm_r" style="margin-top:8px"></div></div>';
     const st=()=>({hr:Math.max(0,(+$('pm_h').value||1)-1),cc:+$('pm_c').value,pc:+$('pm_p').value,kc:+$('pm_k').value});
-    $('pm_s').onchange=()=>{si=+$('pm_s').value;draw()};['pm_h','pm_c','pm_p','pm_k'].forEach(id=>$(id).onchange=()=>draw(st()));$('pm_x').onchange=()=>an(st());an(st())};
-  const an=({hr,cc,pc,kc})=>{const a=SH[si].a,R={down:[],same:[],up:[],nocat:[],bad:0,xmis:[],dup:0},m={},f=n=>fmtN(Math.round(n));let pctSum=0;
+    $('pm_s').onchange=()=>{si=+$('pm_s').value;draw()};['pm_h','pm_c','pm_p','pm_k'].forEach(id=>$(id).onchange=()=>draw(st()));an(st())};
+  const an=({hr,cc,pc,kc})=>{const a=SH[si].a,R={down:[],same:[],up:[],nocat:[],bad:0,xmis:[],dup:0},seen=new Set(),f=n=>fmtN(Math.round(n));let pctSum=0;
     a.slice(hr+1).forEach(r=>{if(!r)return;let c=r[cc],v=r[pc];if(c==null||c==='')return;c=typeof c==='number'?String(Math.round(c)):String(c).trim();
       v=typeof v==='number'?v:Number(String(v==null?'':v).replace(/[\s,₮]/g,''));if(!/^[0-9A-Za-z\-]+$/.test(c)||!isFinite(v)||v<=0){R.bad++;return}v=Math.round(v);
-      const it=itRow(c),cur=it?+(it.price!=null&&it.price!==''?it.price:it.base)||0:null,xk=kc>=0&&typeof r[kc]==='number'?Math.round(r[kc]):null,row={c,v,cur,xk,name:it?it.name:''};
-      if(m[c]!=null)R.dup++;
-      if(!it){R.nocat.push(row);m[c]=v;return}
-      if(xk!=null&&cur!=null&&xk!==cur)R.xmis.push(row);
-      if(v<cur){R.down.push(row);pctSum+=(cur-v)/cur}else if(v===cur)R.same.push(row);else R.up.push(row);m[c]=v});
-    const ex=$('pm_x').checked,take={};R.down.forEach(x=>take[x.c]=x.v);R.nocat.forEach(x=>take[x.c]=x.v);if(!ex)R.same.forEach(x=>take[x.c]=x.v);
-    const n=Object.keys(take).length,tb=(L2,lim)=>'<table class="xt" style="font-size:12px;margin-top:4px"><thead><tr><th>Код</th><th>Нэр (системд)</th><th class="n">Системийн кассын үнэ</th>'+(kc>=0?'<th class="n">Excel-ийн кассын үнэ</th>':'')+'<th class="n">Шинэ үнэ</th><th class="n">%</th></tr></thead><tbody>'+
+      if(seen.has(c))R.dup++;seen.add(c);
+      const it=itRow(c),cur=it?+(it.price!=null&&it.price!==''?it.price:it.base)||0:null,xk=kc>=0&&typeof r[kc]==='number'?Math.round(r[kc]):null,row={c,v,cur,xk,name:it?it.name:'',base:it?+it.base||0:0};
+      if(!it){R.nocat.push(row);return}
+      if(xk!=null&&xk!==cur)R.xmis.push(row);
+      if(v<cur){R.down.push(row);pctSum+=(cur-v)/cur}else if(v===cur)R.same.push(row);else R.up.push(row)});
+    // эргэлзээтэй бүлэг бүр: хэрэглэгч өөрөө «оруулах / оруулахгүй» сонгоно (урьдчилан сонгоогүй)
+    const Q=[];if(R.up.length)Q.push(['up',(PR?'Үнэ ӨСНӨ (шинэ > одоогийн)':'Шинэ үнэ одоогийнхоос ӨНДӨР — касс үнийг өсгөхгүй тул нөлөөгүй'),R.up.length]);
+    if(!PR&&R.same.length)Q.push(['same','Үнэ өөрчлөгдөхгүй (шинэ = одоогийн) — оруулбал энэ жагсаалтын бараа болно',R.same.length]);
+    if(!PR&&R.nocat.length)Q.push(['nocat','Каталогт алга — касс танихгүй бол хэрэглэгдэхгүй',R.nocat.length]);
+    const tb=(L2,lim)=>'<table class="xt" style="font-size:12px;margin-top:4px"><thead><tr><th>Код</th><th>Нэр (системд)</th><th class="n">Системийн кассын үнэ</th>'+(kc>=0?'<th class="n">Excel-ийн кассын үнэ</th>':'')+'<th class="n">Шинэ үнэ</th><th class="n">%</th></tr></thead><tbody>'+
       L2.slice(0,lim).map(x=>'<tr><td>'+esc(x.c)+'</td><td>'+esc((x.name||'—').slice(0,46))+'</td><td class="n">'+(x.cur!=null?f(x.cur):'—')+'</td>'+(kc>=0?'<td class="n">'+(x.xk!=null?f(x.xk):'—')+'</td>':'')+'<td class="n"><b>'+f(x.v)+'</b></td><td class="n">'+(x.cur?Math.round((x.v-x.cur)/x.cur*100)+'%':'')+'</td></tr>').join('')+'</tbody></table>'+(L2.length>lim?'<div class="small">… '+(L2.length-lim)+' мөр</div>':'');
     $('pm_r').innerHTML='<div style="line-height:1.7">✅ Хямдарна: <b>'+fmtN(R.down.length)+'</b> бараа'+(R.down.length?' (дундаж −'+Math.round(pctSum/R.down.length*100)+'%)':'')+
-      '<br>➖ Үнэ өөрчлөгдөхгүй (шинэ = одоогийн): <b>'+fmtN(R.same.length)+'</b>'+(ex?' — оруулахгүй':' — оруулна')+
-      (R.up.length?'<br><span class="hot">⚠ Шинэ үнэ одоогийнхоос ӨНДӨР: <b>'+fmtN(R.up.length)+'</b> — оруулахгүй (касс үнийг хэзээ ч өсгөхгүй)</span>':'')+
-      (R.nocat.length?'<br><span class="hot">⚠ Барааны жагсаалтад (каталогт) алга: <b>'+fmtN(R.nocat.length)+'</b> код — оруулна, гэхдээ касс танихгүй бол хэрэглэгдэхгүй</span>':'')+
+      (PR?'<br>➖ Үнэ өөрчлөгдөхгүй (шинэ = одоогийн): <b>'+fmtN(R.same.length)+'</b> — хөндөхгүй':'')+
+      (PR&&R.nocat.length?'<br><span class="hot">⚠ Каталогт алга: <b>'+fmtN(R.nocat.length)+'</b> код — үнэ өөрчлөх боломжгүй, алгасна (эхлээд бараагаа бүртгэнэ)</span>':'')+
       (R.xmis.length?'<br><span class="hot">⚠ Excel-ийн «одоогийн кассын үнэ» системийнхээс өөр: <b>'+fmtN(R.xmis.length)+'</b> — файл хуучирсан эсвэл үнэ өөрчлөгдсөн байж болно</span>':'')+
       (R.bad?'<br><span class="small">'+R.bad+' мөр алгассан (код эсвэл үнэ хоосон/буруу, ж: «НИЙТ» мөр)</span>':'')+(R.dup?'<br><span class="small">'+R.dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'</div>'+
+      Q.map(q=>'<div style="margin-top:6px;padding:6px 8px;border:1px solid #f0c36d;background:#fff8e6;border-radius:8px"><b>'+esc(q[1])+': '+fmtN(q[2])+'</b><br><label class="inl"><input type="radio" name="pmq_'+q[0]+'" value="1"> оруулах</label> <label class="inl"><input type="radio" name="pmq_'+q[0]+'" value="0"> оруулахгүй</label></div>').join('')+
       (R.down.length?'<details open><summary class="small">Хямдрах бараа — жишээ</summary>'+tb(R.down,8)+'</details>':'')+
       (R.up.length?'<details><summary class="small hot">Үнэ өндөр мөрүүд</summary>'+tb(R.up,30)+'</details>':'')+
       (R.xmis.length?'<details><summary class="small hot">Excel ба системийн кассын үнэ зөрсөн</summary>'+tb(R.xmis,30)+'</details>':'')+
       (R.nocat.length?'<details><summary class="small hot">Каталогт алга</summary>'+tb(R.nocat,30)+'</details>':'')+
-      '<div style="margin-top:8px"><button class="btn pri" id="pm_ok" type="button"'+(n?'':' disabled')+'>✓ '+fmtN(n)+' бараа урамшуулалд оруулах</button> <span class="small">Баганууд: код = '+L(cc)+', урамшууллын үнэ = '+L(pc)+'</span></div>';
-    $('pm_ok').onclick=()=>{$('e_pl').value=Object.entries(take).map(x=>x[0]+'\t'+x[1]).join('\n');$('e_plmsg').innerHTML='✓ <b>'+fmtN(n)+'</b> бараа үнийн жагсаалтад орлоо ('+esc(fname)+', '+L(pc)+' багана). «Хадгалах» дарж урамшууллыг хадгална уу.';box.innerHTML=''}};
-  $('e_plmsg').textContent='';draw()}
+      (PR?'<label class="inl" style="margin-top:6px"><input type="checkbox" id="pm_lbl"> Өөрчилсөн барааг шошгоны дараалалд нэмэх (тус бүр 1 ш)</label>':'')+
+      '<div style="margin-top:8px"><button class="btn pri" id="pm_ok" type="button" disabled></button> <span class="small" id="pm_okm"></span></div>';
+    const upd=()=>{const ch=k=>{const x=document.querySelector('input[name="pmq_'+k+'"]:checked');return x?x.value==='1':null},miss=Q.filter(q=>ch(q[0])==null),take={};
+      R.down.forEach(x=>take[x.c]=x.v);if(ch('up'))R.up.forEach(x=>take[x.c]=x.v);if(ch('same'))R.same.forEach(x=>take[x.c]=x.v);if(ch('nocat'))R.nocat.forEach(x=>take[x.c]=x.v);
+      const n=Object.keys(take).length;$('pm_ok').textContent='✓ '+fmtN(n)+' барааны '+(PR?'кассын үнийг өөрчлөх':'үнийг урамшуулалд оруулах');$('pm_ok').disabled=!!miss.length||!n;
+      $('pm_okm').textContent=miss.length?'Дээрх '+miss.length+' асуултад хариулна уу':'Баганууд: код = '+L(cc)+', шинэ үнэ = '+L(pc);return take};
+    $('pm_r').querySelectorAll('input[type=radio]').forEach(x=>x.onchange=upd);upd();
+    $('pm_ok').onclick=()=>{const take=upd();o.onOk(take,{fname,col:L(pc),lbl:!!($('pm_lbl')&&$('pm_lbl').checked)})}};
+  draw()}
+// «Бараа, үнэ»: Excel-ээр олон барааны кассын үнэ өөрчлөх — 400-аар багцалж бичнэ
+async function itPriceBulk(take,info){const codes=Object.keys(take),m=$('itXmsg');
+  if(!confirm(codes.length+' барааны кассын үнийг өөрчлөх үү?\n('+info.fname+', '+info.col+' багана)\n\nИдэвхтэй урамшуулал (1+1, −% г.м.) шинэ үнээс тооцогдоно.'))return;
+  const by=auth.currentUser.email||'',at=new Date().toISOString(),note='Excel: '+info.fname+' ('+info.col+')';let n=0;
+  try{for(let i=0;i<codes.length;i+=400){const b=db.batch();
+      codes.slice(i,i+400).forEach(c=>{const x=itRow(c);if(!x)return;const old=PITX[x.code],price=take[c],base=Math.max(Math.round(+x.base||0),price),hist=(old&&old.hist||[]).concat([{at,by,base,price,note}]).slice(-30);
+        b.set(db.collection('pos_items').doc(x.code),{code:x.code,bc:x.bc||'',name:x.name,model:x.model||'',size:x.size||'',sup:x.sup||'',grp:x.grp||'',base,price,active:true,isNew:old?!!old.isNew:false,created:old&&old.created||at,updated:at,by,hist});n++;
+        if(info.lbl)lblAdd({...x,base,price},1)});
+      await b.commit();m.textContent='Хадгалж байна… '+n+' / '+codes.length}
+    await auditCfg('price_change_excel',{by,file:info.fname,col:info.col,n});
+    m.innerHTML='<span class="chip">✓ '+fmtN(n)+' барааны кассын үнэ өөрчлөгдлөө</span> Кассууд автоматаар авна. Буцаах бол доорх жагсаалтаас сонгоод «⏸ … үнийн өөрчлөлт цуцлах».';$('itXmap').innerHTML='';$('itXf').value=''}
+  catch(e){m.innerHTML='<span class="hot">Алдаа ('+n+' хадгалсан): '+esc(e.code||e.message||e)+'</span>'}}
 function plMsg(r){return '<b>'+r.n+'</b> бараа уншлаа'+(r.skip?' · '+r.skip+' мөр алгассан (гарчиг эсвэл буруу)':'')+(r.dup?' · <span class="hot">'+r.dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'. Жишээ: '+Object.entries(r.m).slice(0,3).map(x=>esc(x[0])+' → '+x[1].toLocaleString('en-US')+' ₮').join(', ')}
 /* Excel-ээс код унших: том файлыг (жишээ нь Smart-ын 190 000 мөртэй) арын урсгалд (Web Worker) уншина — хуудас гацахгүй.
    Хэд хэдэн хуудас кодтой бол аль хуудсыг авахыг хэрэглэгчээр сонгуулна (бүх хуудсыг нийлүүлж авахгүй). */
@@ -2056,7 +2081,7 @@ function editPromo(i){
     catch(e){$('e_fmsg').textContent='Алдаа: '+(e.message||e)}};
   const parsePl=txt=>{const m={},bad=[];txt.split(/\r?\n/).forEach((ln,i)=>{const s=ln.trim();if(!s)return;const a=s.split(/[\t;,]+|\s{2,}|\s(?=\S+$)/).map(x=>x.trim()).filter(Boolean);const c=a[0],v=Number(String(a[a.length-1]).replace(/\s/g,''));if(a.length>=2&&/^[0-9A-Za-z\-]+$/.test(c)&&isFinite(v)&&v>=0)m[c]=Math.round(v);else bad.push(i+1)});return {m,bad}};
   $('e_plf').onchange=async()=>{const f=$('e_plf').files[0];if(!f)return;$('e_plmsg').textContent='Уншиж байна…';
-    try{await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});plMap(wb,f.name)}
+    try{await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});plMap(wb,f.name,{mode:'promo',box:'e_plmap',onOk:(take,info)=>{$('e_pl').value=Object.entries(take).map(x=>x[0]+'\t'+x[1]).join('\n');$('e_plmsg').innerHTML='✓ <b>'+fmtN(Object.keys(take).length)+'</b> бараа үнийн жагсаалтад орлоо ('+esc(info.fname)+', '+info.col+' багана). «Хадгалах» дарж урамшууллыг хадгална уу.';$('e_plmap').innerHTML=''}})}
     catch(e){$('e_plmsg').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
   $('e_exf').onchange=async()=>{const f=$('e_exf').files[0];if(!f)return;$('e_exmsg').textContent='Уншиж байна…';
     try{const codes=await codesFromFile(f,$('e_exmsg')),cur=new Set($('e_excl').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)),add=codes.filter(c=>!cur.has(c));add.forEach(c=>cur.add(c));$('e_excl').value=[...cur].join('\n');$('e_exmsg').textContent=codes.length+' код олдлоо, '+add.length+' шинээр нэмэгдсэн.'}
@@ -3531,6 +3556,9 @@ $('itPr').onclick=async()=>{const codes=itSel('itck2'),m=$('itMsg');if(!codes.le
       await itSave(x,{price:'кассын үнэ '+val,pct:'үндсэн үнээс −'+val+'%',base:'үндсэн үнэ '+val,reset:'кассын үнэ = үндсэн'}[mode]);n++}
     await auditCfg('price_change',{by:auth.currentUser.email,codes,mode,val});m.innerHTML='<span class="chip">'+n+' барааны үнэ өөрчлөгдлөө</span> Кассууд автоматаар авна.';itSearch()}
   catch(e){m.innerHTML='<span class="hot">Алдаа: '+esc(e.code||e.message||e)+'</span>'}};
+$('itXf').onchange=async()=>{const f=$('itXf').files[0];if(!f)return;$('itXmsg').textContent='Уншиж байна…';
+  try{if(!PCAT)await loadPCat();await xlsx();const wb=XLSX.read(await fileBuf(f),{type:'array'});$('itXmsg').textContent='';plMap(wb,f.name,{mode:'price',box:'itXmap',onOk:itPriceBulk})}
+  catch(e){$('itXmsg').innerHTML='<span class="hot">Алдаа: '+esc(e.message||e)+'</span>'}};
 $('itLbl').onclick=()=>{const q=Math.max(1,Math.round(num0($('itLq').value)||1));itSel('itck2').forEach(c=>{const x=itRow(c);if(x)lblAdd(x,q)})};
 $('itLbl2').onclick=()=>{const q=Math.max(1,Math.round(num0($('itLq2').value)||1));itSel('itck').forEach(c=>{const x=PITX[c];if(x)lblAdd(x,q)})};
 $('itOff').onclick=async()=>{const codes=itSel('itck');if(!codes.length||!confirm(codes.length+' бараа: үнийн өөрчлөлтийг цуцлах (шинэ бараа бол касс дээр идэвхгүй болно) уу?'))return;
