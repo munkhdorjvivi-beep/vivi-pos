@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="18.8">
+<meta name="vivi-ver" content="18.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1956,7 +1956,7 @@ function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),
   const guess=(hd,re,not)=>hd.findIndex((h,j)=>h&&re.test(String(h))&&!(not||[]).includes(j));
   const draw=(keep)=>{const a=SH[si].a,hr=keep&&keep.hr!=null?keep.hr:hdrRow(a),hd=(a[hr]||[]).map(v=>v==null?'':String(v)),nc=Math.max(...a.slice(0,50).map(r=>(r||[]).length),hd.length);
     const K=PR&&keep&&keep.key||null,KM=K==='m'||K==='mc';
-    let cc=keep&&keep.cc!=null?keep.cc:KM?guess(hd,/^(барааны )?ангилал$|загвар|модел|model/i):guess(hd,/^(код|барааны код|баркод|баар код|ean|barcode|code)$/i);if(cc<0&&!KM)cc=guess(hd,/код|баркод|ean|barcode/i);if(cc<0)cc=0;
+    let cc=keep&&keep.cc!=null?keep.cc:KM?[K==='m'?/^(загвар|модел|модель|model)$/i:/^загвар\s*\+\s*өнгө$/i,/^(барааны )?ангилал$/i,/загвар|модел|model/i].reduce((r,re)=>r>=0?r:guess(hd,re),-1):guess(hd,/^(код|барааны код|баркод|баар код|ean|barcode|code)$/i);if(cc<0&&!KM)cc=guess(hd,/код|баркод|ean|barcode/i);if(cc<0)cc=0;
     let pc=keep&&keep.pc!=null?keep.pc:guess(hd,/хямдрал|hyamdral|урамшуул|шинэ|shine|promo|акц|sale|new/i,[cc]);
     if(pc<0){for(let j=nc-1;j>=0;j--){if(j!==cc&&a.slice(hr+1,hr+30).some(r=>r&&typeof r[j]==='number')){pc=j;break}}}
     let kc=keep&&keep.kc!=null?keep.kc:guess(hd,/кассын үнэ|kasiin une/i,[cc,pc]);
@@ -1976,8 +1976,8 @@ function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),
   // загвараар: Excel-ийн мөр бүр = нэг загвар → каталогийн тэр загварын бүх SKU
   const anM=({hr,cc,pc,kc,key})=>{const a=SH[si].a,f=n=>fmtN(Math.round(n)),IX=new Map();
     (PCAT||[]).forEach(r=>{const z=spZ({model:r[7],name:r[2]}),k=key==='m'?z.m:z.mc;if(!k)return;const cur=+(r[4]!=null&&r[4]!==''?r[4]:r[3])||0;(IX.get(k)||IX.set(k,[]).get(k)).push({code:r[0],name:r[2],size:r[8]||'',cur})});
-    const G=new Map();let bad=0,xmis=0;
-    a.slice(hr+1).forEach(r=>{if(!r)return;let c=r[cc],v=r[pc];if(c==null||c==='')return;const z=spZ({model:String(c)}),k=key==='m'?z.m:z.mc;
+    const G=new Map();let bad=0,xmis=0,emp=0;
+    a.slice(hr+1).forEach(r=>{if(!r)return;let c=r[cc],v=r[pc];if(c==null||c==='')return;if(v==null||v===''){emp++;return}const z=spZ({model:String(c)}),k=key==='m'?z.m:z.mc;
       v=typeof v==='number'?v:Number(String(v==null?'':v).replace(/[\s,₮]/g,''));if(!k||!isFinite(v)||v<=0){bad++;return}v=Math.round(v);
       const g=G.get(k)||G.set(k,{c:key+':'+k,k,vs:new Set(),xk:new Set()}).get(k);g.vs.add(v);if(kc>=0&&typeof r[kc]==='number')g.xk.add(Math.round(r[kc]))});
     const R={down:[],same:[],up:[],nocat:[],conf:[]};
@@ -1995,7 +1995,7 @@ function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),
       '<br>➖ Үнэ өөрчлөгдөхгүй: <b>'+fmtN(R.same.length)+'</b> загвар — хөндөхгүй'+
       (R.nocat.length?'<br><span class="hot">⚠ Каталогт олдоогүй загвар: <b>'+fmtN(R.nocat.length)+'</b> — алгасна</span>':'')+
       (xmis?'<br><span class="hot">⚠ Excel-ийн «одоогийн кассын үнэ» системийнхээс өөр загвар: <b>'+fmtN(xmis)+'</b></span>':'')+
-      (bad?'<br><span class="small">'+bad+' мөр алгассан (загвар эсвэл үнэ хоосон/буруу)</span>':'')+'</div>'+
+      (emp?'<br><span class="small">'+fmtN(emp)+' мөрөнд шинэ үнэ хоосон — хөндөхгүй</span>':'')+(bad?'<br><span class="small">'+bad+' мөр алгассан (загвар эсвэл үнэ буруу)</span>':'')+'</div>'+
       Q.map(q=>'<div style="margin-top:6px;padding:6px 8px;border:1px solid #f0c36d;background:#fff8e6;border-radius:8px"><b>'+esc(q[1])+': '+fmtN(q[2])+'</b><br><label class="inl"><input type="radio" name="pmq_'+q[0]+'" value="1"> оруулах</label> <label class="inl"><input type="radio" name="pmq_'+q[0]+'" value="0"> оруулахгүй</label></div>').join('')+
       (R.down.length?'<details open><summary class="small">Хямдрах загвар → SKU</summary>'+tb(R.down,12)+'</details>':'')+
       (R.up.length?'<details><summary class="small hot">Үнэ өсөх SKU-тай загвар</summary>'+tb(R.up,40)+'</details>':'')+
@@ -2010,7 +2010,7 @@ function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),
     $('pm_r').querySelectorAll('input[type=radio]').forEach(x=>x.onchange=upd);upd();
     $('pm_ok').onclick=()=>{const {take,n}=upd();o.onOk(take,{fname,col:L(pc),lbl:!!($('pm_lbl')&&$('pm_lbl').checked),key,nsku:n})}};
   const an=({hr,cc,pc,kc})=>{const a=SH[si].a,R={down:[],same:[],up:[],nocat:[],bad:0,xmis:[],dup:0},seen=new Set(),f=n=>fmtN(Math.round(n));let pctSum=0;
-    a.slice(hr+1).forEach(r=>{if(!r)return;let c=r[cc],v=r[pc];if(c==null||c==='')return;c=typeof c==='number'?String(Math.round(c)):String(c).trim();
+    a.slice(hr+1).forEach(r=>{if(!r)return;let c=r[cc],v=r[pc];if(c==null||c==='')return;if(v==null||v===''){R.emp=(R.emp||0)+1;return}c=typeof c==='number'?String(Math.round(c)):String(c).trim();
       v=typeof v==='number'?v:Number(String(v==null?'':v).replace(/[\s,₮]/g,''));if(!/^[0-9A-Za-z\-]+$/.test(c)||!isFinite(v)||v<=0){R.bad++;return}v=Math.round(v);
       if(seen.has(c))R.dup++;seen.add(c);
       const it=itRow(c),cur=it?+(it.price!=null&&it.price!==''?it.price:it.base)||0:null,xk=kc>=0&&typeof r[kc]==='number'?Math.round(r[kc]):null,row={c,v,cur,xk,name:it?it.name:'',base:it?+it.base||0:0};
@@ -2027,7 +2027,7 @@ function plMap(wb,fname,o){o=o||{mode:'promo',box:'e_plmap'};const box=$(o.box),
       (PR?'<br>➖ Үнэ өөрчлөгдөхгүй (шинэ = одоогийн): <b>'+fmtN(R.same.length)+'</b> — хөндөхгүй':'')+
       (PR&&R.nocat.length?'<br><span class="hot">⚠ Каталогт алга: <b>'+fmtN(R.nocat.length)+'</b> код — үнэ өөрчлөх боломжгүй, алгасна (эхлээд бараагаа бүртгэнэ)</span>':'')+
       (R.xmis.length?'<br><span class="hot">⚠ Excel-ийн «одоогийн кассын үнэ» системийнхээс өөр: <b>'+fmtN(R.xmis.length)+'</b> — файл хуучирсан эсвэл үнэ өөрчлөгдсөн байж болно</span>':'')+
-      (R.bad?'<br><span class="small">'+R.bad+' мөр алгассан (код эсвэл үнэ хоосон/буруу, ж: «НИЙТ» мөр)</span>':'')+(R.dup?'<br><span class="small">'+R.dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'</div>'+
+      (R.emp?'<br><span class="small">'+fmtN(R.emp)+' мөрөнд шинэ үнэ хоосон — хөндөхгүй</span>':'')+(R.bad?'<br><span class="small">'+R.bad+' мөр алгассан (код эсвэл үнэ буруу, ж: «НИЙТ» мөр)</span>':'')+(R.dup?'<br><span class="small">'+R.dup+' давхардсан код (сүүлийн үнийг авсан)</span>':'')+'</div>'+
       Q.map(q=>'<div style="margin-top:6px;padding:6px 8px;border:1px solid #f0c36d;background:#fff8e6;border-radius:8px"><b>'+esc(q[1])+': '+fmtN(q[2])+'</b><br><label class="inl"><input type="radio" name="pmq_'+q[0]+'" value="1"> оруулах</label> <label class="inl"><input type="radio" name="pmq_'+q[0]+'" value="0"> оруулахгүй</label></div>').join('')+
       (R.down.length?'<details open><summary class="small">Хямдрах бараа — жишээ</summary>'+tb(R.down,8)+'</details>':'')+
       (R.up.length?'<details><summary class="small hot">Үнэ өндөр мөрүүд</summary>'+tb(R.up,30)+'</details>':'')+
@@ -2064,8 +2064,12 @@ async function spPut(p,prices){const sz=new TextEncoder().encode(JSON.stringify(
   const m={...p};delete m.prices;m.live=spLive(m);const b=db.batch();b.set(db.collection('pos_pricelists_p').doc(p.id),{id:p.id,at:p.at||'',prices});b.set(db.collection('pos_pricelists').doc(p.id),m);await b.commit();SPP[p.id]={at:p.at,prices}}
 const spState=p=>{const t=todayIso();return !p.active?'зогсоосон':p.start&&t<p.start?'хүлээгдэж буй':p.end&&t>p.end?'дууссан':'идэвхтэй'};
 /* Загвар: Smart «Барааны ангилал» (ж: «2217L 99X»): m = эхний хэсэг (загвар), mc = бүтнээрээ (загвар+өнгө). Ангилалгүй бол LPP нэрнээс («Sinsay 1570F …»). */
-function spZ(x){const mf=String(x.model==null?'':x.model).trim().replace(/\s+/g,' ').toUpperCase();if(mf)return {m:mf.split(' ')[0],mc:mf};
-  const l=/^(sinsay|reserved|cropp|house|mohito)\s+(\S+)/i.exec(String(x.name||'').trim());return {m:l?l[2].toUpperCase():'',mc:''}}
+function spZ(x){const nm=String(x.name||'').trim(),mf=String(x.model==null?'':x.model).trim().replace(/\s+/g,' ').toUpperCase(),f=mf.split(' ')[0];
+  const l=/^(sinsay|reserved|cropp|house|mohito|defacto)\s+(\S+)\s*(.*)$/i.exec(nm);let sz='',c='';
+  if(l){const t=l[3].split(/\s+/).filter(Boolean);if(t.length&&/^(\d{2,3}(\/\d{2,3})?|\d?X{0,3}[SML]|\dXL|X{1,3}L|ONE|\d{1,2}Y|\d{2}-\d{2}|00X)$/i.test(t[t.length-1]))sz=t.pop();
+    if(t.length>1&&!/^(эмэгтэй|эрэгтэй|хүүхэд|хүүхдийн|охид|хөвгүүд|нярай|унисекс|unisex)$/i.test(t[t.length-1]))c=t[t.length-1].toUpperCase()}
+  if(mf&&(/\d/.test(f)||!nm))return {m:f,mc:mf.includes(' ')||!c?mf:f+' '+c,sz};
+  if(!l)return {m:'',mc:'',sz:''};const m=l[2].toUpperCase();return {m,mc:c?m+' '+c:m,sz}}
 // жагсаалт доторх үнэ: эхлээд код/баркод, дараа нь загвар (жагсаалтын түлхүүрээр)
 function spV(p,l){const P=p.prices;if(!P)return null;if(P[l.code]!=null)return P[l.code];if(l.bc&&P[l.bc]!=null)return P[l.bc];
   if(p.key==='m'||p.key==='mc'){const it=l.model!=null?l:Object.assign({},itRow(l.code)||{},l),z=spZ(it),k=p.key==='m'?z.m:z.mc;if(k&&P[p.key+':'+k]!=null)return P[p.key+':'+k]}return null}
@@ -2101,7 +2105,7 @@ function spDraw(){spOldDraw();if(!$('spList'))return;const L=PLISTS.slice().sort
 async function spToggle(id){const p=PLISTS.find(x=>x.id===id);if(!p)return;if(!confirm('«'+p.name+'» — '+(p.active?'зогсоох (касс хуучин үнээр зарна)':'дахин идэвхжүүлэх')+' үү?'))return;
   const a=!p.active;try{await db.collection('pos_pricelists').doc(id).update({active:a,live:spLive({...p,active:a})});await auditCfg('pricelist_toggle',{by:auth.currentUser.email,id,name:p.name,active:a})}catch(e){alert('Алдаа: '+(e.code||e.message||e))}}
 async function spXl(id){const p=PLISTS.find(x=>x.id===id);if(!p)return;await xlsx();if(p.key&&p.key!=='bc'&&!PCAT)await loadPCat();const pr=await spPrices(p.id,p.at);
-  const A=[['Код','Нэр','Нийлүүлэгч','Загвар','Хэмжээ','Үндсэн үнэ','Кассын үнэ (каталог)','Шинэ үнэ','%','Түлхүүр']].concat(spExpand(pr,p.key).map(([c,v,k])=>{const r=itRow(c)||{},cur=+(r.price!=null&&r.price!==''?r.price:r.base)||0;return [c,r.name||'',r.sup||'',r.model||'',r.size||'',+r.base||0,cur,v,cur?Math.round((v-cur)/cur*100):'',k]}));
+  const A=[['Код','Нэр','Нийлүүлэгч','Загвар','Хэмжээ','Үндсэн үнэ','Кассын үнэ (каталог)','Шинэ үнэ','%','Түлхүүр']].concat(spExpand(pr,p.key).map(([c,v,k])=>{const r=itRow(c)||{},z=spZ(r),cur=+(r.price!=null&&r.price!==''?r.price:r.base)||0;return [c,r.name||'',r.sup||'',z.m,r.size||z.sz,+r.base||0,cur,v,cur?Math.round((v-cur)/cur*100):'',k]}));
   const ws=XLSX.utils.aoa_to_sheet(A);ws['!cols']=[16,46,20,14,8,11,12,11,6,14].map(w=>({wch:w}));ws['!autofilter']={ref:'A1:J'+A.length};const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Үнэ');XLSX.writeFile(wb,'une_'+(p.name||'jagsaalt').replace(/[^\wА-Яа-яӨөҮүЁё-]+/g,'_')+'.xlsx')}
 async function spForm(id){const ed=id?PLISTS.find(x=>x.id===id):null;let edp=null;if(ed)try{edp=await spPrices(ed.id,ed.at)}catch(e){return alert('Алдаа: '+(e.code||e.message||e))}
   const p=ed?{...JSON.parse(JSON.stringify(ed)),prices:edp}:{id:'sp'+Date.now(),name:'',all:false,stores:[],start:'',end:'',active:true,prices:{}};SPF={p,take:ed?{...edp}:null,info:ed?{fname:ed.file,col:ed.col,key:ed.key||'bc',nsku:ed.nsku||ed.n}:null};
@@ -2908,8 +2912,9 @@ async function autoStock(){let ch=0;try{if(can('stock')){$('lppFrom').value=awai
   if(!v||ch||Date.now()-new Date(v)>60*60e3)publishStock(true)}catch(e){}}
 // барааны мэдээлэл (каталогоос): нийлүүлэгч, брэнд, бүлэг, загвар+өнгө (Smart «Барааны ангилал»), загвар, хэмжээ, нас, төрөл — шүүх, Excel-д
 const ST_XH=['Нийлүүлэгч','Брэнд','Бүлэг','Загвар+өнгө','Загвар','Хэмжээ','Нас','Төрөл'];
-function stX(r){const it=itRow(r.code)||{},nm=it.name||r.name||'',mc=(it.model||'').trim(),b=/^(sinsay|reserved|cropp|house|mohito)\b/i.exec(nm),c=catOf(nm);
-  return [it.sup||'',b?b[1].charAt(0).toUpperCase()+b[1].slice(1).toLowerCase():'',it.grp||'',mc,mc.split(/\s+/)[0]||'',it.size||'',c.age,c.typ]}
+// Загвар/өнгө/хэмжээ: каталогт (Smart «Барааны ангилал», «хэмжээ») байхгүй бол LPP нэрнээс («Sinsay 5261F Цамц Эрэгтэй Хөх M») — касс, үнийн жагсаалт яг ижил түлхүүр (spZ) ашиглана
+function stX(r){const it=itRow(r.code)||{},nm=it.name||r.name||'',z=spZ({model:it.model,name:nm}),b=/^(sinsay|reserved|cropp|house|mohito|defacto)\b/i.exec(nm),c=catOf(nm);
+  return [it.sup||'',b?b[1].charAt(0).toUpperCase()+b[1].slice(1).toLowerCase():'',it.grp||'',z.mc,z.m,it.size||z.sz,c.age,c.typ]}
 function drawStock(){const q=$('sQ').value.trim().toLowerCase(),L=stockRows.filter(r=>!q||r.code.toLowerCase().includes(q)||(r.name||'').toLowerCase().includes(q));
   if(!stockRows.length){$('sTbl').innerHTML='';return}const n=v=>v==null?null:Math.round(v),val=r=>[r.cost==null?null:r.cost,r.cost==null?null:n(r.cost*r.now),r.cash||null,r.cash?n(r.cash*r.now):null];
   const rows=stockAllMode?L.map(r=>[r.code,r.name,...r.loc.map(x=>x||null),r.now,...val(r),...stX(r)]):L.map(r=>[r.code,r.name,r.open,r.inn||null,r.out||null,r.sold||null,r.ret||null,r.adj||null,r.now,...val(r),...stX(r)]);
