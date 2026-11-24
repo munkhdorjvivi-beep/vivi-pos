@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.2">
+<meta name="vivi-ver" content="8.3">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -1577,12 +1577,23 @@ $('lGo').onclick=async()=>{await jrReady;
   if(!device.store)return $('lMsg').textContent='Энэ касс дэлгүүрт бэхлэгдээгүй';
   if(!(u.role==='admin'||!u.stores.length||device.store==='YV'||u.stores.includes(device.store)))return $('lMsg').textContent='Та '+STORES[device.store]+' дэлгүүрт ажиллах эрхгүй';
   if($('lPin').value!==u.pin)return $('lMsg').textContent='ПИН буруу';
+  // нэг кассчин нэг зэрэг хоёр компьютер дээр нэвтэрч болохгүй (касс бүр 2 минут тутам «хэн нэвтэрсэн»-ээ үүлд илгээдэг)
+  if(loginOk!==u.id){$('lMsg').textContent='Шалгаж байна…';const o=await userElsewhere(u.name);$('lMsg').textContent='';
+    if(o){const m=Math.max(0,Math.round((Date.now()-new Date(o.lastSeen))/60000));
+      openModal('<h2>'+esc(u.name)+' өөр кассанд нэвтэрсэн байна</h2><div>'+esc(STORES[o.store]||o.store||'')+' · Касс '+esc(o.reg)+' — '+(m?m+' минутын өмнө':'дөнгөж сая')+' идэвхтэй байсан.</div><div class="small" style="margin-top:8px">Нэг кассчин нэг зэрэг хоёр кассанд ажиллаж болохгүй. Эхлээд тэр кассаас «Гарах» дарна уу. Тэр компьютер унтарсан бол 5 минутын дараа автоматаар чөлөөлөгдөнө, яаралтай бол админ зөвшөөрнө.</div><div class="rowbtn"><button id="rbC">Болих</button><button id="rbA">Админ зөвшөөрөл</button></div>');
+      $('rbC').onclick=()=>{closeModal();$('lPin').value='';$('lCash').focus()};
+      $('rbA').onclick=async()=>{if(!await askPin('Хоёр дахь кассанд нэвтрэх','admin'))return;closeModal();loginOk=u.id;loginOkBy={by:askPin.by,dev:o.dev,reg:o.reg};$('lGo').click()};return}}
+  const ovr=loginOk===u.id?loginOkBy:null;loginOk=null;
   S.user={store:device.store,reg:$('lReg').value,name:u.name,uid:u.id,role:u.role};$('lPin').value='';$('lMsg').textContent='';
-  S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',{});counterSync(S.user.store,S.user.reg);header();permButtons();setTimeout(gdAfterLogin,700);
+  S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',ovr?{override:ovr}:{});devBeat();counterSync(S.user.store,S.user.reg);header();permButtons();setTimeout(gdAfterLogin,700);
   if(S.shift&&shiftClosedLocal(S.shift.id)){shiftDrop(shiftClosedLocal(S.shift.id),'login_local');return}
   if(S.shift){show('sale');render();$('scan').focus();shiftStaleCheck().then(x=>{if(!x&&shiftGuard())shiftHandover()})}else{show('shiftopen');$('sFloat').select()}
 };
 $('lPin').onkeydown=e=>{if(e.key==='Enter')$('lGo').click()};$('lZ').onclick=zList;
+let loginOk=null,loginOkBy=null;
+async function userElsewhere(name){if(!(fb.ready&&fb.user&&navigator.onLine&&device.store))return null;
+  try{const lim=Date.now()-5*60000,r=await Promise.race([fb.db.collection('pos_devices').where('store','==',device.store).get(),new Promise(res=>setTimeout(()=>res(null),5000))]);if(!r)return null;
+    return r.docs.map(d=>d.data()).find(d=>d.dev&&d.dev!==DEVID&&d.active!==false&&d.user===name&&new Date(d.lastSeen||0).getTime()>lim)||null}catch(e){return null}}
 // Нэг дэлгүүрт нэг касс № зөвхөн нэг компьютер дээр — давхар бол баримтын дугаар давхардана
 const DEVID=store.get('devid',null)||(()=>{const v=uuid();store.set('devid',v);return v})();
 // өөр компьютер дээрх нээлттэй ээлж: (1) энэ касс № дээр, (2) энэ кассчин (нэг хүн хоёр ээлжтэй бол бэлэн мөнгөний хариуцлага холилдоно)
@@ -1625,7 +1636,7 @@ function shiftOpenNow(){
   const d=now();S.shift={dev:DEVID,id:S.user.store+'-'+S.user.reg+'-'+d.getFullYear()+pad(d.getMonth()+1,2)+pad(d.getDate(),2)+'-'+pad(d.getHours(),2)+pad(d.getMinutes(),2),opened:d.toISOString(),openedBy:S.user.name,float:num($('sFloat').value)};
   store.set('shift_'+S.user.store+'-'+S.user.reg,S.shift);shiftOut({...S.shift,store:S.user.store,reg:S.user.reg});log('shift_open',{id:S.shift.id,float:S.shift.float});header();show('sale');render();$('scan').focus();
 };
-function logout(){if(S.cart.length)return flash('Эхлээд баримтаа дуусгах эсвэл түр хадгална уу');S.user=null;applyDevice();fillCashiers();show('login');$('lCash').focus();if(updVer)updGo()}
+function logout(){if(S.cart.length)return flash('Эхлээд баримтаа дуусгах эсвэл түр хадгална уу');S.user=null;devBeat();applyDevice();fillCashiers();show('login');$('lCash').focus();if(updVer)updGo()}
 /* ---------- wiring ---------- */
 $('scan').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();onScan()}};
 $('bSearch').onclick=()=>openSearch($('scan').value.trim());
