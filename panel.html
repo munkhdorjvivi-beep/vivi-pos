@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="17.8">
+<meta name="vivi-ver" content="17.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -552,6 +552,8 @@ main textarea{max-width:100%}
       <label class="btn" style="cursor:pointer">Excel-ээс (A код, B нэр)<input type="file" id="ptFile" accept=".xlsx,.xls,.csv" class="hide"></label><span id="ptMsg" class="small"></span></div>
     <div class="scroll" id="cPart" style="max-height:360px;overflow:auto"></div></div>
   <div class="card"><h2>Нөөц хуулбар</h2><div class="small" style="margin-bottom:8px">POS-ын бүх өгөгдлийг (борлуулалт, буцаалт, ээлж, хяналт, хүсэлт, хөдөлгөөн, тохиргоо, бараа, үнэ) нэг файлд татна. Долоо хоногт нэг удаа татаж, компьютертоо хадгална уу.</div><button id="bkGo" class="btn pri">Нөөц хуулбар (JSON) татах</button> <span id="bkMsg" class="small"></span></div>
+  <div class="card" id="pfCard"><h2>⏱ Хурдны шинжилгээ</h2><div class="small" style="margin-bottom:8px">Асаагаад цэс, дэд цэс бүрийг нэг нэгээр нээнэ. Цэс бүр сангаас хэдэн бичлэг, хэдэн KB уншиж, хэдэн секунд зарцуулсныг бүртгэнэ. «Бүх түүхийг уншдаг» мөрүүд хугацаа өнгөрөх тусам удааширна — 1 жилийн дараах хэмжээг тооцоолж харуулна. Дууссаны дараа унтраана уу.</div>
+    <button id="pfOn" class="btn"></button> <button id="pfShow" class="btn pri">Үр дүн харах</button> <span id="pfMsg" class="small"></span></div>
   </div>
 </section>
 </main>
@@ -571,6 +573,39 @@ const STORES={FC:'Food city',DR:'Драгон',NS:'Нийслэл',YV:'Явуу�
 const MOB=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<900);
 let db,auth,unsub=[],sales=[],audit=[],shifts=[],reqs=[],reqOn=false,allSales=[],allAudit=[],allShifts=[],allReqs=[],gSt='';
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Firebase SDK ачаалагдсангүй. Интернэт холболтоо шалгана уу.'));document.head.appendChild(s)})}
+/* ==== ⏱ Хурдны шинжилгээ (зөвхөн асаасан үед, localStorage vivi_perf=1): сангаас уншсан бичлэг, хэмжээ, хугацааг цэс бүрээр бүртгэнэ ==== */
+const PERF={on:(()=>{try{return localStorage.getItem('vivi_perf')==='1'}catch(e){return false}})(),L:[],start:null};
+function perfPhase(){const a=document.querySelector('#tabs [data-tab].on'),b=document.querySelector('#subtabs .on'),cl=x=>x.textContent.replace(/\d+$/,'').trim();
+  return a?cl(a)+(b&&!$('subtabs').classList.contains('hide')?' › '+cl(b):''):'Нэвтрэх'}
+function perfSize(sn){let n=0,b=0;const ds=sn&&sn.docs?sn.docs:sn&&sn.exists!==undefined?[sn]:[];for(const d of ds){n++;if(d.exists===false)continue;try{b+=JSON.stringify(d.data()).length}catch(e){}}return {n,b}}
+const perfArg=a=>Array.isArray(a)?'['+a.length+']':typeof a==='string'?(/^\d{4}[-/]\d\d[-/]\d\d/.test(a)?'«огноо»':"'"+a.slice(0,24)+"'"):typeof a==='number'?String(a):'…';
+function perfAdd(r){r.at=Date.now();PERF.L.push(r);if(PERF.L.length>4000)PERF.L.shift();return r}
+function perfWrap(x,desc){if(!x||typeof x!=='object')return x;return new Proxy(x,{get(t,p){const v=t[p];if(typeof v!=='function')return v;
+  if(p==='collection')return (...a)=>perfWrap(v.apply(t,a),String(a[0]));
+  if(['where','orderBy','limit','limitToLast','startAfter','startAt','endAt'].includes(p))return (...a)=>perfWrap(v.apply(t,a),desc+'.'+p+'('+a.map(perfArg).join(',')+')');
+  if(p==='doc')return (...a)=>perfWrap(v.apply(t,a),desc+'/доc');
+  if(p==='get')return (...a)=>{const ph=perfPhase(),t0=performance.now();return v.apply(t,a).then(sn=>{try{const z=perfSize(sn);perfAdd({ph,q:desc,k:'get',n:z.n,b:z.b,ms:performance.now()-t0})}catch(e){}return sn})};
+  if(p==='onSnapshot')return (...a)=>{const i=a.findIndex(f=>typeof f==='function');if(i<0)return v.apply(t,a);const ph=perfPhase(),t0=performance.now(),f=a[i];let rec=null;
+    a[i]=sn=>{try{if(!rec){const z=perfSize(sn);rec=perfAdd({ph,q:desc,k:'listen',n:z.n,b:z.b,ms:performance.now()-t0,upd:0})}else rec.upd+=sn.docChanges?sn.docChanges().length:1}catch(e){}return f(sn)};return v.apply(t,a)};
+  return v.bind(t)}})}
+// бүх түүхийг уншдаг эсэх: огноо/хугацааны хязгаар, limit, нэг баримт бичиг биш
+const perfGrow=q=>(/'>=',«огноо»/.test(q)&&!/'<=?',«огноо»/.test(q))||!/«огноо»|\.limit(?:ToLast)?\(|\/доc$|'(?:sent|pending|open)'/.test(q)&&!/^(?:wh_users|pos_(?:config|catalog|items|itemcost|cost|panel_users|guides|devices|dept|promos?))\b/.test(q);
+async function perfShow(){if(!PERF.on)return alert('Эхлээд «Асаах» дарж, цэсүүдийг нээнэ үү');
+  if(!PERF.start)try{const q=await db.collection('pos_day').orderBy('date').limit(1).get();PERF.start=q.docs.length?q.docs[0].data().date:null;PERF.L=PERF.L.filter(r=>r.q!=="pos_day.orderBy('date').limit(1)")}catch(e){}
+  const days=PERF.start?Math.max(1,Math.round((Date.now()-new Date(PERF.start.replace(/\//g,'-')+'T12:00:00'))/864e5)):null,y=x=>days?Math.round(x*365/days):null;
+  const P=new Map();PERF.L.forEach(r=>{const x=P.get(r.ph)||P.set(r.ph,{ph:r.ph,n:0,b:0,ms:0,q:0,g:0}).get(r.ph);x.n+=r.n;x.b+=r.b;x.ms=Math.max(x.ms,r.ms);x.q++;if(perfGrow(r.q))x.g+=r.n});
+  const ph=[...P.values()].sort((a,b)=>b.b-a.b),kb=b=>Math.round(b/1024);
+  $('pbox').innerHTML='<h2 style="margin:0 0 4px">⏱ Хурдны шинжилгээ</h2><div class="small">Систем '+(PERF.start?esc(PERF.start)+'-аас ('+days+' өдөр)':'—')+' · бүртгэсэн '+PERF.L.length+' уншилт · «1 жилийн дараа» = бүх түүхийг уншдаг мөрүүдийг өдрийн өсөлтөөр тооцоолсон</div>'+
+    '<h3 style="margin:10px 0 4px;font-size:14px">Цэс бүрээр (хамгийн хүнд нь дээр)</h3><div class="scroll" style="max-height:260px;overflow:auto"><table class="xt"><thead><tr><th>Цэс</th><th class="n">Уншилт</th><th class="n">Бичлэг</th><th class="n">KB</th><th class="n">Хамгийн удаан, сек</th><th class="n">Үүнээс бүх түүх</th><th class="n">1 жилийн дараа (бичлэг)</th></tr></thead><tbody>'+
+    ph.map(x=>'<tr><td>'+esc(x.ph)+'</td><td class="n">'+x.q+'</td><td class="n">'+fmtN(x.n)+'</td><td class="n">'+fmtN(kb(x.b))+'</td><td class="n">'+(x.ms/1000).toFixed(1)+'</td><td class="n">'+fmtN(x.g)+'</td><td class="n">'+(x.g&&days?'<b>≈ '+fmtN(x.n-x.g+y(x.g))+'</b>':'')+'</td></tr>').join('')+'</tbody></table></div>'+
+    '<h3 style="margin:10px 0 4px;font-size:14px">Уншилт бүр</h3><div class="scroll" style="max-height:300px;overflow:auto"><table class="xt"><thead><tr><th>Цэс</th><th>Асуулга</th><th>Төрөл</th><th class="n">Бичлэг</th><th class="n">KB</th><th class="n">сек</th><th class="n">Дараа ирсэн өөрчлөлт</th><th>Бүх түүх</th></tr></thead><tbody>'+
+    PERF.L.slice().sort((a,b)=>b.b-a.b).slice(0,400).map(r=>'<tr><td>'+esc(r.ph)+'</td><td style="font-family:monospace;font-size:11px">'+esc(r.q)+'</td><td>'+(r.k==='get'?'нэг удаа':'шууд')+'</td><td class="n">'+fmtN(r.n)+'</td><td class="n">'+fmtN(kb(r.b))+'</td><td class="n">'+(r.ms/1000).toFixed(1)+'</td><td class="n">'+(r.upd||'')+'</td><td>'+(perfGrow(r.q)?'⚠ өснө':'')+'</td></tr>').join('')+'</tbody></table></div>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn" id="pfCsv">⬇ CSV татах</button><button class="btn" id="pfClr">Цэвэрлэх</button><button class="btn pri" id="pfX">Хаах</button></div>';
+  $('pm').classList.remove('hide');$('pfX').onclick=pClose;$('pfClr').onclick=()=>{PERF.L=[];pClose()};
+  $('pfCsv').onclick=()=>{const rows=[['menu','query','type','docs','kb','sec','updates','grows'],...PERF.L.map(r=>[r.ph,r.q,r.k,r.n,kb(r.b),(r.ms/1000).toFixed(2),r.upd||0,perfGrow(r.q)?1:0])];
+    const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n'),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='vivi_hurd_'+iso(new Date())+'.csv';a.click()}}
+function perfUi(){if(!$('pfOn'))return;$('pfOn').textContent=PERF.on?'⏹ Унтраах':'▶ Асаах';$('pfMsg').textContent=PERF.on?'Асаалттай — '+PERF.L.length+' уншилт бүртгэсэн':'';
+  $('pfOn').onclick=()=>{try{localStorage.setItem('vivi_perf',PERF.on?'0':'1')}catch(e){}location.reload()};$('pfShow').onclick=perfShow}
 async function init(){
   try{
     if(!window.firebase)for(const m of ['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+FB_VER+'/firebase-'+m+'-compat.js');
@@ -579,6 +614,7 @@ async function init(){
     // Утас/таблет: төхөөрөмжийн кэш ашиглахгүй — iPhone-д санах ой дүүрч хуудас унадаг («A problem repeatedly occurred»). Өмнөх кэшийг нэг удаа цэвэрлэнэ.
     if(MOB){try{if(!localStorage.getItem('vivi_pclr2')&&db.clearPersistence)db.clearPersistence().then(()=>localStorage.setItem('vivi_pclr2','1')).catch(()=>{})}catch(e){}}
     else try{const pr=db.enablePersistence&&db.enablePersistence({synchronizeTabs:true});if(pr&&pr.catch)pr.catch(e=>console.warn('persistence',e&&e.code))}catch(e){}
+    if(PERF.on){db=perfWrap(db,'');document.body.insertAdjacentHTML('beforeend','<div style="position:fixed;left:8px;bottom:8px;z-index:9999;background:#b3261e;color:#fff;padding:4px 10px;border-radius:12px;font-size:12px;cursor:pointer" onclick="perfShow()">⏱ хурдны шинжилгээ асаалттай — харах</div>')}
     auth.onAuthStateChanged(async u=>{if(!u){ME=null;$('login').classList.remove('hide');$('app').classList.add('hide');return}
       const em=(u.email||'').toLowerCase();let P=null;
       if(em===PANEL_EMAIL)P={owner:true,admin:true,perms:PERM_ALL};
@@ -625,7 +661,7 @@ let ME=null;
 const can=p=>!!ME&&(ME.admin||ME.perms.includes(p)||(!!PERM_PARENT[p]&&ME.perms.includes(PERM_PARENT[p])));
 const canSome=m=>can(m)||(PERM_SUB[m]||[]).some(x=>can(x[0]));
 const canTab=t=>t==='users'?!!(ME&&ME.admin):t==='guide'?!!ME:canSome(t);
-function applyPerms(){if($('lppCard'))$('lppCard').style.display=can('stock')?'':'none';if($('tillMain'))$('tillMain').style.display=can('till.cfg')?'contents':'none';if($('bnWrap'))$('bnWrap').hidden=!can('bonus');document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.hidden=!canTab(b.dataset.tab));document.body.classList.toggle('nocost',!can('cost'));showTab(location.hash.slice(1)||'home')}
+function applyPerms(){try{if($('pfCard'))$('pfCard').hidden=!(ME&&ME.admin);perfUi()}catch(e){}if($('lppCard'))$('lppCard').style.display=can('stock')?'':'none';if($('tillMain'))$('tillMain').style.display=can('till.cfg')?'contents':'none';if($('bnWrap'))$('bnWrap').hidden=!can('bonus');document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.hidden=!canTab(b.dataset.tab));document.body.classList.toggle('nocost',!can('cost'));showTab(location.hash.slice(1)||'home')}
 /* ---- Хүсэлтүүд: буцаалт (зөвшөөрөл), солилт (хийгдсэн — нягтлан баталгаажуулна), төлбөрийн хэлбэр засах (батлахад баримт өөрчлөгдөнө) ---- */
 const RQK={return:'Буцаалт',exchange:'Солилт',paychange:'Төлбөр засах'};
 const payTxt=L=>(L||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))+' <b>'+money(p.amount)+'</b>').join('<br>');
