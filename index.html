@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.6">
+<meta name="vivi-ver" content="8.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -356,9 +356,14 @@ const item=i=>{const x={code:CAT[i][0],bc:CAT[i][1]?String(CAT[i][1]):'',name:CA
 /* 💲 Самбарын «Шинэ үнэ (Excel)»: энэ дэлгүүр, өнөөдөрт хүчинтэй жагсаалтын үнэ = кассын үнэ (урамшуулал үүнээс тооцогдоно).
    Хэд хэдэн жагсаалтад байвал хамгийн сүүлд эхэлсэн (дараа нь хадгалсан) нь хүчинтэй. */
 let PLISTS=store.get('pricelists',[]);
+/* Загвараар жагсаалт (key m / mc): Smart «Барааны ангилал» («2217L 99X») → m = «2217L», mc = «2217L 99X». Ангилалгүй бол LPP нэрнээс. Жагсаалт дотор код/баркод түрүүлнэ. */
+function spZ(x){const mf=String(x.model==null?'':x.model).trim().replace(/\s+/g,' ').toUpperCase();if(mf)return {m:mf.split(' ')[0],mc:mf};
+  const l=/^(sinsay|reserved|cropp|house|mohito)\s+(\S+)/i.exec(String(x.name||'').trim());return {m:l?l[2].toUpperCase():'',mc:''}}
+function spV(p,x){const P=p.prices;if(!P)return null;if(P[x.code]!=null)return P[x.code];if(x.bc&&P[x.bc]!=null)return P[x.bc];
+  if(p.key==='m'||p.key==='mc'){const z=spZ(x),k=p.key==='m'?z.m:z.mc;if(k&&P[p.key+':'+k]!=null)return P[p.key+':'+k]}return null}
 function spFor(x){if(!PLISTS.length||!S.user)return null;const st=S.user.store,t=today();let best=null;
   for(const p of PLISTS){if(!p.active||(p.start&&t<p.start)||(p.end&&t>p.end))continue;if(!p.all&&!(p.stores||[]).includes(st))continue;
-    const v=p.prices&&(p.prices[x.code]!=null?p.prices[x.code]:(x.bc&&p.prices[x.bc]!=null?p.prices[x.bc]:null));if(v==null)continue;
+    const v=spV(p,x);if(v==null)continue;
     if(!best||(p.start||'')>(best.p.start||'')||((p.start||'')===(best.p.start||'')&&(p.at||'')>(best.p.at||'')))best={p,v:Math.round(v)}}
   return best}
 /* ---------- state ---------- */
