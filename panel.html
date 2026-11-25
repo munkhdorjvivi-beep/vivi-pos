@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="19.4">
+<meta name="vivi-ver" content="19.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1901,13 +1901,14 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-zp]');if(!
 function showTab(t,push){if(TAB_RED[t]){try{localStorage.setItem('vivipanel_sub_rep',TAB_RED[t])}catch(e){}t='rep'}if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
   document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   document.querySelectorAll('section[data-panel]').forEach(x=>x.hidden=x.dataset.panel!==t);
-  CURTAB=t;drawSubtabs(t);if(t==='set'){lcDraw();loadPCat().then(lcDraw).catch(()=>{})}
+  CURTAB=t;drawSubtabs(t);if(t==='set'){setTimeout(()=>{try{lcDraw()}catch(e){}},0);loadPCat().then(lcDraw).catch(()=>{})}
   try{localStorage.setItem('vivipanel_tab',t)}catch(e){}
   if(push&&location.hash!=='#'+t)history.pushState(null,'','#'+t);window.scrollTo(0,0)}
 $('tabs').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)showTab(b.dataset.tab,true)};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)showTab(b.dataset.go,true)});
 window.addEventListener('popstate',()=>showTab(location.hash.slice(1)));
-showTab(location.hash.slice(1)||(()=>{try{return localStorage.getItem('vivipanel_tab')}catch(e){return ''}})()||'home');
+// эхлэхэд: аль ч цэсний алдаа нэвтрэлтийг эвдэхгүй (19.4.1: «Тохиргоо» дээр нээхэд LPPH эрт дуудагдаж нэвтрэх боломжгүй болдог байсан)
+try{showTab(location.hash.slice(1)||(()=>{try{return localStorage.getItem('vivipanel_tab')}catch(e){return ''}})()||'home')}catch(e){console.warn('showTab',e);try{showTab('home')}catch(e2){}}
 // Дэлгүүр сонгох (толгойд) — дэлгүүрийн хавтангуудтай ижил
 $('gStSel').onchange=()=>{gSt=$('gStSel').value;['fSt','xSt'].forEach(id=>{if($(id))$(id).value=gSt});draw()};
 
