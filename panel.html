@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="19.7">
+<meta name="vivi-ver" content="19.9">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -471,14 +471,14 @@ main textarea{max-width:100%}
         <div id="lbPick" style="margin-top:6px"></div></div>
       <div style="border:1px solid var(--line);border-radius:10px;padding:10px"><b>2. Цаас, загвар</b>
         <div class="frm" style="margin-top:6px">
-          <div><label class="f">Цаас</label><select id="lbPaper" class="inp"><option value="40x30">Наалт 40×30 мм</option><option value="50x30">Наалт 50×30 мм</option><option value="58x40">Наалт 58×40 мм</option><option value="30x20">Наалт 30×20 мм</option><option value="60x40">Наалт 60×40 мм</option><option value="a4">A4 хуудас (олон шошго)</option><option value="custom">Бусад хэмжээ…</option></select></div>
-          <div><label class="f">Загвар</label><select id="lbTpl" class="inp"><option value="smart">Энгийн: нэр · үнэ · баркод (Smart шиг)</option><option value="full">Дэлгэрэнгүй: VIVI · хэмжээ · загвар · хуучин үнэ</option></select></div>
+          <div><label class="f">Цаас</label><select id="lbPaper" class="inp"><option value="40x30">Наалт 40×30 мм</option><option value="50x30">Наалт 50×30 мм</option><option value="58x40">Наалт 58×40 мм</option><option value="30x20">Наалт 30×20 мм</option><option value="20x30">Наалт 20×30 мм (нарийн, босоо)</option><option value="60x40">Наалт 60×40 мм</option><option value="a4">A4 хуудас (олон шошго)</option><option value="custom">Бусад хэмжээ…</option></select></div>
+          <div><label class="f">Загвар</label><select id="lbTpl" class="inp"><option value="full" selected>VIVI: лого · хэмжээ · нэр, загвар · баркод · үнэ</option><option value="smart">Smart шиг: нэр · үнэ · баркод</option></select></div>
           <div><label class="f">Өргөн × өндөр (мм)</label><div style="display:flex;gap:4px;align-items:center"><input id="lbW" class="inp" style="width:70px" value="40"><span>×</span><input id="lbH" class="inp" style="width:70px" value="30"></div></div>
           <div id="lbA4" hidden><label class="f">A4: багана × мөр</label><div style="display:flex;gap:4px;align-items:center"><input id="lbCols" class="inp" style="width:60px" value="4"><span>×</span><input id="lbRows" class="inp" style="width:60px" value="10"></div></div>
           <div><label class="f">Үнэ</label><select id="lbPl" class="inp"><option value="">Кассын үнэ (одоогийн)</option></select></div>
           <div><label class="f">Хэвлэгчийн шилжилт X / Y (мм)</label><div style="display:flex;gap:4px;align-items:center"><input id="lbOx" class="inp" style="width:60px" value="0"><span>/</span><input id="lbOy" class="inp" style="width:60px" value="0"></div></div></div>
         <label class="inl small" style="margin-top:6px"><input type="checkbox" id="lbBase" checked> хямдарсан бол хуучин (үндсэн) үнийг зурааслах</label>
-        <div class="small" style="margin-top:4px">Хэвлэх цонхонд: хэвлэгчээ сонгоод «Margins: None», «Scale: 100%» (Default) байлгана. Тохиргоо энэ компьютерт хадгалагдана.</div></div>
+        <div class="small" style="margin-top:4px">Хэвлэх цонхонд: хэвлэгчээ сонгоод «Margins: None», «Scale: 100%» (Default) байлгана. <b>HPRT LPQ80</b>: Windows-ийн драйверт (Printing preferences → Paper/Stock) цаасны хэмжээг шошготой яг ижил (ж: 40×30 эсвэл 20×30 мм), төрлийг «Label with gaps» болгоно; шошго шилжвэл хэвлэгчийн FEED товчийг удаан дарж зай (gap) тохируулна. Тохиргоо энэ компьютерт хадгалагдана.</div></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><b>Хэвлэх жагсаалт: <span id="lbCnt">0</span> ш</b><span id="lbSel" class="small"></span>
       <button id="lbPrev" class="btn">👁 Харах</button><button id="lbPrint" class="btn pri">🖨 Хэвлэх</button><button id="lbClr" class="btn">Хоослох</button></div>
@@ -4189,11 +4189,11 @@ $('lbClr').onclick=()=>{if(LBL.length&&!confirm('Шошгоны жагсаалт
 // үнэ: «Кассын үнэ» эсвэл сонгосон үнийн жагсаалт (тэр жагсаалтад байвал түүний үнэ, хуучин = кассын)
 function lbPriceOf(l){const id=$('lbPl')?$('lbPl').value:'',r=itRow(l.code)||l,cur=+(r.price!=null&&r.price!==''?r.price:r.base)||+l.price||0,base=+r.base||+l.base||0;
   if(id){const p=PLISTS.find(x=>x.id===id);const v=p&&spV(p,{...r,code:l.code});if(v!=null)return {p:Math.round(v),old:Math.max(cur,base)}}return {p:cur,old:base}}
-function lbCfgSave(){const c={};['lbPaper','lbTpl','lbW','lbH','lbCols','lbRows','lbOx','lbOy'].forEach(id=>c[id]=$(id).value);c.lbBase=$('lbBase').checked;try{localStorage.setItem('vivi_lblcfg',JSON.stringify(c))}catch(e){}}
+function lbCfgSave(){const c={};['lbPaper','lbTpl','lbW','lbH','lbCols','lbRows','lbOx','lbOy'].forEach(id=>c[id]=$(id).value);c.lbBase=$('lbBase').checked;c.tplv=1;try{localStorage.setItem('vivi_lblcfg',JSON.stringify(c))}catch(e){}}
 function lbPaperUi(){const v=$('lbPaper').value,m=/^(\d+)x(\d+)$/.exec(v);if(m){$('lbW').value=m[1];$('lbH').value=m[2]}$('lbA4').hidden=v!=='a4';if(v==='a4'&&(+$('lbW').value>100||!+$('lbW').value)){$('lbW').value=48;$('lbH').value=25}
   ['lbW','lbH'].forEach(id=>$(id).readOnly=!!m);lbCfgSave()}
 let LBI=false;
-async function lbInit(){if(!LBI){LBI=true;try{const c=JSON.parse(localStorage.getItem('vivi_lblcfg')||'{}');Object.entries(c).forEach(([k,v])=>{if(!$(k))return;if(k==='lbBase')$(k).checked=!!v;else $(k).value=v})}catch(e){}
+async function lbInit(){if(!LBI){LBI=true;try{const c=JSON.parse(localStorage.getItem('vivi_lblcfg')||'{}');if(!c.tplv)delete c.lbTpl;Object.entries(c).forEach(([k,v])=>{if(!$(k))return;if(k==='lbBase')$(k).checked=!!v;else $(k).value=v})}catch(e){}
     $('lbPaper').onchange=lbPaperUi;['lbTpl','lbW','lbH','lbCols','lbRows','lbOx','lbOy','lbBase'].forEach(id=>$(id).onchange=lbCfgSave);$('lbPl').onchange=drawLbl;
     $('lbS').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();lbFind()}};$('lbF').onclick=()=>lbFilter();$('lbRcA').onclick=()=>lbFromRc();lbPaperUi()}
   $('lbG').innerHTML='<option value="">— бүгд —</option>'+(catLists.grps||[]).map(x=>'<option'+(x===$('lbG').value?' selected':'')+'>'+esc(x)+'</option>').join('');
@@ -4225,12 +4225,18 @@ function code128(s){s=String(s);const v=[];
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+(x+10)+' 60" preserveAspectRatio="none">'+bars+'</svg>'}
 $('lbPrint').onclick=()=>lblPrintL(LBL.filter(l=>l.on!==false));$('lbPrev').onclick=()=>lblPrintL(LBL.filter(l=>l.on!==false),true);
 // шошгоны HTML: наалт (хуудас = шошго) эсвэл A4 (багана×мөр); загвар smart (нэр · үнэ · баркод · код) / full
-function lblHtml(SRC,prev){const W=num0($('lbW').value)||40,H=num0($('lbH').value)||30,sb=$('lbBase').checked,tpl=$('lbTpl').value||'smart',a4=$('lbPaper').value==='a4',ox=+$('lbOx').value||0,oy=+$('lbOy').value||0,
+function lblHtml(SRC,prev){const W=num0($('lbW').value)||40,H=num0($('lbH').value)||30,sb=$('lbBase').checked,tpl=$('lbTpl').value||'full',a4=$('lbPaper').value==='a4',ox=+$('lbOx').value||0,oy=+$('lbOy').value||0,
     cols=Math.max(1,Math.round(num0($('lbCols').value)||4)),rows=Math.max(1,Math.round(num0($('lbRows').value)||10)),f=Math.min(H/30,W/40),L=[];
   SRC.forEach(l=>{const pr=lbPriceOf(l);for(let i=0;i<(+l.q||0);i++)L.push({...l,pp:pr.p,old:pr.old})});
   const nfx=v=>Math.round(+v||0).toLocaleString('en-US'),mm=v=>(Math.round(v*f*100)/100)+'mm',lab=l=>tpl==='full'
-    ?'<div class="l"><div class="t"><span>VIVI</span><span>'+esc(l.size||'')+'</span></div><div class="n2">'+esc(l.name)+(l.model?' · '+esc(l.model):'')+'</div><div class="b">'+code128(l.code)+'</div><div class="c">'+esc(l.code)+'</div><div class="p2">'+(sb&&l.old>l.pp?'<s>'+nfx(l.old)+'</s>':'<span></span>')+'<b>'+nfx(l.pp)+'₮</b></div></div>'
-    :'<div class="l"><div class="n">'+esc(l.name)+'</div><div class="p">'+(sb&&l.old>l.pp?'<s>'+nfx(l.old)+'</s> ':'')+nfx(l.pp)+'₮</div><div class="b">'+code128(l.code)+'</div><div class="c">'+esc(l.code)+'</div></div>';
+    ?(()=>{const fh=H/30,iw=W-3,pt=nfx(l.pp)+'₮',ot=sb&&l.old>l.pp?nfx(l.old):'',fz=(b,n)=>Math.max(1.1,Math.round(Math.min(b*fh,iw/(Math.max(n,1)*0.6))*100)/100)+'mm',two=H>W*1.2,nm=esc(l.name)+(l.model&&!String(l.name).includes(l.model)?' · '+esc(l.model):'');
+      return '<div class="l"><div class="t" style="font-size:'+fz(2.6,8+String(l.size||'').length)+'"><span>VIVI</span><span>'+esc(l.size||'')+'</span></div><div class="n2" style="font-size:'+fz(2.3,two?13:22)+';max-height:2.3em;line-height:1.12">'+nm+'</div><div class="b">'+code128(l.code)+'</div><div class="c" style="font-size:'+fz(2.4,String(l.code).length)+'">'+esc(l.code)+'</div>'+
+        (two?(ot?'<div style="text-align:center;font-size:'+fz(2.4,ot.length)+'"><s>'+ot+'</s></div>':'')+'<div style="text-align:center;font-weight:700;font-size:'+fz(4.6,pt.length)+'">'+pt+'</div>'
+          :'<div class="p2">'+(ot?'<s style="font-size:'+fz(2.4,ot.length+pt.length)+'">'+ot+'</s>':'<span></span>')+'<b style="font-size:'+fz(4.6,pt.length+(ot?ot.length*0.55:0))+'">'+pt+'</b></div>')+'</div>'})()
+    :(()=>{const fh=H/30,iw=W-3,pt=nfx(l.pp)+'₮',ot=sb&&l.old>l.pp?nfx(l.old):'',fz=(b,n)=>Math.max(1.1,Math.round(Math.min(b*fh,iw/(Math.max(n,1)*0.6))*100)/100)+'mm',two=H>W*1.2;
+      return '<div class="l"><div class="n" style="font-size:'+fz(2.7,Math.min(String(l.name).length,two?14:22))+(two?';white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.1':'')+'">'+esc(l.name)+'</div>'+
+        (ot&&two?'<div class="p" style="font-size:'+fz(2.6,ot.length)+';font-weight:400;margin:0"><s>'+ot+'</s></div>':'')+
+        '<div class="p" style="font-size:'+fz(5.2,pt.length+(ot&&!two?ot.length*0.5+1:0))+'">'+(ot&&!two?'<s>'+ot+'</s> ':'')+pt+'</div><div class="b">'+code128(l.code)+'</div><div class="c" style="font-size:'+fz(2.6,String(l.code).length)+'">'+esc(l.code)+'</div></div>'})();
   const css='*{box-sizing:border-box;margin:0}body{font-family:Arial,Helvetica,sans-serif;color:#000}'+
     '.l{width:'+W+'mm;height:'+H+'mm;padding:'+mm(1.2)+' '+mm(1.6)+';overflow:hidden;display:flex;flex-direction:column;align-items:stretch;transform:translate('+ox+'mm,'+oy+'mm)}'+
     '.n{font-size:'+mm(2.7)+';text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.p{font-size:'+mm(5.2)+';font-weight:700;text-align:center;line-height:1.15;margin:'+mm(.4)+' 0}.p s{font-size:'+mm(2.6)+';font-weight:400}'+
