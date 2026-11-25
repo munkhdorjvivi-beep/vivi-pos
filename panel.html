@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="19.5">
+<meta name="vivi-ver" content="19.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -440,12 +440,15 @@ main textarea{max-width:100%}
   <div class="card"><h2>Бараа бүртгэх, үнэ өөрчлөх, шошго хэвлэх</h2><div id="itMsg" class="small" style="margin-bottom:8px"></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
       <div style="border:1px solid var(--line);border-radius:10px;padding:10px"><b>1. Шинэ бараа</b>
-        <div class="frm"><div><label class="f">Нэр *</label><input id="itN" class="inp"></div><div><label class="f">Модель / өнгө</label><input id="itM" class="inp"></div>
+        <div style="margin:8px 0;line-height:1.6">Шинэ бараа <b>⬇ Орлого</b>-оор бүртгэнэ: нийлүүлэгч, тоо, өртөг, кассын үнэтэй — үлдэгдэл нэмэгдэж, каталогт бүртгэгдэж, шошго хэвлэнэ.<br>
+          <span class="small">Хятад / дотоодын бараа: нэг бараа = нэг баркод (хэмжээгээр задлахгүй, ж: цамц 30 ш → 1 мөр, 30 ш). LPP: хэмжээ бүр өөрийн баркодтой — скан эсвэл Excel (загвар, хэмжээ баганатай).</span></div>
+        <button class="btn pri" id="itToRc" type="button">⬇ Орлого руу очих</button>
+        <div hidden id="itNewOld"><div class="frm"><div><label class="f">Нэр *</label><input id="itN" class="inp"></div><div><label class="f">Модель / өнгө</label><input id="itM" class="inp"></div>
         <div><label class="f">Нийлүүлэгч *</label><input id="itS" class="inp" list="itSL"><datalist id="itSL"></datalist></div><div><label class="f">Бүлэг</label><input id="itG" class="inp" list="itGL"><datalist id="itGL"></datalist></div>
         <div><label class="f">Хэмжээнүүд (S,M,L,XL — хэмжээ бүр тусдаа код)</label><input id="itZ" class="inp"></div><div><label class="f">Баркод (байвал, нэг хэмжээнд)</label><input id="itBC" class="inp" placeholder="хоосон бол автоматаар 29…"></div>
         <div><label class="f">Өртөг (₮)</label><input id="itC" class="inp" inputmode="numeric"></div><div><label class="f">Үндсэн үнэ (₮) *</label><input id="itB" class="inp" inputmode="numeric"></div>
         <div><label class="f">Кассын үнэ (₮, хоосон = үндсэн)</label><input id="itP" class="inp" inputmode="numeric"></div><div><label class="f">Шошго (хэмжээ бүрт, ш)</label><input id="itQ" class="inp" inputmode="numeric"></div></div>
-        <button id="itNew" class="btn pri" style="margin-top:8px">Бүртгэх</button></div>
+        <button id="itNew" class="btn pri" style="margin-top:8px">Бүртгэх</button></div></div>
       <div style="border:1px solid var(--line);border-radius:10px;padding:10px"><b>2. Бараа хайх, үнэ өөрчлөх</b>
         <div style="display:flex;gap:8px;margin-top:6px"><input id="itQs" class="inp" placeholder="Баркод (модель бүх хэмжээ), код, нэр эсвэл модель"><button id="itGo" class="btn">Хайх</button></div>
         <div id="itAct" class="hide" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><select id="itMode" class="inp" style="width:auto"><option value="price">Кассын үнэ = (₮)</option><option value="pct">Үндсэн үнээс −%</option><option value="base">Үндсэн үнэ = (₮)</option><option value="reset">Кассын үнэ = үндсэн үнэ</option></select><input id="itVal" class="inp" style="width:120px" inputmode="numeric"><label class="inl small"><input type="checkbox" id="itKeep" checked> үндсэн үнэ өөрчлөхөд кассын үнийг хадгалах</label><button id="itPr" class="btn pri">Үнэ өөрчлөх</button><span class="small">·</span><input id="itLq" class="inp" style="width:70px" value="1"><button id="itLbl" class="btn">Шошгонд нэмэх</button></div>
@@ -2571,7 +2574,7 @@ function rcForm(){if(!$('rcForm'))return;const R=RC,ed=rcCan(),loc=Object.keys(L
         (C?'<td class="n" data-mg="'+i+'"></td>':'')+'<td class="n" data-sm="'+i+'"></td><td><button class="btn" data-rcx="'+i+'" title="Мөр хасах">×</button></td></tr>'}).join('')+'</tbody></table></div>'+
     '<div id="rcSum" style="margin-top:6px"></div>'+
     '<div id="rcM" class="small" style="color:var(--red);min-height:18px;margin-top:4px"></div>'+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">'+(ed?'<button class="btn" id="rcSave">💾 Ноорог хадгалах</button>':'')+'<button class="btn" id="rcPrint">🖨 Ноорог хэвлэх</button>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">'+(ed?'<button class="btn" id="rcSave">💾 Ноорог хадгалах</button>':'')+'<button class="btn" id="rcPrint">🖨 Ноорог хэвлэх</button><button class="btn" id="rcLbD" title="Бараа ирэхээс өмнө шошголох: шинэ бараа (баркодгүй) ноорогийг хадгалахад «29…» код авна">🏷 Шошго (ноорог)</button>'+
       (ed?'<button class="btn pri" id="rcOk" style="min-width:220px">✓ Хүлээн авч бүртгэх</button>':'')+'<button class="btn" id="rcClr">Шинэ (цэвэрлэх)</button>'+(R.no&&ed?'<button class="btn" id="rcDelD" style="color:var(--red)">Ноорог устгах</button>':'')+'</div>'+
     '<div id="rcDone"></div>';
   rcSumDraw();rcBind()}
@@ -2596,6 +2599,11 @@ function rcBind(){const R=RC;['rcSup','rcTo','rcDay','rcInv','rcNote'].forEach(i
   $('rcTbl').onclick=e=>{const b=e.target.closest('[data-rcx]');if(!b)return;rcHead();R.lines.splice(+b.dataset.rcx,1);R.dirty=true;rcForm()};
   $('rcFile').onchange=()=>rcXl($('rcFile').files[0]);
   $('rcPrint').onclick=()=>{rcHead();rcPrint(R,true)};
+  // ноорогоос шошго: баркодгүй шинэ бараанд урьдчилан «29…» код олгоно (бүртгэхэд тэр кодоор каталогт орно)
+  $('rcLbD').onclick=async()=>{rcHead();if(!R.lines.length)return;const nb=R.lines.filter(x=>!x.ex&&!x.bc);
+    if(nb.length){if(!confirm(nb.length+' шинэ бараанд баркод алга — одоо «29…» код олгож ноорогт хадгалах уу? (шошгон дээр тэр код хэвлэгдэнэ)'))return;try{await loadPCat()}catch(x){}const g=newCodes(nb.length);nb.forEach((x,i)=>x.bc=g[i]);R.dirty=true;rcForm();await rcSave();if(RC.dirty)return}
+    const bad=R.lines.filter(x=>!(+x.price>0)||!String(x.name||'').trim());if(bad.length)return $('rcM').textContent='Шошгонд нэр, кассын үнэ хэрэгтэй: '+bad.length+' мөр дутуу';
+    lblPrintL(R.lines.map(x=>({code:x.ex?x.code:x.bc,name:String(x.name).trim(),model:x.model||'',size:x.size||'',base:+x.base>0?Math.max(+x.base,+x.price):+x.price,price:+x.price,q:Math.round(+x.qty)||0})).filter(l=>l.q>0))};
   $('rcClr').onclick=()=>{if(R.dirty&&R.lines.length&&!confirm('Хадгалаагүй өөрчлөлтийг орхих уу?'))return;rcNew()};
   if($('rcSave'))$('rcSave').onclick=()=>rcSave();
   if($('rcOk'))$('rcOk').onclick=()=>rcReg();
@@ -3882,6 +3890,7 @@ function drawItems(){const L=Object.values(PITX).sort((a,b)=>a.updated<b.updated
   xtable('itList','items',['','Код','Нэр','Модель','Хэмжээ','Нийлүүлэгч','Үндсэн үнэ','Кассын үнэ','Төлөв','Төрөл','Өөрчилсөн','Хэн',''],L.map(x=>[x.code,x.code,x.name,x.model,x.size,x.sup,x.base,x.price,x.active===false?'идэвхгүй':'идэвхтэй',x.isNew?'шинэ бараа':'үнэ өөрчилсөн',lt(x.updated),(x.by||'').split('@')[0],x.code]),
     {cell:(r,c)=>c===0?'<input type="checkbox" class="itck" value="'+esc(r[0])+'">':c===12?'<button class="btn" data-ited="'+esc(r[0])+'" style="min-height:28px;padding:1px 10px">Засах</button>':c===8?'<span class="chip'+(r[8]==='идэвхгүй'?' r':'')+'">'+r[8]+'</span>':r[c]==null?'':typeof r[c]==='number'?nfx(r[c]):esc(r[c])})}
 // шинэ бараа
+$('itToRc').onclick=()=>{showTab('stock',true);setTimeout(()=>{try{stSub('in')}catch(e){}},0)};
 $('itNew').onclick=async()=>{const m=$('itMsg'),v=id=>$(id).value.trim();
   const name=v('itN'),sup=v('itS'),base=num0(v('itB')),price=num0(v('itP'))||base,cost=num0(v('itC')),sizes=v('itZ').split(/[,;]+/).map(x=>x.trim()).filter(Boolean),bc=v('itBC');
   if(!name||!sup||!(base>0))return m.innerHTML='<span class="hot">Нэр, нийлүүлэгч, үндсэн үнэ заавал</span>';if(price>base)return m.innerHTML='<span class="hot">Кассын үнэ үндсэн үнээс их байж болохгүй</span>';
