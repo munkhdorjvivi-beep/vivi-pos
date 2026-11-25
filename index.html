@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="8.9">
+<meta name="vivi-ver" content="9.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -1854,7 +1854,9 @@ function openCnt(){if(!S.user)return flash('Эхлээд нэвтэрнэ үү')
   openModal('<h2>📋 Тооллогын даалгавар</h2>'+CNTT.map((t,i)=>'<button class="blue" data-ct="'+i+'" style="display:block;width:100%;text-align:left;margin-bottom:8px;padding:12px 14px">'+esc(t.title||'')+'<div class="small" style="color:#fff;opacity:.85">'+JSON.parse(t.codes||'[]').length+' код · '+esc((t.created||'').slice(0,16).replace('T',' '))+(t.note?' · '+esc(t.note):'')+'</div></button>').join('')+'<div class="rowbtn"><button id="ctX">Хаах</button></div>',true);
   $('ctX').onclick=closeModal;document.querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>cntTask(CNTT[+b.dataset.ct]))}
 function cntTask(t){const K='cnt_'+t.uid,codes=JSON.parse(t.codes||'[]'),cm=new Map(codes.map(x=>[x[0],x])),C=new Map(Object.entries(store.get(K,{})));
-  openModal('<h2>📋 Тооллого: '+esc(t.title||'')+'</h2><div class="small" style="margin-bottom:6px">Энэ загварын <span style="font-weight:700">бүх хэмжээ, өнгийг</span> лангуу, өлгүүр, агуулахаас олж нэг бүрчлэн уншуулна уу (Enter = +1, олон бол <span style="font-weight:700">5*баркод</span>). Олдохгүй хэмжээг <span style="font-weight:700">0</span> үлдээнэ. Дуусмагц «Тоолж дууслаа».'+(t.note?'<br>Оффисын тайлбар: '+esc(t.note):'')+'</div>'+
+  // 📷 барааны зураг: оффисоос оруулсан холбоос, эсвэл LPP бол Google-ээс хайх
+  const img=t.img||(/^(sinsay|reserved|cropp|house|mohito)\s+\S+/i.test(t.title||'')?'https://www.google.com/search?tbm=isch&q='+encodeURIComponent(t.title):'');
+  openModal('<h2>📋 Тооллого: '+esc(t.title||'')+(img?' <a href="'+esc(img)+'" target="_blank" rel="noopener" style="font-size:15px;text-decoration:none;background:#e8f0fe;padding:3px 10px;border-radius:8px">'+(t.img?'📷 Зураг харах':'🔍 Зураг хайх')+'</a>':'')+'</h2><div class="small" style="margin-bottom:6px">Энэ загварын <span style="font-weight:700">бүх хэмжээ, өнгийг</span> лангуу, өлгүүр, агуулахаас олж нэг бүрчлэн уншуулна уу (Enter = +1, олон бол <span style="font-weight:700">5*баркод</span>). Олдохгүй хэмжээг <span style="font-weight:700">0</span> үлдээнэ. Дуусмагц «Тоолж дууслаа».'+(t.note?'<br>Оффисын тайлбар: '+esc(t.note):'')+'</div>'+
     (()=>{const hold=new Map();parked.concat([{cart:S.cart}]).forEach(p=>(p.cart||[]).forEach(l=>{if(cm.has(l.code))hold.set(l.code,(hold.get(l.code)||0)+l.qty)}));if(!hold.size)return '';
       return '<div class="small" style="background:#fff4d6;padding:6px 8px;border-radius:8px;margin-bottom:6px">⚠ Түр хадгалсан / одоогийн баримтад энэ загвараас: '+[...hold].map(([c,q])=>esc((cm.get(c)||[])[2]||c)+' × '+q).join(', ')+' — тэдгээр ширхэгийг ч (лангуун дээр) уншуулна уу.</div>'})()+
     '<div class="hbar"><input id="ctS" placeholder="Баркод уншуулна уу" style="flex:1" autofocus autocomplete="off"><span id="ctM" class="small"></span></div><div class="list" style="max-height:46vh"><table><thead><tr><th>Хэмжээ / бараа</th><th class="n">Тоолсон</th><th></th></tr></thead><tbody id="ctL"></tbody></table></div><div id="ctT" class="small ib" style="margin-top:6px"></div>'+

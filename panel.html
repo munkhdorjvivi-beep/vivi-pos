@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="20.2">
+<meta name="vivi-ver" content="20.3">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -360,6 +360,8 @@ main textarea{max-width:100%}
       <div class="small" style="margin-bottom:8px">Хасах мөрийн «📋 Тоолуулах», эсвэл доорх хэсгээс дурын загварыг тоолуулна. Касс системийн тоог харахгүй (сохор тооллого). Касс «Тоолж дууслаа» дармагц «✓ тоолсон» болж, систем зөрүү, шалтгааныг (хэмжээ андуурсан / дутагдал / илүүдэл) гаргана. «Үр дүн» → «Зөрүүг засах».</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px;margin-bottom:6px"><b>Загвар тоолуулах:</b><select id="cnSt" class="inp" style="width:auto"></select><input id="cnQ" class="inp" placeholder="Код, баркод эсвэл модель" style="width:220px"><button id="cnGo" class="btn pri">📋 Тоолуулах</button></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px;margin-bottom:10px"><b>Санамсаргүй (давтамжит) тооллого:</b><select id="cnRSt" class="inp" style="width:auto"></select><input id="cnRN" class="inp" value="5" inputmode="numeric" style="width:70px"><span class="small">загвар (үлдэгдэлтэй загваруудаас санамсаргүй)</span><button id="cnRGo" class="btn">🎲 Илгээх</button><span id="cnMsg" class="small"></span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;border:1px dashed var(--line);border-radius:10px;margin-bottom:10px"><b>📷 LPP барааны зураг:</b><span class="small">хүргэлтийн Excel («Image link» + баркод эсвэл MODEL баганатай) оруулахад даалгавар, зөрүүнд 📷 холбоос гарна; оруулаагүй LPP бараанд 🔍 Google-ээс хайна.</span>
+        <label class="btn" style="cursor:pointer">📥 Excel оруулах<input type="file" id="imgF" accept=".xlsx,.xls" multiple style="display:none"></label><span id="imgM" class="small"></span></div>
       <div class="scroll" id="cntTasks"></div>
       <h2 style="margin:16px 0 4px">👤 Тооллогын тайлан — кассчин, дутагдал (дээрх огнооны хүрээнд)</h2>
       <div class="small" style="margin-bottom:6px">«Зөрүүг засах» хийсэн тооллого бүрийн дүгнэлт: хэмжээ андуурсан баримтын кассчин, дутагдал/илүүдлийн тоо, өртөг ба кассын үнээр дүн. Дутагдлын акт хэвлэж гарын үсэг зуруулна.</div>
@@ -684,7 +686,7 @@ async function init(){
       else{try{const d=await db.collection('pos_panel_users').doc(em).get(),x=d.exists?d.data():null;if(x&&x.active!==false)P={admin:!!x.admin,perms:x.admin?PERM_ALL:(x.perms||[]),name:x.name||''}}catch(e){}}
       if(!P){$('lm').innerHTML='<b>'+esc(u.email||'')+'</b> — хяналтын самбарт орох эрхгүй. Захиралд хандаж, «👤 Хэрэглэгч» цэсэнд имэйлээ нэмүүлнэ үү.';$('lp').value='';auth.signOut();return}
       ME=P;if(!P.owner)db.collection('pos_panel_users').doc(em).update({lastLogin:new Date().toISOString()}).catch(()=>{});
-      $('who').textContent=u.email+(P.name?' · '+P.name:'');applyPerms();$('login').classList.add('hide');$('app').classList.remove('hide');listen();if(stPosP()&&!MOB)setTimeout(autoStock,3000);if(!MOB)setTimeout(autoClose,6000)});
+      $('who').textContent=u.email+(P.name?' · '+P.name:'');applyPerms();$('login').classList.add('hide');$('app').classList.remove('hide');listen();if(stPosP()&&!MOB)setTimeout(autoStock,3000);if(stPosP())setTimeout(()=>imgLoad(),9000);if(!MOB)setTimeout(autoClose,6000)});
   }catch(e){$('lm').textContent=e.message||String(e)}
 }
 const APP_VER=document.querySelector('meta[name=vivi-ver]').content;document.querySelectorAll('.appver').forEach(e=>e.textContent=APP_VER);document.title='VIVI POS хяналт '+APP_VER;
@@ -969,7 +971,7 @@ function dfDet(I,ce,wh){const box=$('dfList'),D=I.find(x=>x.key===DF.sel);if(!D)
     (D.lines.length?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px"><div class="dfchips">'+[['open','Нээлттэй'],['short','Дутуу'],['over','Илүү'],['all','Бүгд']].map(([k,t])=>'<button data-dflf="'+k+'" aria-pressed="'+(lf===k)+'">'+t+'</button>').join('')+'</div>'+
       (opn.length?'<label class="small" style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-dfckall="1" '+(L.length&&L.every(({l})=>!l.left||ck.has(l.k))&&ck.size?'checked':'')+'> Харагдаж буй нээлттэй мөрүүдийг бүгдийг сонгох</label>':'')+'</div>'+bulk+
       '<table class="t" data-xe="1" style="margin-top:6px"><thead><tr><th style="width:26px"></th><th>Код</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Ирсэн</th><th class="n">Зөрүү</th><th>Шийдвэр</th></tr></thead><tbody>'+
-      L.slice(0,DF.lim).map(({l,i})=>'<tr'+(ck.has(l.k)?' style="background:#eef5ff"':'')+'><td>'+(l.left?'<input type="checkbox" data-dfck="'+esc(l.k)+'"'+(ck.has(l.k)?' checked':'')+'>':'')+'</td><td class="mono">'+esc(l.code)+'</td><td>'+esc(l.name)+'</td><td class="n">'+l.sent+'</td><td class="n">'+l.recv+'</td><td class="n"><b class="'+(l.d<0?'hot':'')+'">'+(l.d>0?'+':'')+l.d+'</b><div class="small">'+(l.d<0?'дутуу':'илүү')+'</div></td><td>'+dfActs(I,D,l,i,ce,wh)+'</td></tr>').join('')+'</tbody></table>'+
+      L.slice(0,DF.lim).map(({l,i})=>'<tr'+(ck.has(l.k)?' style="background:#eef5ff"':'')+'><td>'+(l.left?'<input type="checkbox" data-dfck="'+esc(l.k)+'"'+(ck.has(l.k)?' checked':'')+'>':'')+'</td><td class="mono">'+esc(l.code)+'</td><td>'+esc(l.name)+imgA(l.code,itRow(l.code)||{name:l.name})+'</td><td class="n">'+l.sent+'</td><td class="n">'+l.recv+'</td><td class="n"><b class="'+(l.d<0?'hot':'')+'">'+(l.d>0?'+':'')+l.d+'</b><div class="small">'+(l.d<0?'дутуу':'илүү')+'</div></td><td>'+dfActs(I,D,l,i,ce,wh)+'</td></tr>').join('')+'</tbody></table>'+
       (L.length>DF.lim?'<div class="small" style="margin:6px 0">'+DF.lim+' / '+L.length+' мөр харагдаж байна <button class="btn" data-dfmore="1">Бүгдийг харуулах</button> (бөөнөөр сонгоход бүх мөр орно)</div>':'')+(!L.length?'<div class="small" style="padding:8px">Энэ шүүлтүүрт мөр алга.</div>':''):'<div class="small" style="padding:8px">Энэ баримт зөрүүгүй хүлээн авагдсан.</div>')+'</div>'}
 async function dfSaveMany(D,arr){if(!arr.length)return;if(DF._cz)arr.forEach(([k,a])=>{if(a.act!=='recount'&&!a.cause){a.cause=DF._cz.cause;a.cnote=DF._cz.cnote}});const ref=db.collection('pos_diff').doc(D.key),cur=await ref.get(),res=cur.exists?JSON.parse(cur.data().res||'{}'):{};arr.forEach(([k,a])=>(res[k]=res[k]||[]).push(a));const last=arr[arr.length-1][1];
   await ref.set({key:D.key,src:D.src,srcId:D.srcId,no:D.no,from:D.from,to:D.to,at:D.at,res:JSON.stringify(res),updated:last.at,updatedBy:last.by},{merge:true})}
@@ -2903,7 +2905,7 @@ const MOVT={in:['⬇ Орлого — нийлүүлэгчээс ирсэн ба
   move:['⇄ Шилжүүлэг — байршлаас байршил руу','Илгээх барааг уншуулна. Хадгалахад баримт хэвлэгдэж, бараа «замд» болно. Хүлээн авагч дэлгүүр касс дээрээ уншуулж хүлээн авна.','Тайлбар','Шилжүүлэг илгээх'],
   out:['⬆ Зарлага — гэмтэл, алдагдал, нийлүүлэгчид буцаалт','Байршлаас гарсан (зарагдаагүй) барааг шалтгаантай нь бүртгэнэ. Гэмтэлтэй барааг «Шилжүүлэг»-ээр «Гэмтэлтэй бараа» агуулах руу шилжүүлж болно.','Тайлбар','Зарлага хадгалах']};
 function stSub(k){{const L=SUBS.stock.filter(x=>subOk('stock',x));if(!L.some(x=>x[0]===k)&&L.length)k=L[0][0]}
-  const mv=['move','out'].includes(k);if(k==='in')setTimeout(rcInit,0);if(k==='open')setTimeout(clDraw,0);if(k==='diff')setTimeout(dfInit,0);if(k==='zinv')setTimeout(pivFill,0);
+  const mv=['move','out'].includes(k);if(k==='in')setTimeout(rcInit,0);if(k==='cnt'||k==='diff')imgLoad().then(()=>{drawCnts();dfDraw();if($('imgM')&&!$('imgM').textContent&&IMGM.size)$('imgM').textContent='Хадгалсан холбоос: '+fmtN(IMGM.size)});if(k==='open')setTimeout(clDraw,0);if(k==='diff')setTimeout(dfInit,0);if(k==='zinv')setTimeout(pivFill,0);
   {const fr=document.querySelector('section[data-panel="stock"] .card[data-sub="'+k+'"] iframe[data-wh]');if(fr&&!fr.src)fr.src='wh.html?embed=1&tab='+fr.dataset.wh+'&t='+Date.now()}
   document.querySelectorAll('#stNav [data-sub]').forEach(b=>b.classList.toggle('on',b.dataset.sub===k));subMark('stock',k);
   document.querySelectorAll('section[data-panel="stock"] .card[data-sub]').forEach(c=>c.hidden=c.dataset.sub!==(mv?'mov':k));
@@ -3291,8 +3293,37 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-nchk]');if
     try{await db.collection('pos_stock_chk').doc(k).set({loc,code:cc.join('_'),now:Number(r[3]),note:n,by:auth.currentUser.email||'',at:new Date().toISOString()});await auditCfg('stock_neg_check',{by:auth.currentUser.email,loc,code:cc.join('_'),now:Number(r[3]),note:n});pClose()}
     catch(er){$('nc_m').textContent='Алдаа: '+(er.code||er.message||er)}}});
 
+/* ==== 📷 Барааны зураг (20.3): pos_img (хэсэгчилсэн) [[түлхүүр,url]] — түлхүүр: баркод, 'm:ЗАГВАР', 'mc:ЗАГВАР ӨНГӨ'.
+   LPP-ийн хүргэлтийн Excel-ийн «Image link» баганаас оруулна. Холбоос алга LPP бараанд — Google зургийн хайлт (брэнд + загвар). ==== */
+let IMGM=null,IMGP=null;
+function imgLoad(){if(IMGM)return Promise.resolve(IMGM);if(IMGP)return IMGP;IMGP=(async()=>{const m=new Map();try{const meta=await db.collection('pos_img').doc('meta').get();if(meta.exists)for(const c of meta.data().chunks||[]){const d=await db.collection('pos_img').doc(c.id).get();if(d.exists)JSON.parse(d.data().d).forEach(x=>m.set(x[0],x[1]))}}catch(e){console.warn('pos_img',e)}IMGM=m;return m})();return IMGP}
+function imgOf(code,it){it=it||itRow(code)||{};const z=spZ({model:it.model,name:it.name}),u=IMGM&&(IMGM.get(String(code))||(z.mc&&IMGM.get('mc:'+z.mc))||(z.m&&IMGM.get('m:'+z.m)));if(u)return {u,real:true};
+  const br=/^(sinsay|reserved|cropp|house|mohito)\b/i.exec(String(it.name||'').trim());if(!br||!z.m)return null;return {u:'https://www.google.com/search?tbm=isch&q='+encodeURIComponent(br[1]+' '+z.m),real:false}}
+const imgA=(code,it)=>{const x=imgOf(code,it);return x?' <a href="'+esc(x.u)+'" target="_blank" rel="noopener" title="'+(x.real?'Барааны зураг':'Google-ээс зураг хайх (холбоос оруулаагүй)')+'" style="text-decoration:none;white-space:nowrap">'+(x.real?'📷':'🔍')+'</a>':''};
+// Excel-ээс зургийн холбоос: баркод ба/эсвэл загварын багана + холбоосын багана (утга, hyperlink эсвэл =HYPERLINK())
+async function imgXl(files){const out=$('imgM');if(!files||!files.length)return;out.textContent='Уншиж байна…';await xlsx();await imgLoad();await loadPCat().catch(()=>{});
+  const url=c=>{if(!c)return '';if(c.l&&c.l.Target&&/^https?:/i.test(c.l.Target))return c.l.Target;if(typeof c.v==='string'&&/^https?:\/\//i.test(c.v.trim()))return c.v.trim();const m=c.f&&/HYPERLINK\(\s*"([^"]+)"/i.exec(c.f);return m&&/^https?:/i.test(m[1])?m[1]:''};
+  const add=new Map();let rows=0;const miss=[];
+  for(const f of files){const wb=XLSX.read(await fileBuf(f),{type:'array',cellFormula:true,sheetStubs:true});let got=false;
+    for(const sn of wb.SheetNames){const ws=wb.Sheets[sn];if(!ws['!ref'])continue;const R=XLSX.utils.decode_range(ws['!ref']);let hr=-1,H=[];
+      for(let r=R.s.r;r<=Math.min(R.e.r,R.s.r+15)&&hr<0;r++){const h=[];for(let c=R.s.c;c<=R.e.c;c++){const x=ws[XLSX.utils.encode_cell({r,c})];h[c]=x&&x.v!=null?String(x.v).trim():''}if(h.some(v=>/image|зураг|photo|picture/i.test(v)))hr=r,H=h}
+      if(hr<0)continue;const fi=re=>H.findIndex(v=>v&&re.test(v)&&!/google/i.test(v)),first=(...a)=>{for(const x of a)if(x>=0)return x;return -1};
+      const ci=first(fi(/^(баркод|бар код|barcode|ean|item|index|код)$/i),fi(/баркод|barcode|ean/i)),mi=first(fi(/^(model|модель|загвар|ангилал|барааны ангилал)$/i),fi(/model|модел|загвар/i)),ui=fi(/image|зураг|photo|picture/i);
+      if(ui<0||(ci<0&&mi<0))continue;got=true;
+      for(let r=hr+1;r<=R.e.r;r++){const u=url(ws[XLSX.utils.encode_cell({r,c:ui})]);if(!u)continue;rows++;
+        const cv=ci>=0?ws[XLSX.utils.encode_cell({r,c:ci})]:null,code=cv&&cv.v!=null?(typeof cv.v==='number'?String(Math.round(cv.v)):String(cv.v).trim()):'',mv=mi>=0?ws[XLSX.utils.encode_cell({r,c:mi})]:null;
+        let z=mv&&mv.v!=null&&String(mv.v).trim()?spZ({model:String(mv.v)}):null;if(code){add.set(code,u);const it=itRow(code);if(!z&&it)z=spZ({model:it.model,name:it.name})}
+        if(z&&z.m){if(!add.has('m:'+z.m))add.set('m:'+z.m,u);if(z.mc&&z.mc!==z.m&&!add.has('mc:'+z.mc))add.set('mc:'+z.mc,u)}}}
+    if(!got)miss.push(f.name)}
+  if(!add.size){out.innerHTML='<span class="hot">Зургийн холбоос олдсонгүй'+(miss.length?' ('+esc(miss.join(', '))+')':'')+'. Гарчигт «Image link / Зураг / Photo» багана, мөн баркод эсвэл MODEL багана хэрэгтэй.</span>';return}
+  let nw=0;add.forEach((u,k)=>{if(IMGM.get(k)!==u){IMGM.set(k,u);nw++}});
+  if(!nw){out.textContent='Бүх холбоос аль хэдийн хадгалагдсан ('+fmtN(add.size)+')';return}
+  out.textContent='Хадгалж байна…';try{await writeChunks('pos_img',[...IMGM.entries()],{src:'xl',files:[...files].map(f=>f.name).slice(0,20)},(i,n)=>out.textContent='Хадгалж байна '+i+'/'+n);
+    out.innerHTML='<span class="chip">✓ Хадгаллаа</span> '+fmtN(rows)+' мөр → '+fmtN(nw)+' шинэ/өөрчлөгдсөн холбоос (нийт '+fmtN(IMGM.size)+')'+(miss.length?' · холбоосгүй файл: '+esc(miss.join(', ')):'');auditCfg('img_upload',{n:nw,total:IMGM.size}).catch(()=>{});drawCnts();dfDraw()}
+  catch(e){out.textContent='Хадгалсангүй: '+(e.code||e.message||e)}}
 /* ==== 📋 Тооллогын даалгавар: pos_counts/{uid} {store, codes:[[код,нэр,хэмжээ]], status open→counted→applied|cancelled, counts:[[код,тоо]]} ==== */
 let CNTS=[];const TILL_LOC=['FC','DR','NS','YV'];
+$('imgF').onchange=()=>{imgXl([...$('imgF').files]).finally(()=>$('imgF').value='')};
 function watchCnts(){db.collection('pos_counts').orderBy('created','desc').limit(200).onSnapshot(s=>{CNTS=s.docs.map(d=>d.data());drawCnts()},()=>{})}
 /* Загварын түлхүүр: (1) каталогийн «модель»; (2) LPP нэр «SINSAY 5485C …» → брэнд + артикул; (3) нэрээс хэмжээ/size-ийг хассан хэсэг.
    Ингэснээр ижил загварын бүх хэмжээ (өнгө) нэг бүлэгт орно. */
@@ -3308,7 +3339,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-ncnt]');if
 // байршлын одоогийн үлдэгдлийн мөрүүд (тооцоолсон бол дахин ашиглана)
 async function locRows(loc){if(negSrc&&negSrc.R[loc])return negSrc.R[loc].rows;const od=await openGet(loc);if(!od.exists)return [];
   const O=od.data(),SD=await salesSince(sDay(O.asOf),loc);return stockCalc(loc,O,SD).rows}
-async function cntNew(loc,code){const q0=cntNew.q;if(!TILL_LOC.includes(loc))return alert((LOC[loc]||loc)+'-д касс байхгүй — «Тооллого» Excel-ээр тоолно уу.');
+async function cntNew(loc,code){const q0=cntNew.q;await imgLoad();if(!TILL_LOC.includes(loc))return alert((LOC[loc]||loc)+'-д касс байхгүй — «Тооллого» Excel-ээр тоолно уу.');
   if(CNTS.some(t=>t.store===loc&&t.status==='open'&&JSON.parse(t.codes).some(x=>x[0]===code)))return alert('Энэ барааны тооллого аль хэдийн кассад илгээгдсэн (хүлээгдэж байна).');
   await loadPCat().catch(()=>{});const G=groupOf(code),it=itRow(code)||{},rows=await locRows(loc).catch(()=>[]),nowOf=c=>(rows.find(x=>x.code===c)||{}).now||0;
   $('pbox').innerHTML='<h2 style="margin:0 0 6px">📋 Тоолуулах — '+esc(LOC[loc])+'</h2><div class="small" style="margin-bottom:6px">'+esc(it.model||it.name||code)+' загварын кодууд. Тоолуулах кодоо сонгоно (анхдагч: бүгд). Касс системийн тоог харахгүй (сохор тооллого).</div>'+
@@ -3317,10 +3348,10 @@ async function cntNew(loc,code){const q0=cntNew.q;if(!TILL_LOC.includes(loc))ret
   $('pm').classList.remove('hide');$('cg_x').onclick=pClose;
   $('cg_ok').onclick=async()=>{const sel=[...document.querySelectorAll('.cg:checked')].map(i=>i.value);if(!sel.length)return $('cg_m').textContent='Код сонгоно уу';
     const uid='cnt_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),at=new Date().toISOString();
-    try{await db.collection('pos_counts').doc(uid).set({uid,store:loc,title:modelOf(code).label,model:modelOf(code).label,q:q0||code,kind:q0?'manual':'neg',negCode:code,codes:JSON.stringify(sel.map(c=>{const j=itRow(c)||{};return [c,j.name||'',j.size||'']})),note:$('cg_n').value.trim(),status:'open',created:at,createdBy:auth.currentUser.email||''});
+    try{await db.collection('pos_counts').doc(uid).set({uid,store:loc,title:modelOf(code).label,model:modelOf(code).label,q:q0||code,kind:q0?'manual':'neg',negCode:code,img:(x=>x&&x.real?x.u:'')(imgOf(code)),codes:JSON.stringify(sel.map(c=>{const j=itRow(c)||{};return [c,j.name||'',j.size||'']})),note:$('cg_n').value.trim(),status:'open',created:at,createdBy:auth.currentUser.email||''});
       await auditCfg('count_task_new',{by:auth.currentUser.email,uid,store:loc,codes:sel.length});pClose()}catch(er){$('cg_m').textContent='Алдаа: '+(er.code||er.message||er)}}}
 const cntTaskDoc=(loc,code,codes,note,kind)=>{const it=itRow(code)||{},uid='cnt_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  return {uid,store:loc,title:modelOf(code).label,model:modelOf(code).label,q:code,negCode:code,codes:JSON.stringify(codes.map(c=>{const j=itRow(c)||{};return [c,j.name||'',j.size||'']})),note:note||'',kind:kind||'manual',status:'open',created:new Date().toISOString(),createdBy:auth.currentUser.email||''}};
+  return {uid,store:loc,title:modelOf(code).label,model:modelOf(code).label,q:code,negCode:code,codes:JSON.stringify(codes.map(c=>{const j=itRow(c)||{};return [c,j.name||'',j.size||'']})),img:(x=>x&&x.real?x.u:'')(imgOf(code)),note:note||'',kind:kind||'manual',status:'open',created:new Date().toISOString(),createdBy:auth.currentUser.email||''}};
 function cnFill(){const o=TILL_LOC.map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('');['cnSt','cnRSt'].forEach(id=>{if($(id)&&!$(id).options.length)$(id).innerHTML=o})}
 $('cnGo').onclick=async()=>{await loadPCat().catch(()=>{});const q=$('cnQ').value.trim();if(!q)return $('cnMsg').textContent='Код, баркод эсвэл модель оруулна уу';
   let code=null;if(PCATi&&PCATi.has(q))code=PCAT[PCATi.get(q)][0];else if(PCAT){const ql=q.toLowerCase(),r=PCAT.find(r=>(r[7]||'').trim().toLowerCase()===ql)||PCAT.find(r=>{const m=modelOf(r[0],{name:r[2],model:r[7]||''});return m.label.toLowerCase()===ql||m.k==='L:'+q.toUpperCase()})||PCAT.find(r=>(r[2]||'').toLowerCase().includes(' '+ql+' '));if(r)code=r[0]}
@@ -3338,7 +3369,7 @@ function drawCnts(){if(!$('cntTasks'))return;cnFill();drawAcct();stkBan();if(CHL
   if(!CNTS.length){$('cntTasks').innerHTML='<div class="small">Даалгавар алга</div>';return}
   const nm1=t=>{const c=JSON.parse(t.codes||'[]');const x=c.find(y=>y[0]===t.negCode)||c[0]||[];return ((x[1]||'').replace(/\s+size\b.*$/i,'').replace(/\bsize[-\s]*\S+.*$/i,'').trim())};
   $('cntTasks').innerHTML='<table class="xt" data-xe="1" style="border-spacing:0"><thead><tr><th style="padding:6px 8px">Илгээсэн</th><th style="padding:6px 8px">Дэлгүүр</th><th style="padding:6px 8px">Модель / оруулсан код</th><th style="padding:6px 8px">Барааны нэр</th><th class="n" style="padding:6px 8px">Кодын тоо</th><th style="padding:6px 8px">Төрөл</th><th style="padding:6px 8px">Төлөв</th><th style="padding:6px 8px">Тоолсон</th><th></th></tr></thead><tbody>'+CNTS.map(t=>{const st=SN[t.status]||[t.status,''];
-    return '<tr><td class="small">'+esc(lt(t.created))+'</td><td>'+esc(LOC[t.store]||t.store)+'</td><td><b>'+esc(t.model||t.title||'')+'</b>'+(t.q&&t.q!==t.model?'<div class="small">'+esc(t.q)+'</div>':'')+'</td><td class="small">'+esc(nm1(t))+'</td><td class="n">'+JSON.parse(t.codes||'[]').length+'</td><td class="small">'+({cycle:'санамсаргүй',manual:'гараар',neg:'хасах үлдэгдэл'}[t.kind]||'')+'</td><td><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="small">'+esc((t.countedBy||'')+(t.countedAt?' · '+lt(t.countedAt):''))+'</td><td>'+(t.status==='counted'||t.status==='applied'?'<button class="btn'+(t.status==='counted'?' pri':'')+'" data-cres="'+esc(t.uid)+'" style="min-height:28px;padding:1px 10px">Үр дүн</button>':'')+(t.status==='open'?'<button class="btn" data-ccan="'+esc(t.uid)+'" style="min-height:28px;padding:1px 10px">Цуцлах</button>':'')+'</td></tr>'}).join('')+'</tbody></table>'}
+    return '<tr><td class="small">'+esc(lt(t.created))+'</td><td>'+esc(LOC[t.store]||t.store)+'</td><td><b>'+esc(t.model||t.title||'')+'</b>'+(t.img?' <a href="'+esc(t.img)+'" target="_blank" rel="noopener" title="Барааны зураг" style="text-decoration:none">📷</a>':imgA(t.negCode||t.q||'',itRow(t.negCode||t.q||'')||{name:t.title}))+(t.q&&t.q!==t.model?'<div class="small">'+esc(t.q)+'</div>':'')+'</td><td class="small">'+esc(nm1(t))+'</td><td class="n">'+JSON.parse(t.codes||'[]').length+'</td><td class="small">'+({cycle:'санамсаргүй',manual:'гараар',neg:'хасах үлдэгдэл'}[t.kind]||'')+'</td><td><span class="chip '+st[1]+'">'+st[0]+'</span></td><td class="small">'+esc((t.countedBy||'')+(t.countedAt?' · '+lt(t.countedAt):''))+'</td><td>'+(t.status==='counted'||t.status==='applied'?'<button class="btn'+(t.status==='counted'?' pri':'')+'" data-cres="'+esc(t.uid)+'" style="min-height:28px;padding:1px 10px">Үр дүн</button>':'')+(t.status==='open'?'<button class="btn" data-ccan="'+esc(t.uid)+'" style="min-height:28px;padding:1px 10px">Цуцлах</button>':'')+'</td></tr>'}).join('')+'</tbody></table>'}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-ccan]');if(!b)return;if(!confirm('Даалгаврыг цуцлах уу? (касс дээрээс алга болно)'))return;await db.collection('pos_counts').doc(b.dataset.ccan).update({status:'cancelled',cancelledBy:auth.currentUser.email||'',cancelledAt:new Date().toISOString()})});
 // үр дүн: тоолсон мөчийн системийн үлдэгдэлтэй харьцуулж, шалтгааныг тайлбарлана
 async function cntResult(t){await loadPCat().catch(()=>{});const loc=t.store,od=await openGet(loc);if(!od.exists)return alert(LOC[loc]+': эхний үлдэгдэл алга');
