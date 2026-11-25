@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="20.1">
+<meta name="vivi-ver" content="20.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -24,7 +24,7 @@ header nav.tabs button.on{color:#fff;border-bottom-color:var(--red)}
 /* дэд цэс (VIVI Хяналт шиг): үндсэн цэсний доор цагаан мөр, идэвхтэйг доогуур зураасаар */
 #subtabs{flex:0 0 calc(100% + 32px);box-sizing:border-box;margin:0 -16px -10px;background:#fff;border-bottom:1px solid #e3e6eb;display:flex;gap:2px;padding:0 16px;overflow-x:auto;scrollbar-width:thin}
 #subtabs.hide{display:none}
-[data-rsub][hidden],.card[data-sub][hidden],[data-isub][hidden]{display:none!important}
+[data-rsub][hidden],.card[data-sub][hidden],[data-isub][hidden],[data-tsub][hidden]{display:none!important}
 #subtabs button{font:inherit;font-size:14px;font-weight:600;background:none;border:0;border-bottom:2px solid transparent;padding:11px 14px 9px;color:#6b7280;cursor:pointer;white-space:nowrap}
 #subtabs button:hover{color:#1d2330}
 #subtabs button.on{color:#1d2330;border-bottom-color:#1d2330}
@@ -200,6 +200,21 @@ main textarea{max-width:100%}
     <div id="hcKpi" class="kpi" style="margin-top:10px"></div><div id="hcChart" style="margin-top:8px"></div><div class="scroll" id="hcTbl" style="margin-top:8px"></div>
     <div style="margin-top:6px"><button id="hcX" class="btn">⬇ Excel</button></div></div>
   <div data-rsub="trip" class="card"><h2>Явуулын касс — аянаар</h2><div class="small" style="margin:-4px 0 8px">Дээрх огнооны хугацаанд хийгдсэн Явуулын кассын борлуулалт аян бүрээр. Бүх аяныг харьцуулах бол хугацааг уртаар сонгоно.</div><div class="scroll" id="cTrip" style="max-height:360px;overflow:auto"></div></div>
+  <div data-rsub="pl" class="card" id="prCard" hidden><h2>💲 Шинэ үнийн үр дүн — үнийн жагсаалтаар</h2>
+    <div class="small" style="margin:-4px 0 8px">«💲 Шинэ үнэ»-ээр оруулсан жагсаалт бүр энд автоматаар гарна. Жагсаалтаа сонгоод огноо → тухайн барааны борлуулалт (ш, ₮), өдрийн дундаж (өмнөх ижил хугацаатай харьцуулсан), өнөөдрийн үлдэгдэл, зарагдалтын хувь.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px">
+      <select id="prL" class="inp" style="min-width:300px;flex:1"></select>
+      <span>Огноо</span><input type="date" id="prA" class="inp" style="width:auto"><span>→</span><input type="date" id="prB" class="inp" style="width:auto">
+      <select id="prSt" class="inp" style="width:auto"></select>
+      <select id="prG" class="inp" style="width:auto"><option value="sku">SKU-гаар</option><option value="m">Загвараар</option></select>
+      <button id="prGo" class="btn pri">Харах</button><button id="prXl" class="btn">Excel</button></div>
+    <div id="prM" class="small" style="margin-top:6px"></div>
+    <div id="prK" class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:8px"></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-top:10px">
+      <div><b>Өдрөөр</b><div class="scroll" id="prD" style="max-height:320px;overflow:auto;margin-top:4px"></div></div>
+      <div><b>Дэлгүүрээр</b><div class="scroll" id="prS" style="max-height:320px;overflow:auto;margin-top:4px"></div></div></div>
+    <div style="margin-top:10px"><b>Бараагаар</b><div class="scroll" id="prT" style="max-height:60vh;overflow:auto;margin-top:4px"></div></div>
+  </div>
   <div data-rsub="new" class="card" id="nwCard" hidden><h2>🆕 Шинэ ачааны борлуулалт — шинээр ирсэн бараа хэр зарагдаж байна</h2>
     <div class="small" style="margin:-4px 0 8px">Сонгосон хугацаанд дэлгүүрт <b>хүлээн авсан орлого</b> (LPP илгээмж, бусад нийлүүлэгчийн орлого) — бараа бүр тухайн дэлгүүрт хүлээн авснаас хойш хэдэн ширхэг зарагдсан, зарагдалтын хувь, борлуулалт, ашиг, үлдсэн. Борлуулалтыг илгээмж агуулахаас гарснаас хойш тооцно; ижил код хэд хэдэн орлогоор ирсэн бол эртнийхээс нь эхлэн; буцаалт хасагдана. Мөр дээр дарж задлана: ачаа › эмэгтэй/эрэгтэй/хүүхэд › ангилал › загвар › бараа. «Өмнө нь бас байсан» — тэр код дэлгүүрт өмнө нь бас байсан (зарагдсан нь хуучин бараанаас байж болно).</div>
     <div class="slf">
@@ -709,7 +724,7 @@ const WH_P=['wh','whedit','rcv_fc','rcv_dr','rcv_ns','rcv_ht','inv','invadm'],wh
 let ME=null;
 const can=p=>!!ME&&(ME.admin||ME.perms.includes(p)||(!!PERM_PARENT[p]&&ME.perms.includes(PERM_PARENT[p])));
 const canSome=m=>can(m)||(PERM_SUB[m]||[]).some(x=>can(x[0]));
-const canTab=t=>t==='users'?!!(ME&&ME.admin):t==='guide'?!!ME:canSome(t);
+const canTab=t=>t==='users'?!!(ME&&ME.admin):t==='guide'?!!ME:t==='till'?canSome('till')||['cash','rep.disc','rep.trip'].some(can):canSome(t);
 function applyPerms(){try{if($('pfCard'))$('pfCard').hidden=!(ME&&ME.admin);perfUi()}catch(e){}if($('lppCard'))$('lppCard').style.display=can('stock')?'':'none';if($('tillMain'))$('tillMain').style.display=can('till.cfg')?'contents':'none';if($('bnWrap'))$('bnWrap').hidden=!can('bonus');document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.hidden=!canTab(b.dataset.tab));document.body.classList.toggle('nocost',!can('cost'));showTab(location.hash.slice(1)||'home')}
 /* ---- Хүсэлтүүд: буцаалт (зөвшөөрөл), солилт (хийгдсэн — нягтлан баталгаажуулна), төлбөрийн хэлбэр засах (батлахад баримт өөрчлөгдөнө) ---- */
 const RQK={return:'Буцаалт',exchange:'Солилт',paychange:'Төлбөр засах'};
@@ -1353,7 +1368,7 @@ function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true
 
 }
 let AUDQ=null,AUDK=null;
-function audWatch(){const el=$('cAud')&&$('cAud').closest('[data-rsub]');if(!AUDK||CURTAB!=='rep'||!el||el.hidden)return;const k=AUDK.join('|');if(AUDQ&&AUDQ.k===k)return;if(AUDQ)AUDQ.un();
+function audWatch(){const el=$('cAud')&&$('cAud').closest('[data-tsub]');if(!AUDK||CURTAB!=='till'||!el||el.hidden)return;const k=AUDK.join('|');if(AUDQ&&AUDQ.k===k)return;if(AUDQ)AUDQ.un();
   if($('cAud'))$('cAud').innerHTML='<div class="small">Ачаалж байна…</div>';AUDQ={k,ok:false,un:db.collection('pos_audit').where('t','>=',AUDK[0]).where('t','<=',AUDK[1]).onSnapshot(s=>{allAudit=s.docs.map(d=>d.data());AUDQ&&(AUDQ.ok=true);drawSoon()},e=>console.warn('audit',e))}}
 function group(list,key,val){const o={};list.forEach(x=>{const k=key(x);o[k]=o[k]||{k,n:0,v:0};o[k].n++;o[k].v+=val(x)});return Object.values(o).sort((a,b)=>b.v-a.v)}
 function tbl(head,rows){return rows.length?'<table><thead><tr>'+head.map((h,i)=>'<th'+(i?' class="n"':'')+'>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table>':'<div class="small">Өгөгдөл алга</div>'}
@@ -1853,17 +1868,22 @@ function drawTrips(){if(SUMM&&!SUMM.rawAll){const m=new Map();sumDays().filter(D
 (()=>{const rep=document.querySelector('section[data-panel="rep"]');
   [...document.querySelectorAll('section[data-panel="rcpt"] > *')].forEach(c=>{c.dataset.rsub='rcpt';c.hidden=true;rep.appendChild(c)});
   [...document.querySelectorAll('section[data-panel="cash"] > *')].forEach(c=>{c.dataset.rsub=c.dataset.csub||'sh';delete c.dataset.csub;c.hidden=true;rep.appendChild(c)});
-  ['rcpt','cash'].forEach(t=>{const b=document.querySelector('#tabs [data-tab="'+t+'"]');if(b)b.remove();const x=document.querySelector('section[data-panel="'+t+'"]');if(x)x.remove()})})();
-const TAB_RED={rcpt:'rcpt',cash:'sh'};
+  ['rcpt','cash'].forEach(t=>{const b=document.querySelector('#tabs [data-tab="'+t+'"]');if(b)b.remove();const x=document.querySelector('section[data-panel="'+t+'"]');if(x)x.remove()});
+  // 20.2: Ээлж, Z, кассчны үйлдэл, хөнгөлөлт, явуулын касс → «Касс, ажилтан» (till)
+  const till=document.querySelector('section[data-panel="till"]');[...till.children].forEach(c=>c.dataset.tsub='cfg');
+  [...rep.querySelectorAll(':scope > [data-rsub]')].filter(c=>['sh','z','aud','disc','trip'].includes(c.dataset.rsub)).forEach(c=>{c.dataset.tsub=c.dataset.rsub;delete c.dataset.rsub;c.hidden=true;till.appendChild(c)})})();
+const TAB_RED={rcpt:['rep','rcpt'],cash:['till','sh']};
 const TABK=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab);
 /* ==== Дэд цэс: үндсэн цэс бүрийн доорх хуудсууд ==== */
 const SUBS={stock:[['bal','📦 Үлдэгдэл'],['age','⏳ Насжилт'],['in','⬇ Орлого'],['move','⇄ Шилжүүлэг'],['out','⬆ Зарлага'],['cnt','✓ Тооллого'],['lpp','🚚 Агуулах (LPP)',()=>can('wh')||can('whedit')],['rcv','📥 Хүлээн авалт (LPP, шилжүүлэг)',()=>can('wh')||can('whedit')||rcvAnyP()],['zinv','🗂 Тооллого (бүсээр)',()=>can('inv')||can('invadm')],['whset','⚙ LPP тохиргоо',()=>!!(ME&&ME.admin)],['diff','⚠ Зөрүү',()=>dfView()],['arc','🗂 Архив'],['open','⚙ Эхний үлдэгдэл']],
   items:[['cat','📦 Бараа, үнэ'],['lbl','🏷 Шошго хэвлэх'],['sp','💲 Шинэ үнэ (Excel, дэлгүүрээр)']],
-  rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','📋 Борлуулалтын жагсаалт'],['new','🆕 Шинэ ачааны борлуулалт',()=>can('rep.new')||can('rep.acc')],['rcpt','🧾 Баримтууд'],['chk','✅ Баримт шалгах',()=>can('rcpt')||can('rep.sum')],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['disc','🔍 Хөнгөлөлтийн хяналт'],['hist','📥 Smart-ын түүх'],['trip','🚐 Явуулын касс']]};
+  rep:[['sum','📊 Тойм'],['fc','📈 Өнөөдрийн таамаг'],['hour','⏱ Цагаар харьцуулах'],['acc','📋 Борлуулалтын жагсаалт'],['new','🆕 Шинэ ачааны борлуулалт',()=>can('rep.new')||can('rep.acc')],['rcpt','🧾 Баримтууд'],['chk','✅ Баримт шалгах',()=>can('rcpt')||can('rep.sum')],['pl','💲 Шинэ үнийн үр дүн',()=>can('rep.sum')||can('rep.acc')],['hist','📥 Smart-ын түүх']],
+  // 20.2: кассын хяналтын дэд цэсүүд «Касс, ажилтан» цэсэнд
+  till:[['cfg','⚙ Касс, ажилтан',()=>can('till.cfg')||can('bonus')],['sh','💵 Ээлж, бэлэн мөнгө'],['z','🗒 Z тайлан'],['aud','👁 Кассчны үйлдэл'],['disc','🔍 Хөнгөлөлтийн хяналт'],['trip','🚐 Явуулын касс']]};
 let CURTAB='';
 const subGet=t=>{try{return localStorage.getItem(t==='stock'?'vivipanel_stsub':'vivipanel_sub_'+t)}catch(e){return ''}};
 function subMark(t,k){if(CURTAB!==t)return;document.querySelectorAll('#subtabs [data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===k||(t==='stock'&&k==='mov'&&false)))}
-const SUBK={items:{cat:'items',sp:'items',lbl:'items.lbl'},stock:{bal:'stock.bal',age:'stock.bal',in:'stock.in',move:'stock.move',out:'stock.out',cnt:'stock.cnt',arc:'stock.arc',open:'stock.open'},rep:{sum:'rep.sum',rcpt:'rcpt',sh:'cash',z:'cash',aud:'cash',fc:'rep.fc',hour:'rep.hour',acc:'rep.acc',disc:'rep.disc',hist:'rep.hist',trip:'rep.trip'}};
+const SUBK={till:{sh:'cash',z:'cash',aud:'cash',disc:'rep.disc',trip:'rep.trip'},items:{cat:'items',sp:'items',lbl:'items.lbl'},stock:{bal:'stock.bal',age:'stock.bal',in:'stock.in',move:'stock.move',out:'stock.out',cnt:'stock.cnt',arc:'stock.arc',open:'stock.open'},rep:{sum:'rep.sum',rcpt:'rcpt',sh:'cash',z:'cash',aud:'cash',fc:'rep.fc',hour:'rep.hour',acc:'rep.acc',disc:'rep.disc',hist:'rep.hist',trip:'rep.trip'}};
 const subOk=(t,x)=>x[2]?x[2]():(SUBK[t]&&SUBK[t][x[0]]?can(SUBK[t][x[0]]):true);
 /* Анхааруулгын тоо: дэд цэс бүр өөрийн тоотой, үндсэн цэс = харагдах дэд цэсүүдийн нийлбэр. badge('stock','diff',12) */
 const BADGE={};function badge(t,s,n){n=Math.max(0,+n||0);if(BADGE[t+':'+s]===n)return;BADGE[t+':'+s]=n;clearTimeout(badge.t);badge.t=setTimeout(badgeDraw,30)}
@@ -1873,9 +1893,10 @@ function badgeDraw(){Object.keys(BADGE).filter(k=>k.endsWith(':_')).forEach(k=>{
   const b=document.querySelector('#tabs [data-tab="'+t+'"]');if(!b)return;let tn=b.querySelector('.tn');if(!tn){tn=document.createElement('span');tn.className='tn hide';b.appendChild(tn)}tn.textContent=sum||'';tn.classList.toggle('hide',!sum)})}
 function drawSubtabs(t){const L=(SUBS[t]||[]).filter(x=>subOk(t,x)),el=$('subtabs');el.classList.toggle('hide',!L.length);if(!L.length){el.innerHTML='';return}
   let cur=subGet(t);if(!L.some(x=>x[0]===cur))cur=L[0][0];el.innerHTML=L.map(([k,l])=>'<button data-st="'+k+'"'+(k===cur?' class="on"':'')+'>'+l+'<span class="sn hide" id="sn_'+t+'_'+k+'"></span></button>').join('');badgeDraw();
-  if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0);else if(t==='cash')csSub(cur);else if(t==='items')itSub(cur)}
-function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='aud')setTimeout(audWatch,0);if(k==='fc')setTimeout(fcShow,0);if(k==='z')setTimeout(zInit,0);if(k==='acc')setTimeout(slInit,0);if(k==='new')setTimeout(nwInit,0);if(k==='chk')setTimeout(ckInit,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
-$('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);else if(CURTAB==='cash')csSub(k);else if(CURTAB==='items')itSub(k);window.scrollTo(0,0)};
+  if(t==='rep')rpSub(cur);else if(t==='stock')setTimeout(()=>stSub(cur),0);else if(t==='cash')csSub(cur);else if(t==='items')itSub(cur);else if(t==='till')tlSub(cur)}
+function tlSub(k){document.querySelectorAll('section[data-panel="till"] [data-tsub]').forEach(c=>c.hidden=c.dataset.tsub!==k);if(k==='aud')setTimeout(audWatch,0);if(k==='z')setTimeout(zInit,0);try{localStorage.setItem('vivipanel_sub_till',k)}catch(e){}subMark('till',k)}
+function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsub]').forEach(c=>c.hidden=c.dataset.rsub!==k);if(k==='aud')setTimeout(audWatch,0);if(k==='fc')setTimeout(fcShow,0);if(k==='z')setTimeout(zInit,0);if(k==='acc')setTimeout(slInit,0);if(k==='new')setTimeout(nwInit,0);if(k==='chk')setTimeout(ckInit,0);if(k==='pl')setTimeout(prInit,0);try{localStorage.setItem('vivipanel_sub_rep',k)}catch(e){}subMark('rep',k)}
+$('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);else if(CURTAB==='cash')csSub(k);else if(CURTAB==='items')itSub(k);else if(CURTAB==='till')tlSub(k);window.scrollTo(0,0)};
 function csSub(k){document.querySelectorAll('section[data-panel="cash"] [data-csub]').forEach(c=>c.hidden=c.dataset.csub!==k);try{localStorage.setItem('vivipanel_sub_cash',k)}catch(e){}subMark('cash',k);if(k==='z')setTimeout(zInit,0)}
 /* ==== 🧾 Z тайлан: хаасан ээлжүүд (pos_shifts), огнооны хүрээгээр; Excel, A4 хүснэгт, 80 мм Z баримт ==== */
 const Z_KIND={deposit:'Банкинд тушаасан',expense:'Жижиг зардал',other:'Бусад гаргалт',change:'Задгай мөнгө нэмсэн',in_other:'Бусад орлого'};let ZL=[],ZP=[];
@@ -1926,7 +1947,7 @@ function zRec(A,B){const shut=new Set(ZL.filter(h=>!h.open).map(h=>h.id)),S={};
 $('zGo').onclick=zRun;$('zBy').onchange=zRun;$('zXl').onclick=()=>{if(!ZL.length)return;xtXlsx('zr','Z_tailan_'+$('zA').value+'_'+$('zB').value,'Z тайлан')};$('zPrAll').onclick=zPrintTable;
 $('zPrZ').onclick=()=>{const ids=new Set(xtData('zr').L.map(r=>r[r.length-1]));zPrint(ZL.filter(h=>ids.has(h.id)&&!h.open))};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-zp]');if(!b)return;const h=ZL.find(x=>x.id===b.dataset.zp);if(h)zPrint([h])});
-function showTab(t,push){if(TAB_RED[t]){try{localStorage.setItem('vivipanel_sub_rep',TAB_RED[t])}catch(e){}t='rep'}if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
+function showTab(t,push){if(TAB_RED[t]){const r=TAB_RED[t];try{localStorage.setItem('vivipanel_sub_'+r[0],r[1])}catch(e){}t=r[0]}if(!TABK.includes(t))t='home';if(ME&&!canTab(t))t=TABK.find(canTab)||'home';
   document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   document.querySelectorAll('section[data-panel]').forEach(x=>x.hidden=x.dataset.panel!==t);
   CURTAB=t;drawSubtabs(t);if(t==='set'){setTimeout(()=>{try{lcDraw()}catch(e){}},0);loadPCat().then(lcDraw).catch(()=>{})}
@@ -2112,7 +2133,7 @@ const spLive=p=>!!p.active&&(!p.end||p.end>=todayIso());
 async function spPrices(id,at){if(SPP[id]&&(!at||SPP[id].at===at))return SPP[id].prices;const d=await db.collection('pos_pricelists_p').doc(id).get();const pr=d.exists?d.data().prices||{}:{};SPP[id]={at,prices:pr};return pr}
 function watchPlists(){db.collection('pos_pricelists').onSnapshot(async q=>{const M=q.docs.map(d=>d.data());
     for(const p of M){if(spLive(p))try{p.prices=await spPrices(p.id,p.at)}catch(e){}}
-    PLISTS=M;if(CURTAB==='items')spDraw();
+    PLISTS=M;if(CURTAB==='items')spDraw();if(PRI)prInit();
     // хугацаа нь дууссан жагсаалтыг архивт (касс татахаа болино)
     M.filter(p=>p.live&&!spLive(p)).forEach(p=>db.collection('pos_pricelists').doc(p.id).update({live:false}).catch(()=>{}))},()=>{});
   if(!spMig){spMig=true;spMigrate()}}
@@ -2121,6 +2142,48 @@ async function spMigrate(){try{const d=await db.collection('pos_config').doc('pr
   for(const p of L)await spPut(p,p.prices||{});await db.collection('pos_config').doc('pricelists').set({list:[],migrated:new Date().toISOString(),n:L.length});await auditCfg('pricelist_migrate',{n:L.length})}catch(e){console.warn('pricelist migrate',e)}}
 async function spPut(p,prices){const sz=new TextEncoder().encode(JSON.stringify(prices)).length;if(sz>950000)throw new Error('Жагсаалт хэт том ('+Math.round(sz/1024)+' КБ, нэг жагсаалтад дээд ~950 КБ ≈ 35 000 бараа). Хоёр жагсаалт болгож хуваана уу.');
   const m={...p};delete m.prices;m.live=spLive(m);const b=db.batch();b.set(db.collection('pos_pricelists_p').doc(p.id),{id:p.id,at:p.at||'',prices});b.set(db.collection('pos_pricelists').doc(p.id),m);await b.commit();SPP[p.id]={at:p.at,prices}}
+/* ==== 💲 Шинэ үнийн үр дүн (20.2): үнийн жагсаалт бүрийн борлуулалт (pos_day), өмнөх ижил хугацаатай харьцуулалт, өнөөдрийн үлдэгдэл ==== */
+let PRI=false,PRSTK=null,PRR=null;
+async function pdGet(A,B){const dates=[];for(let d=new Date(A+'T12:00:00');dates.length<800;d.setDate(d.getDate()+1)){const k=iso(d);if(k>B)break;dates.push(k.replace(/-/g,'/'))}
+  const yd=(()=>{const t=new Date();t.setDate(t.getDate()-1);return iso(t).replace(/-/g,'/')})(),need=dates.filter(d=>!PDC.has(d)),out=[];
+  if(need.length){const q=await db.collection('pos_day').where('date','>=',need[0]).where('date','<=',need[need.length-1]).get(),nb={};q.docs.forEach(x=>{const D=x.data();(nb[D.date]=nb[D.date]||[]).push(D)});
+    need.forEach(d=>{const L=nb[d]||[];if(d<yd&&L.every(x=>(+x.v||0)>=DSA.DAYV&&!x.dirty))PDC.set(d,L);else out.push(...L)})}
+  dates.forEach(d=>{if(PDC.has(d))out.push(...PDC.get(d))});return out}
+function prInit(){const t=todayIso(),L=PLISTS.slice().sort((a,b)=>(b.start||'')<(a.start||'')?-1:(b.start||'')>(a.start||'')?1:(b.at||'')<(a.at||'')?-1:1),cur=$('prL').value;
+  $('prL').innerHTML=L.length?L.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===cur?' selected':'')+'>'+esc(p.name)+' · '+esc(p.all?'бүх дэлгүүр':(p.stores||[]).map(x=>STN[x]||x).join(', '))+' · '+esc((p.start||'')+'→'+(p.end||'…'))+' · '+fmtN(p.nsku||p.n||0)+' SKU'+(spState(p)==='идэвхтэй'?'':' ('+spState(p)+')')+'</option>').join(''):'<option value="">— үнийн жагсаалт алга —</option>';
+  if(!PRI){PRI=true;$('prL').onchange=()=>{prDates();prRun()};$('prGo').onclick=prRun;$('prG').onchange=()=>PRR&&prDraw();$('prXl').onclick=()=>{if(PRR)xtXlsx('plr','une_ur_dun_'+(PRR.p.name||'').replace(/[^\wА-яӨөҮүЁё]+/g,'_')+'_'+PRR.A+'_'+PRR.B,'Үр дүн')};prDates();prRun()}}
+function prDates(){const p=PLISTS.find(x=>x.id===$('prL').value);if(!p)return;const t=todayIso();$('prA').value=p.start||addD(t,-6);$('prB').value=p.end&&p.end<t?p.end:t;
+  $('prSt').innerHTML='<option value="">'+(p.all?'Бүх дэлгүүр':'Жагсаалтын дэлгүүрүүд')+'</option>'+(p.all?['FC','DR','NS','ON','YV']:(p.stores||[])).map(k=>'<option value="'+k+'">'+esc(STN[k]||LOC[k]||k)+'</option>').join('')}
+async function prRun(){const p=PLISTS.find(x=>x.id===$('prL').value);if(!p)return;let A=$('prA').value,B=$('prB').value;if(!A||!B||A>B)return $('prM').textContent='Огноо буруу';
+  $('prM').textContent='Ачаалж байна…';$('prK').innerHTML='';['prD','prS','prT'].forEach(id=>$(id).innerHTML='');
+  try{await loadPCat().catch(()=>{});const pr=await spPrices(p.id,p.at),C=new Map();spExpand(pr,p.key).forEach(([c,v,k])=>{if(!C.has(c))C.set(c,{v:+v,k})});
+    const N=Math.round((new Date(B)-new Date(A))/864e5)+1,PA=addD(A,-N),PB=addD(A,-1),stF=$('prSt').value,SS=stF?[stF]:(p.all?null:(p.stores||[])),okSt=st=>!SS||SS.includes(st);
+    const docs=await pdGet(PA,B),R={p,A,B,N,PA,PB,C,SS,by:new Map(),day:{},st:{},q:0,s:0,qp:0,sp:0};
+    docs.forEach(D=>{if(!okSt(D.store))return;const d=String(D.date).replace(/\//g,'-'),cur=d>=A&&d<=B,prev=d>=PA&&d<=PB;if(!cur&&!prev)return;
+      Object.entries(D.item||{}).forEach(([c,it])=>{if(!C.has(c))return;const q=+it[0]||0,s=+it[1]||0;if(!q&&!s)return;const o=R.by.get(c)||R.by.set(c,{q:0,s:0,qp:0}).get(c);
+        if(cur){o.q+=q;o.s+=s;R.q+=q;R.s+=s;const dd=R.day[d]||(R.day[d]={q:0,s:0});dd.q+=q;dd.s+=s;const so=R.st[D.store]||(R.st[D.store]={q:0,s:0});so.q+=q;so.s+=s}else{o.qp+=q;R.qp+=q;R.sp+=s}})});
+    PRR=R;prDraw();$('prM').textContent='Үлдэгдэл тооцоолж байна…';
+    if(!PRSTK||Date.now()-PRSTK.t>180000)PRSTK={t:Date.now(),A:await stockAll()};const SA=PRSTK.A,ix=SA.SS.map((s,i)=>(!SS||SS.includes(s))?i:-1).filter(i=>i>=0);
+    R.stk=new Map();C.forEach((x,c)=>{const v=SA.M.get(c);if(v)R.stk.set(c,ix.reduce((a,i)=>a+Math.max(0,+v[i]||0),0))});
+    if(PRR===R){prDraw();$('prM').textContent=p.name+' · '+A+' → '+B+' ('+N+' өдөр), харьцуулах үе '+PA+' → '+PB+' · үлдэгдэл: '+(SS?SS.map(x=>LOC[x]||x).join(', '):'бүх байршил (агуулахтай)')+' · '+lt(new Date(PRSTK.t).toISOString())}}
+  catch(e){$('prM').textContent='Алдаа: '+(e.code||e.message||e)}}
+function prDraw(){const R=PRR,f=v=>fmtN(Math.round(v)),pc=(a,b)=>b?Math.round((a-b)/b*100):null,stk=R.stk,ST=stk?[...stk.values()].reduce((a,b)=>a+b,0):null;
+  let stv=0;if(stk)stk.forEach((n,c)=>stv+=n*R.C.get(c).v);const sold=Math.max(0,R.q),thr=stk&&sold+ST?Math.round(sold/(sold+ST)*100):null,dq=R.q/R.N,dqp=R.qp/R.N,ch=pc(dq,dqp);
+  const card=(t,v,s)=>'<div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px"><div class="small">'+t+'</div><div style="font-size:20px;font-weight:700">'+v+'</div><div class="small">'+(s||'')+'</div></div>';
+  const nm=new Set();R.C.forEach((x,c)=>{const r=itRow(c)||{};nm.add(spZ({model:r.model,name:r.name}).m||c)});
+  $('prK').innerHTML=card('Бараа',fmtN(R.C.size)+' SKU',fmtN(nm.size)+' загвар')+card('Зарагдсан',f(R.q)+' ш','өдөрт '+(Math.round(dq*10)/10)+' ш')+card('Борлуулалт',money(R.s),R.q?'дундаж '+f(R.s/R.q)+' ₮/ш':'')+
+    card('Өмнөх '+R.N+' өдөр',f(R.qp)+' ш',ch==null?'өмнө борлуулалт алга':'өдрийн дундаж <b style="color:'+(ch>=0?'#1a7f37':'var(--red)')+'">'+(ch>=0?'+':'')+ch+'%</b>')+
+    card('Өнөөдрийн үлдэгдэл',ST==null?'…':f(ST)+' ш',ST==null?'тооцоолж байна':'шинэ үнээр '+money(stv))+card('Зарагдалт',thr==null?'…':thr+'%','зарагдсан / (зарагдсан + үлдэгдэл)');
+  const DL=Object.keys(R.day).sort(),mx=Math.max(1,...DL.map(d=>R.day[d].q));
+  $('prD').innerHTML=DL.length?'<table class="t" data-xe="1" style="font-size:12px"><thead><tr><th>Огноо</th><th class="n">Ш</th><th class="n">₮</th><th style="width:40%"></th></tr></thead><tbody>'+DL.map(d=>'<tr><td>'+d+'</td><td class="n">'+f(R.day[d].q)+'</td><td class="n">'+f(R.day[d].s)+'</td><td><div style="height:10px;background:var(--red);opacity:.75;border-radius:3px;width:'+Math.max(1,Math.round(R.day[d].q/mx*100))+'%"></div></td></tr>').join('')+'</tbody></table>':'<span class="small">Энэ хугацаанд борлуулалт алга</span>';
+  const SL=Object.entries(R.st).sort((a,b)=>b[1].s-a[1].s);$('prS').innerHTML=SL.length?'<table class="t" data-xe="1" style="font-size:12px"><thead><tr><th>Дэлгүүр</th><th class="n">Ш</th><th class="n">₮</th></tr></thead><tbody>'+SL.map(([k,o])=>'<tr><td>'+esc(STN[k]||LOC[k]||k)+'</td><td class="n">'+f(o.q)+'</td><td class="n">'+f(o.s)+'</td></tr>').join('')+'</tbody></table>':'';
+  const rows=[...R.C.entries()].map(([c,x])=>{const r=itRow(c)||{},o=R.by.get(c)||{q:0,s:0,qp:0},z=spZ({model:r.model,name:r.name}),old=+(r.price!=null&&r.price!==''?r.price:r.base)||0,st=stk?(stk.get(c)||0):null;
+    return {c,name:r.name||'',m:z.m||'',size:r.size||z.sz||'',old,v:x.v,q:o.q,s:o.s,qp:o.qp,st}});
+  if($('prG').value==='m'){const G=new Map();rows.forEach(r=>{const k=r.m||r.c,g=G.get(k)||G.set(k,{k,n:0,name:r.name,v0:r.v,v1:r.v,old:r.old,q:0,s:0,qp:0,st:stk?0:null}).get(k);g.n++;g.v0=Math.min(g.v0,r.v);g.v1=Math.max(g.v1,r.v);g.q+=r.q;g.s+=r.s;g.qp+=r.qp;if(stk)g.st+=r.st});
+    const L=[...G.values()].sort((a,b)=>b.s-a.s);
+    xtable('prT','plr',['Загвар','SKU','Нэр (жишээ)','Хуучин үнэ','Шинэ үнэ','Зарагдсан ш','Борлуулалт ₮','Өмнөх үед ш','Үлдэгдэл','Зарагдалт %'],L.map(g=>[g.k,g.n,g.name,g.old,g.v0===g.v1?g.v0:g.v0+'–'+g.v1,g.q,g.s,g.qp,g.st,g.st==null||g.q+g.st<=0?null:Math.round(Math.max(0,g.q)/(Math.max(0,g.q)+g.st)*100)]),{noSum:[3,4,9]})}
+  else{rows.sort((a,b)=>b.s-a.s||b.q-a.q);
+    xtable('prT','plr',['Код','Нэр','Загвар','Хэмжээ','Хуучин үнэ','Шинэ үнэ','Хямдрал %','Зарагдсан ш','Борлуулалт ₮','Өмнөх үед ш','Үлдэгдэл','Зарагдалт %'],rows.map(r=>[r.c,r.name,r.m,r.size,r.old,r.v,r.old?Math.round((r.v-r.old)/r.old*100):null,r.q,r.s,r.qp,r.st,r.st==null||r.q+r.st<=0?null:Math.round(Math.max(0,r.q)/(Math.max(0,r.q)+r.st)*100)]),{noSum:[4,5,6,11]})}}
 const spState=p=>{const t=todayIso();return !p.active?'зогсоосон':p.start&&t<p.start?'хүлээгдэж буй':p.end&&t>p.end?'дууссан':'идэвхтэй'};
 /* Загвар: LPP нэрнээс (агуулахын хуваарилалттай ижил: «Sinsay 001DG Комбинзон нярай Цэнхэр 62» → 001DG, «001DG-Цэнхэр», 62). Нэр нь LPP биш бол Smart «Барааны ангилал». Түлхүүр (m, mc) том үсгээр, «-» = зай. */
 function spZ(x){const nm=String(x.name||'').trim(),mf=String(x.model==null?'':x.model).trim().replace(/\s*-\s*|\s+/g,' ').toUpperCase(),f=mf.split(' ')[0];
