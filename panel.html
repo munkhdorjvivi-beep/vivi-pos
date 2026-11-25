@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="20.3">
+<meta name="vivi-ver" content="20.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -360,8 +360,11 @@ main textarea{max-width:100%}
       <div class="small" style="margin-bottom:8px">Хасах мөрийн «📋 Тоолуулах», эсвэл доорх хэсгээс дурын загварыг тоолуулна. Касс системийн тоог харахгүй (сохор тооллого). Касс «Тоолж дууслаа» дармагц «✓ тоолсон» болж, систем зөрүү, шалтгааныг (хэмжээ андуурсан / дутагдал / илүүдэл) гаргана. «Үр дүн» → «Зөрүүг засах».</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px;margin-bottom:6px"><b>Загвар тоолуулах:</b><select id="cnSt" class="inp" style="width:auto"></select><input id="cnQ" class="inp" placeholder="Код, баркод эсвэл модель" style="width:220px"><button id="cnGo" class="btn pri">📋 Тоолуулах</button></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--soft);border-radius:10px;margin-bottom:10px"><b>Санамсаргүй (давтамжит) тооллого:</b><select id="cnRSt" class="inp" style="width:auto"></select><input id="cnRN" class="inp" value="5" inputmode="numeric" style="width:70px"><span class="small">загвар (үлдэгдэлтэй загваруудаас санамсаргүй)</span><button id="cnRGo" class="btn">🎲 Илгээх</button><span id="cnMsg" class="small"></span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;border:1px dashed var(--line);border-radius:10px;margin-bottom:10px"><b>📷 LPP барааны зураг:</b><span class="small">хүргэлтийн Excel («Image link» + баркод эсвэл MODEL баганатай) оруулахад даалгавар, зөрүүнд 📷 холбоос гарна; оруулаагүй LPP бараанд 🔍 Google-ээс хайна.</span>
-        <label class="btn" style="cursor:pointer">📥 Excel оруулах<input type="file" id="imgF" accept=".xlsx,.xls" multiple style="display:none"></label><span id="imgM" class="small"></span></div>
+      <!-- 20.5: нуусан — LPP бараанд 🔍 Google хайлт хангалттай; шууд зургийн холбоос (LPP CDN) хэрэг болбол hidden-ийг авна -->
+      <div id="imgBox" hidden style="padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-bottom:10px;text-align:left">
+        <div><b>📷 LPP барааны зургийн холбоос</b></div>
+        <div class="small" style="margin:2px 0 8px;line-height:1.5">Зорилго: тоолох, зөрүү шалгах, агуулахаас бараа илгээхэд ажилтан барааг <b>зургаар нь</b> танина. LPP хүргэлтийн Excel-ийн <b>«by model»</b> хуудсыг (MODEL + зургийн холбоос) оруулна — хүргэлт бүрт нэг удаа; нэг загварын холбоос бүх хэмжээ, өмнөх хүргэлтийн үлдэгдэлд ч ажиллана. Оруулаагүй загварт 🔍 Google-ээс хайна.</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label class="btn pri" style="cursor:pointer">📥 Зургийн холбоосын Excel оруулах<input type="file" id="imgF" accept=".xlsx,.xls" multiple style="display:none"></label><span id="imgM" class="small"></span></div></div>
       <div class="scroll" id="cntTasks"></div>
       <h2 style="margin:16px 0 4px">👤 Тооллогын тайлан — кассчин, дутагдал (дээрх огнооны хүрээнд)</h2>
       <div class="small" style="margin-bottom:6px">«Зөрүүг засах» хийсэн тооллого бүрийн дүгнэлт: хэмжээ андуурсан баримтын кассчин, дутагдал/илүүдлийн тоо, өртөг ба кассын үнээр дүн. Дутагдлын акт хэвлэж гарын үсэг зуруулна.</div>
@@ -3305,17 +3308,22 @@ async function imgXl(files){const out=$('imgM');if(!files||!files.length)return;
   const url=c=>{if(!c)return '';if(c.l&&c.l.Target&&/^https?:/i.test(c.l.Target))return c.l.Target;if(typeof c.v==='string'&&/^https?:\/\//i.test(c.v.trim()))return c.v.trim();const m=c.f&&/HYPERLINK\(\s*"([^"]+)"/i.exec(c.f);return m&&/^https?:/i.test(m[1])?m[1]:''};
   const add=new Map();let rows=0;const miss=[];
   for(const f of files){const wb=XLSX.read(await fileBuf(f),{type:'array',cellFormula:true,sheetStubs:true});let got=false;
-    for(const sn of wb.SheetNames){const ws=wb.Sheets[sn];if(!ws['!ref'])continue;const R=XLSX.utils.decode_range(ws['!ref']);let hr=-1,H=[];
-      for(let r=R.s.r;r<=Math.min(R.e.r,R.s.r+15)&&hr<0;r++){const h=[];for(let c=R.s.c;c<=R.e.c;c++){const x=ws[XLSX.utils.encode_cell({r,c})];h[c]=x&&x.v!=null?String(x.v).trim():''}if(h.some(v=>/image|зураг|photo|picture/i.test(v)))hr=r,H=h}
-      if(hr<0)continue;const fi=re=>H.findIndex(v=>v&&re.test(v)&&!/google/i.test(v)),first=(...a)=>{for(const x of a)if(x>=0)return x;return -1};
-      const ci=first(fi(/^(баркод|бар код|barcode|ean|item|index|код)$/i),fi(/баркод|barcode|ean/i)),mi=first(fi(/^(model|модель|загвар|ангилал|барааны ангилал)$/i),fi(/model|модел|загвар/i)),ui=fi(/image|зураг|photo|picture/i);
-      if(ui<0||(ci<0&&mi<0))continue;got=true;
-      for(let r=hr+1;r<=R.e.r;r++){const u=url(ws[XLSX.utils.encode_cell({r,c:ui})]);if(!u)continue;rows++;
-        const cv=ci>=0?ws[XLSX.utils.encode_cell({r,c:ci})]:null,code=cv&&cv.v!=null?(typeof cv.v==='number'?String(Math.round(cv.v)):String(cv.v).trim()):'',mv=mi>=0?ws[XLSX.utils.encode_cell({r,c:mi})]:null;
-        let z=mv&&mv.v!=null&&String(mv.v).trim()?spZ({model:String(mv.v)}):null;if(code){add.set(code,u);const it=itRow(code);if(!z&&it)z=spZ({model:it.model,name:it.name})}
-        if(z&&z.m){if(!add.has('m:'+z.m))add.set('m:'+z.m,u);if(z.mc&&z.mc!==z.m&&!add.has('mc:'+z.mc))add.set('mc:'+z.mc,u)}}}
+    for(const sn of wb.SheetNames){const ws=wb.Sheets[sn];if(!ws['!ref'])continue;const R=XLSX.utils.decode_range(ws['!ref']),cell=(r,c)=>ws[XLSX.utils.encode_cell({r,c})];let hr=-1,H=[];
+      // гарчгийн мөр: MODEL / загвар эсвэл баркодын багана байгаа мөр («by model» хуудас ч болно)
+      for(let r=R.s.r;r<=Math.min(R.e.r,R.s.r+15)&&hr<0;r++){const h=[];for(let c=R.s.c;c<=R.e.c;c++){const x=cell(r,c);h[c]=x&&x.v!=null?String(x.v).trim():''}if(h.some(v=>/^(model|модель|загвар|ангилал|барааны ангилал|баркод|бар код|barcode|ean|item)$/i.test(v)))hr=r,H=h}
+      if(hr<0)continue;const fi=re=>H.findIndex(v=>v&&re.test(v)),first=(...a)=>{for(const x of a)if(x>=0)return x;return -1};
+      const ci=first(fi(/^(баркод|бар код|barcode|ean|item|index)$/i),fi(/баркод|barcode|ean/i)),mi=first(fi(/^(model|модель|загвар|ангилал|барааны ангилал)$/i),fi(/^(?!.*google).*(model|модел|загвар)/i));
+      // холбоосын багана: зураг/image → link/холбоос/url → google; байхгүй бол MODEL/баркодын нүдний hyperlink, эсвэл мөрийн аль нэг холбоос
+      const U=[fi(/image|зураг|photo|picture|фото/i),fi(/link|линк|холбоос|url/i),fi(/google/i)].filter(x=>x>=0);
+      if(ci<0&&mi<0)continue;let n0=rows;
+      for(let r=hr+1;r<=R.e.r;r++){let u='';for(const c of U){u=url(cell(r,c));if(u)break}
+        if(!u)u=url(mi>=0?cell(r,mi):null)||url(ci>=0?cell(r,ci):null);if(!u)for(let c=R.s.c;c<=R.e.c&&!u;c++)u=url(cell(r,c));if(!u)continue;rows++;
+        const cv=ci>=0?cell(r,ci):null,code=cv&&cv.v!=null?(typeof cv.v==='number'?String(Math.round(cv.v)):String(cv.v).trim()):'',mv=mi>=0?cell(r,mi):null;
+        let z=mv&&mv.v!=null&&String(mv.v).trim()?spZ({model:String(mv.v)}):null;if(code&&/^\d{6,}$/.test(code)){add.set(code,u);const it=itRow(code);if(!z&&it)z=spZ({model:it.model,name:it.name})}
+        if(z&&z.m){if(!add.has('m:'+z.m))add.set('m:'+z.m,u);if(z.mc&&z.mc!==z.m&&!add.has('mc:'+z.mc))add.set('mc:'+z.mc,u)}}
+      if(rows>n0)got=true}
     if(!got)miss.push(f.name)}
-  if(!add.size){out.innerHTML='<span class="hot">Зургийн холбоос олдсонгүй'+(miss.length?' ('+esc(miss.join(', '))+')':'')+'. Гарчигт «Image link / Зураг / Photo» багана, мөн баркод эсвэл MODEL багана хэрэгтэй.</span>';return}
+  if(!add.size){out.innerHTML='<span class="hot">Зургийн холбоос олдсонгүй'+(miss.length?' ('+esc(miss.join(', '))+')':'')+'. «by model» хуудас (MODEL багана + холбоос) эсвэл баркод + «Image link» баганатай файл оруулна уу.</span>';return}
   let nw=0;add.forEach((u,k)=>{if(IMGM.get(k)!==u){IMGM.set(k,u);nw++}});
   if(!nw){out.textContent='Бүх холбоос аль хэдийн хадгалагдсан ('+fmtN(add.size)+')';return}
   out.textContent='Хадгалж байна…';try{await writeChunks('pos_img',[...IMGM.entries()],{src:'xl',files:[...files].map(f=>f.name).slice(0,20)},(i,n)=>out.textContent='Хадгалж байна '+i+'/'+n);
