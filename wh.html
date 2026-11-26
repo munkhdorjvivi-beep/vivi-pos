@@ -6466,7 +6466,8 @@ async function onScan(raw){
   if (!(await whReady(id))){ showResult('bad', 'Өгөгдөл ачаалж дуусаагүй', 'Илгээмж, тоолуурын мэдээлэл серверээс ирээгүй байна. Интернэтээ шалгаад дахин скан хийнэ үү — энэ скан тоологдоогүй.'); beep('bad'); return; }
   const P = await loadParts(id); if (!P){ showResult('bad', 'Хүргэлт ачаалж чадсангүй', ''); return; }
   let k = P.eans[e], it = k ? P.items[k] : null, st, kind = 'ok', why = ''; const DV = WS.delivs.find(d => d.id === id), V2 = isV2(DV);
-  if (!it){ const O = whOtherDeliv(e, id); if (O){ showResult('bad', 'ӨӨР ТРАКЫН БАРАА', `${e} — энэ бараа «${O.name}» тракын жагсаалтад байна, харин энэ төхөөрөмж «${DV ? DV.name : ''}»-г сканнердаж байна. Дээрээс хүргэлтээ шалгаад дахин уншуулна уу — энэ скан тоологдоогүй.`); beep('bad'); pushLast({e, n: '«' + O.name + '»', s: '', st: '', kind: 'bad'}); return; } }
+  if (!it){ const oth = whOpenDelivs().filter(D => D.id !== id); if (oth.some(D => !WS.parts[D.id])) await Promise.all(oth.map(D => WS.parts[D.id] || loadParts(D.id).catch(() => null)));   // бусад тракыг зөвхөн жагсаалтад байхгүй бараа уншигдахад л ачаална
+    const O = whOtherDeliv(e, id); if (O){ showResult('bad', 'ӨӨР ТРАКЫН БАРАА', `${e} — энэ бараа «${O.name}» тракын жагсаалтад байна, харин энэ төхөөрөмж «${DV ? DV.name : ''}»-г сканнердаж байна. Дээрээс хүргэлтээ шалгаад дахин уншуулна уу — энэ скан тоологдоогүй.`); beep('bad'); pushLast({e, n: '«' + O.name + '»', s: '', st: '', kind: 'bad'}); return; } }
   if (V2 && it){ const r = v2Pick(id, DV, P, k, it); st = r.st; kind = r.kind; why = r.why || ''; addPend(id, (kind === 'extra' ? 'x|' : 'c|') + k, st, 1); statAdd(1); }
   else if (it && it.x){ st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); statAdd(1); }
   else if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg(), totOf(id)); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); statAdd(1); }
@@ -6648,8 +6649,6 @@ function renderWhMulti(){
 function renderWhCur(){ const el = $('#wh-cur'); if (!el) return; const D = WS.delivs.find(d => d.id === WS.active), n = whOpenDelivs().length;
   const html = D ? `<div style="background:${delivColor(D.id)};color:#fff;border-radius:8px;padding:8px 12px;font-size:${n > 1 ? 18 : 15}px;font-weight:700">▶ ${esc(D.name)}${isV2(D) ? ' · v2' : ''}${n > 1 ? ' <span style="font-weight:400;font-size:13px">— энэ төхөөрөмж ЗӨВХӨН энэ тракыг сканнердана</span>' : ''}</div>` : '';
   if (el.innerHTML !== html) el.innerHTML = html; const sel = $('#wh-active'); if (sel) sel.style.borderLeft = D ? '8px solid ' + delivColor(D.id) : ''; }
-// бусад нээлттэй тракын EAN-ууд (скан дэлгэц нээгдэхэд арын горимд ачаална)
-function whPreloadOthers(){ if (WS.mode !== 'scan') return; for (const D of whOpenDelivs()) if (D.id !== WS.active && !WS.parts[D.id] && !(WS.preload = WS.preload || {})[D.id]){ WS.preload[D.id] = 1; loadParts(D.id).catch(() => { delete WS.preload[D.id]; }); } }
 function whOtherDeliv(e, id){ for (const D of whOpenDelivs()){ if (D.id === id) continue; const P = WS.parts[D.id]; if (P && P.eans && P.eans[e]) return D; } return null; }
 document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'wh-multi-d') WS.multiOpen = ev.target.open; }, true);
 document.addEventListener('click', ev => { const b = ev.target.closest('[data-whview]'); if (!b) return; const sel = $('#wh-active'); if (!sel) return; sel.value = b.dataset.whview; sel.dispatchEvent(new Event('change')); window.scrollTo({top: 0}); });
@@ -7243,7 +7242,7 @@ window.addEventListener('online', syncChip); window.addEventListener('offline', 
 function renderWh(){
   if (!$('section[data-panel="wh"]')) return;
   $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-price-card').hidden = WS.mode !== 'price'; { const pc = $('#wh-prod-card'); if (pc){ pc.hidden = WS.mode !== 'prod'; if (WS.mode === 'prod' && typeof prodRender === 'function') prodRender(); } } renderMyStat(); { const lc = $('#wh-label-card'); if (lc){ lc.hidden = WS.mode !== 'label'; if (WS.mode === 'label' && typeof lbRender === 'function') lbRender(); } } restoreLast(); renderSession(); $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
-  renderWhActive(); renderWhMulti(); renderWhCur(); whPreloadOthers(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip(); { const h = $('#wh-hist'); if (h) h.innerHTML = WS.mode === 'ship' && whCanEdit() ? whHistHTML(() => true, 200) : ''; }
+  renderWhActive(); renderWhMulti(); renderWhCur(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip(); { const h = $('#wh-hist'); if (h) h.innerHTML = WS.mode === 'ship' && whCanEdit() ? whHistHTML(() => true, 200) : ''; }
   { const sig = JSON.stringify(whCfg().stores); if (!WD && WS.pctSig !== sig){ WS.pctSig = sig; wdPctInputs(); } }
   try{ renderRcv(); }catch(err){ console.warn('rcv', err); }
 }

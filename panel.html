@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="20.6">
+<meta name="vivi-ver" content="20.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -2181,7 +2181,7 @@ async function prRun(){const p=PLISTS.find(x=>x.id===$('prL').value);if(!p)retur
       Object.entries(D.item||{}).forEach(([c,it])=>{if(!C.has(c))return;const q=+it[0]||0,s=+it[1]||0;if(!q&&!s)return;const o=R.by.get(c)||R.by.set(c,{q:0,s:0,qp:0}).get(c);
         if(cur){o.q+=q;o.s+=s;R.q+=q;R.s+=s;const dd=R.day[d]||(R.day[d]={q:0,s:0});dd.q+=q;dd.s+=s;const so=R.st[D.store]||(R.st[D.store]={q:0,s:0});so.q+=q;so.s+=s}else{o.qp+=q;R.qp+=q;R.sp+=s}})});
     PRR=R;prDraw();$('prM').textContent='Үлдэгдэл тооцоолж байна…';
-    if(!PRSTK||Date.now()-PRSTK.t>180000)PRSTK={t:Date.now(),A:await stockAll()};const SA=PRSTK.A,ix=SA.SS.map((s,i)=>(!SS||SS.includes(s))?i:-1).filter(i=>i>=0);
+    if(!PRSTK||Date.now()-PRSTK.t>120000)PRSTK={t:Date.now(),A:await stockAll()};const SA=PRSTK.A,ix=SA.SS.map((s,i)=>(!SS||SS.includes(s))?i:-1).filter(i=>i>=0);
     R.stk=new Map();C.forEach((x,c)=>{const v=SA.M.get(c);if(v)R.stk.set(c,ix.reduce((a,i)=>a+Math.max(0,+v[i]||0),0))});
     if(PRR===R){prDraw();$('prM').textContent=p.name+' · '+A+' → '+B+' ('+N+' өдөр), харьцуулах үе '+PA+' → '+PB+' · үлдэгдэл: '+(SS?SS.map(x=>LOC[x]||x).join(', '):'бүх байршил (агуулахтай)')+' · '+lt(new Date(PRSTK.t).toISOString())}}
   catch(e){$('prM').textContent='Алдаа: '+(e.code||e.message||e)}}
@@ -2206,7 +2206,8 @@ function prDraw(){const R=PRR,f=v=>fmtN(Math.round(v)),pc=(a,b)=>b?Math.round((a
 /* ===== 🤝 Нийлүүлэгчийн борлуулалт: pos_config/supcons = {sups:{нэр:{on,since}}, paid:{"нэр|A|B":{at,by,amt,q}}} =====
    Бараа → нийлүүлэгч: каталогийн «Нийлүүлэгч» + тухайн нийлүүлэгчийн орлогын (⬇ Орлого) мөрүүд. Зарагдсан = pos_day (буцаалт хассан).
    Буцаасан = ⬆ Зарлага «Нийлүүлэгчид буцаасан». Үлдэгдэл = одоогийн (бүх байршил). */
-let SUC={sups:{},paid:{}},SUI=false,SUR=null,SUSTK=null;
+let SUC={sups:{},paid:{}},SUI=false,SUR=null,SUW=false;
+const suErr=e=>{const c=e&&(e.code||e.message)||String(e);return c+(/permission/i.test(c)?' — эрх хүрэлцэхгүй: Firebase-д шинэ firestore.rules нийтэлсэн эсэхийг шалгана уу':'')};
 const suN=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,' ');
 const suKey=(n,A,B)=>n+'|'+A+'|'+B;
 function suHalf(d){const y=+d.slice(0,4),m=+d.slice(5,7),day=+d.slice(8,10),ym=d.slice(0,8);if(day<=15)return [ym+'01',ym+'15'];const last=new Date(Date.UTC(y,m,0)).getUTCDate();return [ym+'16',ym+String(last).padStart(2,'0')]}
@@ -2214,16 +2215,19 @@ function suPeriods(from,to){const L=[];let p=suHalf(from);for(let i=0;i<200&&p[0
 function suSups(){return Object.entries(SUC.sups||{}).filter(([,v])=>v&&v.on).map(([k])=>k).sort((a,b)=>a.localeCompare(b))}
 // дууссан, тооцоо хийгээгүй үеүүд (үе дууссаны маргаашаас)
 function suDue(){const t=todayIso(),out=[];suSups().forEach(n=>{const since=(SUC.sups[n]||{}).since||t;suPeriods(since,t).forEach(([A,B])=>{if(B<t&&!(SUC.paid||{})[suKey(n,A,B)])out.push([n,A,B])})});return out}
-function watchSup(){db.collection('pos_config').doc('supcons').onSnapshot(d=>{SUC=d.exists?{sups:{},paid:{},...d.data()}:{sups:{},paid:{}};badge('rep','sup',can('cost')?suDue().length:0);
-  if(SUI&&!$('suCard').hidden){suFill();suCfgDraw();if(SUR)suPayDraw()}},()=>{})}
+function watchSup(){if(SUW)return;SUW=true;db.collection('pos_config').doc('supcons').onSnapshot(d=>{SUC=d.exists?{sups:{},paid:{},...d.data()}:{sups:{},paid:{}};badge('rep','sup',can('cost')?suDue().length:0);
+  suRedraw()},e=>{SUW=false;console.warn('supcons',e);if($('suM'))$('suM').innerHTML='<b style="color:var(--red)">Нийлүүлэгчийн тохиргоо уншиж чадсангүй: '+esc(suErr(e))+'</b>'})}
+function suRedraw(){badge('rep','sup',can('cost')?suDue().length:0);if(SUI&&!$('suCard').hidden){suFill();suCfgDraw();if(SUR)suPayDraw()}}
 setInterval(()=>{if(can&&ME&&can('cost'))badge('rep','sup',suDue().length)},10*60000);
-async function suSave(fn){const ref=db.collection('pos_config').doc('supcons');const x=await ref.get();const D=x.exists?{sups:{},paid:{},...x.data()}:{sups:{},paid:{}};fn(D);D.at=new Date().toISOString();D.by=(auth.currentUser&&auth.currentUser.email)||'';await ref.set(D)}
+async function suSave(patch,local){const at=new Date().toISOString(),by=(auth.currentUser&&auth.currentUser.email)||'';
+  const p=db.collection('pos_config').doc('supcons').set({...patch,at,by},{merge:true});local(SUC);suRedraw();
+  try{await p}catch(e){const d=await db.collection('pos_config').doc('supcons').get().catch(()=>null);if(d)SUC=d.exists?{sups:{},paid:{},...d.data()}:{sups:{},paid:{}};suRedraw();throw e}}
 function suFill(){const cur=$('suS').value,L=suSups(),due=suDue();
   $('suS').innerHTML='<option value="">'+(L.length?'Бүх нийлүүлэгч — нэгтгэл ('+L.length+')':'— нийлүүлэгч тохируулаагүй («⚙ Нийлүүлэгчид») —')+'</option>'+L.map(n=>{const k=due.filter(x=>x[0]===n).length;return '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+(k?' · 🔴 '+k+' тооцоо хүлээгдэж байна':'')+'</option>'}).join('')}
 function suFillP(){const t=todayIso(),L=suPeriods(addD(t,-370),t).reverse(),cur=$('suP').value;
   $('suP').innerHTML='<option value="">Чөлөөт огноо</option>'+L.map(([A,B])=>'<option value="'+A+'|'+B+'"'+((A+'|'+B)===cur?' selected':'')+'>'+A.slice(0,7)+(A.slice(8)==='01'?' · 1–15':' · 16–'+B.slice(8))+(B>=t?' (явагдаж буй)':'')+'</option>').join('');
   if(!cur){const d=suDue(),p=suHalf(addD(suHalf(t)[0],-1));$('suP').value=p[0]+'|'+p[1];$('suA').value=p[0];$('suB').value=p[1]}}
-function suInit(){if(!SUI){SUI=true;suFillP();
+function suInit(){watchSup();if(!SUI){SUI=true;suFillP();
     $('suP').onchange=()=>{const v=$('suP').value;if(v){const [A,B]=v.split('|');$('suA').value=A;$('suB').value=B;suRun()}};
     ['suA','suB'].forEach(id=>$(id).onchange=()=>{const v=$('suA').value+'|'+$('suB').value;$('suP').value=[...$('suP').options].some(o=>o.value===v)?v:''});
     $('suS').onchange=suRun;$('suGo').onclick=suRun;$('suCfgB').onclick=()=>{$('suCfg').hidden=!$('suCfg').hidden;suCfgDraw()};
@@ -2231,12 +2235,12 @@ function suInit(){if(!SUI){SUI=true;suFillP();
   suFill();if(!suSups().length){$('suCfg').hidden=false;suCfgDraw()}suRun()}
 function suCfgDraw(){if($('suCfg').hidden)return;const t=todayIso(),S=SUC.sups||{},all=[...new Set([...(catLists.sups||[]),...Object.keys(S)])].filter(Boolean).sort((a,b)=>a.localeCompare(b));
   $('suCfg').innerHTML='<b>Борлуулалтаар тооцох нийлүүлэгчид</b> <span class="small">— зөвхөн тэмдэглэсэн нийлүүлэгч тайланд гарна. «Хэзээнээс» = тооцоо эхлэх өдөр (энэ өдрөөс хойшхи дууссан үе бүр 🔴 болно).</span>'+
-    '<div style="display:flex;gap:6px;margin:6px 0"><input id="suFind" class="inp" placeholder="Нийлүүлэгч хайх…" style="max-width:280px"></div><div class="scroll" style="max-height:280px;overflow:auto"><table class="t" style="font-size:13px"><thead><tr><th>Нийлүүлэгч</th><th>Борлуулалтаар тооцох</th><th>Хэзээнээс</th></tr></thead><tbody>'+
+    '<div style="display:flex;gap:6px;margin:6px 0"><input id="suFind" class="inp" placeholder="Нийлүүлэгч хайх…" style="max-width:280px"></div><div class="scroll" style="max-height:280px;overflow:auto"><table class="t" data-xe="skip" style="font-size:13px"><thead><tr><th>Нийлүүлэгч</th><th>Борлуулалтаар тооцох</th><th>Хэзээнээс</th></tr></thead><tbody>'+
     all.map(n=>{const v=S[n]||{};return '<tr data-sun="'+esc(n)+'"><td>'+esc(n)+'</td><td><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-suon'+(v.on?' checked':'')+'> тийм</label></td><td><input type="date" class="inp" data-susince value="'+esc(v.since||'')+'" style="width:auto"'+(v.on?'':' disabled')+'></td></tr>'}).join('')+'</tbody></table></div>';
   $('suFind').oninput=e=>{const q=suN(e.target.value);$('suCfg').querySelectorAll('tr[data-sun]').forEach(r=>r.hidden=q&&!suN(r.dataset.sun).includes(q))};
   $('suCfg').querySelectorAll('tr[data-sun]').forEach(r=>{const n=r.dataset.sun,cb=r.querySelector('[data-suon]'),dt=r.querySelector('[data-susince]');
-    cb.onchange=async()=>{try{await suSave(D=>{const o=D.sups[n]||{};o.on=cb.checked;if(cb.checked&&!o.since)o.since=suHalf(t)[0];D.sups[n]=o})}catch(e){alert('Хадгалж чадсангүй: '+(e.code||e.message))}};
-    dt.onchange=async()=>{if(!dt.value)return;try{await suSave(D=>{D.sups[n]={...(D.sups[n]||{on:true}),since:suHalf(dt.value)[0]}})}catch(e){alert('Хадгалж чадсангүй: '+(e.code||e.message))}}})}
+    cb.onchange=async()=>{cb.disabled=true;const o={...(SUC.sups[n]||{}),on:cb.checked};if(cb.checked&&!o.since)o.since=suHalf(t)[0];try{await suSave({sups:{[n]:o}},D=>{D.sups={...D.sups,[n]:o}});$('suM').textContent='✓ Хадгаллаа: '+n+(cb.checked?' — борлуулалтаар тооцох':' — хассан')}catch(e){cb.checked=!cb.checked;cb.disabled=false;$('suM').innerHTML='<b style="color:var(--red)">Хадгалж чадсангүй: '+esc(suErr(e))+'</b>';alert('Хадгалж чадсангүй: '+suErr(e))}};
+    dt.onchange=async()=>{if(!dt.value)return;const o={...(SUC.sups[n]||{on:true}),since:suHalf(dt.value)[0]};try{await suSave({sups:{[n]:o}},D=>{D.sups={...D.sups,[n]:o}})}catch(e){$('suM').innerHTML='<b style="color:var(--red)">Хадгалж чадсангүй: '+esc(suErr(e))+'</b>';alert('Хадгалж чадсангүй: '+suErr(e))}}})}
 // нийлүүлэгч бүрийн бараа, худалдан авах үнэ, орлого, буцаалт
 function suIndex(names,B){const W=new Map(names.map(n=>[suN(n),n])),code2s=new Map(),price=new Map(),PH=new Map();
   if(PCAT)PCAT.forEach(r=>{const n=W.get(suN(r[5]));if(n)code2s.set(r[0],n)});Object.values(PITX||{}).forEach(r=>{const n=W.get(suN(r.sup));if(n)code2s.set(r.code,n)});
@@ -2254,17 +2258,21 @@ async function suRun(){const name=$('suS').value,A=$('suA').value,B=$('suB').val
     (await pdGet(A,B)).forEach(D=>{const d=String(D.date).replace(/\//g,'-');if(d<A||d>B)return;Object.entries(D.item||{}).forEach(([c,it])=>{if(!I.code2s.has(c))return;const q=+it[0]||0,sv=+it[1]||0;if(!q&&!sv)return;const o=row(c);o.q+=q;o.s+=sv;o.st[D.store]=(o.st[D.store]||0)+q;R.st.add(D.store)})});
     (movDocs||[]).forEach(m=>{const d=iso(new Date(m.at));if(d<A||d>B)return;const ret=m.type==='out'&&/нийлүүлэгчид буцаа/i.test(m.reason||m.note||''),inn=m.type==='in';if(!ret&&!inn)return;let L=[];try{L=JSON.parse(m.lines||'[]')}catch(e){}
       L.forEach(x=>{if(!I.code2s.has(x[0]))return;const o=row(x[0]);if(inn)o.in+=+x[1]||0;else o.ret+=+x[1]||0})});
-    SUR=R;suDraw();$('suM').textContent='Үлдэгдэл тооцоолж байна…';
-    if(!SUSTK||Date.now()-SUSTK.t>180000)SUSTK={t:Date.now(),A:await stockAll()};const SA=SUSTK.A;R.SS=SA.SS;R.stk=new Map();
-    I.code2s.forEach((n,c)=>{const v=SA.M.get(c);if(v&&v.some(x=>x>0)){R.stk.set(c,v.map(x=>Math.max(0,+x||0)));row(c)}});
-    if(SUR===R){suDraw();$('suM').textContent=(name||'Бүх нийлүүлэгч ('+names.length+')')+' · '+A+' → '+B+' · барааны тоо '+fmtN(I.code2s.size)+' · үлдэгдэл '+lt(new Date(SUSTK.t).toISOString())+(R.noP.size?' · ⚠ '+R.noP.size+' бараанд худалдан авах үнэ алга (Төлөх дүнд ороогүй)':'')}}
+    SUR=R;suDraw();suMsg(R);
+    if(stockAllAge()<120000)await suStock(R)}   // үлдэгдэл саяхан (өөр цэсэнд) тооцоологдсон бол шууд — эс бөгөөс «📦 Харуулах» товчоор
   catch(e){$('suM').textContent='Алдаа: '+(e.code||e.message||e)}}
+async function suStock(R){const b=$('suStkB');if(b){b.disabled=true;b.textContent='Тооцоолж байна…'}$('suM').textContent='Үлдэгдэл тооцоолж байна…';
+  const SA=await stockAll();R.SS=SA.SS;R.stk=new Map();R.stkAt=Date.now()-stockAllAge();
+  R.I.code2s.forEach((n,c)=>{const v=SA.M.get(c);if(v&&v.some(x=>x>0)){R.stk.set(c,v.map(x=>Math.max(0,+x||0)));if(!R.by.has(c))R.by.set(c,{c,q:0,s:0,st:{},in:0,ret:0})}});
+  if(SUR===R){suDraw();suMsg(R)}}
+function suMsg(R){$('suM').textContent=(R.name||'Бүх нийлүүлэгч ('+R.names.length+')')+' · '+R.A+' → '+R.B+' · барааны тоо '+fmtN(R.I.code2s.size)+(R.stk?' · үлдэгдэл '+lt(new Date(R.stkAt).toISOString()):'')+(R.noP&&R.noP.size?' · ⚠ '+R.noP.size+' бараанд худалдан авах үнэ алга (Төлөх дүнд ороогүй)':'')}
 function suCalc(R){R.sq=0;R.amt=0;R.sv=0;R.inq=0;R.rq=0;R.noP=new Set();const per=new Map();
   R.by.forEach(o=>{const p=R.I.price.get(o.c),n=R.I.code2s.get(o.c);o.p=p==null?null:p;o.amt=p==null?null:Math.round(p*o.q);if(p==null&&o.q)R.noP.add(o.c);R.sq+=o.q;R.sv+=o.s;R.inq+=o.in;R.rq+=o.ret;if(o.amt)R.amt+=o.amt;
     const g=per.get(n)||per.set(n,{n,q:0,amt:0,s:0,in:0,ret:0,st:0,noP:0}).get(n);g.q+=o.q;g.s+=o.s;g.in+=o.in;g.ret+=o.ret;if(o.amt)g.amt+=o.amt;if(p==null&&o.q)g.noP++;const v=R.stk&&R.stk.get(o.c);if(v)g.st+=v.reduce((a,b)=>a+b,0)});R.per=per}
 function suDraw(){const R=SUR,f=v=>fmtN(Math.round(v));suCalc(R);const ST=R.stk?[...R.stk.values()].reduce((a,v)=>a+v.reduce((x,y)=>x+y,0),0):null;
   const card=(t,v,s)=>'<div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px"><div class="small">'+t+'</div><div style="font-size:20px;font-weight:700">'+v+'</div><div class="small">'+(s||'')+'</div></div>';
-  $('suK').innerHTML=card('Төлөх дүн',money(R.amt),'худалдан авах үнэ × зарагдсан')+card('Зарагдсан',f(R.sq)+' ш','манай борлуулалт '+money(R.sv))+card('Ирсэн (энэ хугацаанд)',f(R.inq)+' ш','⬇ Орлого')+card('Буцаасан',f(R.rq)+' ш','нийлүүлэгчид')+card('Одоогийн үлдэгдэл',ST==null?'…':f(ST)+' ш',ST==null?'тооцоолж байна':'бүх байршил, өнөөдөр');
+  $('suK').innerHTML=card('Төлөх дүн',money(R.amt),'худалдан авах үнэ × зарагдсан')+card('Зарагдсан',f(R.sq)+' ш','манай борлуулалт '+money(R.sv))+card('Ирсэн (энэ хугацаанд)',f(R.inq)+' ш','⬇ Орлого')+card('Буцаасан',f(R.rq)+' ш','нийлүүлэгчид')+card('Одоогийн үлдэгдэл',ST==null?'<button class="btn" id="suStkB" style="font-size:14px">📦 Харуулах</button>':f(ST)+' ш',ST==null?'бүх дэлгүүрийн үлдэгдэл — хэдэн секунд':'бүх байршил, өнөөдөр');
+  const sb=$('suStkB');if(sb)sb.onclick=()=>suStock(R).catch(e=>$('suM').textContent='Алдаа: '+suErr(e));
   suPayDraw();
   if(!R.name){const L=[...R.per.values()].sort((a,b)=>b.amt-a.amt),t=todayIso(),one=suHalf(R.A),full=one[0]===R.A&&one[1]===R.B;
     xtable('suT','sup',['Нийлүүлэгч','Зарагдсан ш','Төлөх дүн ₮','Манай борлуулалт ₮','Ирсэн ш','Буцаасан ш','Үлдэгдэл ш','Үнэгүй бараа','Тооцоо'],L.map(g=>[g.n,g.q,g.amt,g.s,g.in,g.ret,R.stk?g.st:null,g.noP||null,!full?'—':R.B>=t?'явагдаж буй':(SUC.paid||{})[suKey(g.n,R.A,R.B)]?'✓ хийсэн':'🔴 хүлээгдэж байна']),{noSum:[7,8]});return}
@@ -2278,10 +2286,10 @@ function suPayDraw(){const R=SUR;if(!R)return;const el=$('suPay'),t=todayIso(),o
   el.innerHTML=P?'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:#e8f5ec;border-radius:10px"><b style="color:#1a7f37">✓ Тооцоо хийсэн</b><span class="small">'+money(P.amt||0)+' · '+fmtN(P.q||0)+' ш · '+esc(String(P.by||'').split('@')[0])+' · '+lt(P.at)+'</span>'+(Math.round(P.amt||0)!==Math.round(R.amt)?'<span class="small" style="color:var(--red)">⚠ одоогийн тооцоо '+money(R.amt)+' — тэмдэглэснээс хойш өөрчлөгдсөн</span>':'')+'<button class="btn" id="suUnpay">Буцаах</button></div>'
     :'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:#fdecea;border-radius:10px"><b style="color:var(--red)">🔴 Тооцоо хийгээгүй</b><span class="small">'+esc(R.name)+' · '+R.A+' → '+R.B+' · төлөх '+money(R.amt)+'</span><button class="btn pri" id="suPayB">✓ Тооцоо хийсэн гэж тэмдэглэх</button></div>';
   const b=$('suPayB');if(b)b.onclick=async()=>{if(R.noP.size&&!confirm(R.noP.size+' бараанд худалдан авах үнэ алга — төлөх дүнд ороогүй. Тэмдэглэх үү?'))return;if(!confirm(R.name+'\n'+R.A+' → '+R.B+'\nТөлөх дүн: '+money(R.amt)+'\n\nТооцоо хийсэн гэж тэмдэглэх үү?'))return;
-    b.disabled=true;try{await suSave(D=>{D.paid=D.paid||{};D.paid[k]={at:new Date().toISOString(),by:(auth.currentUser&&auth.currentUser.email)||'',amt:Math.round(R.amt),q:R.sq}})}catch(e){b.disabled=false;alert('Хадгалж чадсангүй: '+(e.code||e.message))}};
-  const u=$('suUnpay');if(u)u.onclick=async()=>{if(!confirm('Тооцооны тэмдэглэгээг буцаах уу?'))return;try{await suSave(D=>{if(D.paid)delete D.paid[k]})}catch(e){alert('Хадгалж чадсангүй: '+(e.code||e.message))}}}
+    b.disabled=true;const v={at:new Date().toISOString(),by:(auth.currentUser&&auth.currentUser.email)||'',amt:Math.round(R.amt),q:R.sq};try{await suSave({paid:{[k]:v}},D=>{D.paid={...(D.paid||{}),[k]:v}})}catch(e){b.disabled=false;alert('Хадгалж чадсангүй: '+suErr(e))}};
+  const u=$('suUnpay');if(u)u.onclick=async()=>{if(!confirm('Тооцооны тэмдэглэгээг буцаах уу?'))return;try{await suSave({paid:{[k]:null}},D=>{D.paid={...(D.paid||{}),[k]:null}})}catch(e){alert('Хадгалж чадсангүй: '+suErr(e))}}}
 // нийлүүлэгчид илгээх баримт: манай зарах үнэ, борлуулалтын дүн БАЙХГҮЙ
-async function suDoc(){const R=SUR;if(!R||!R.name)return alert('Нэг нийлүүлэгч сонгоод «Харах» дарна уу.');await xlsx();suCalc(R);
+async function suDoc(){const R=SUR;if(!R||!R.name)return alert('Нэг нийлүүлэгч сонгоод «Харах» дарна уу.');if(!R.stk)await suStock(R);await xlsx();suCalc(R);
   const L=[...R.by.values()].filter(o=>o.q||o.ret||o.in||(R.stk&&R.stk.get(o.c))).map(o=>{const r=itRow(o.c)||{},v=R.stk&&R.stk.get(o.c);return {c:o.c,bc:r.bc&&r.bc!==o.c?r.bc:'',n:r.name||'',p:o.p,q:o.q,a:o.amt,ret:o.ret,in:o.in,st:v?v.reduce((a,b)=>a+b,0):0}}).sort((a,b)=>b.q-a.q||a.n.localeCompare(b.n));
   const H=['№','Код','Баркод','Барааны нэр','Нэгж үнэ (₮)','Зарагдсан (ш)','Төлөх дүн (₮)','Буцаасан (ш)','Ирсэн (ш)','Үлдэгдэл (ш)'];
   const A=[['БОРЛУУЛАЛТЫН ТАЙЛАН — НИЙЛҮҮЛЭГЧ'],['Нийлүүлэгч:',R.name],['Хугацаа:',R.A+' — '+R.B],['Худалдан авагч:','Вивекавикториа ХХК (VIVI)'],['Бэлтгэсэн:',todayIso()+' · '+((auth.currentUser&&auth.currentUser.email)||'')],[],H]
@@ -2686,7 +2694,7 @@ $('mUp').onclick=async()=>{
   try{await loadPCat()}catch(x){}const prices={};movLines.forEach(x=>{const p=movPrice[x[0]]!=null?movPrice[x[0]]:(itRow(x[0])||{}).price;if(p)prices[x[0]]=p});
   try{let costNote='';
     // Орлого + нэгж өртөг: жигнэсэн дундаж өртөг = (бүх байршлын үлдэгдэл × хуучин өртөг + ирсэн тоо × шинэ өртөг) / (үлдэгдэл + ирсэн)
-    if(ty==='in'&&can('cost')&&movLines.some(x=>x[3]!=null)){$('mMsg').textContent='Жигнэсэн дундаж өртөг тооцоолж байна…';const A=await stockAll(),m=new Map(costMap);let n=0;
+    if(ty==='in'&&can('cost')&&movLines.some(x=>x[3]!=null)){$('mMsg').textContent='Жигнэсэн дундаж өртөг тооцоолж байна…';const A=await stockAll({fresh:true}),m=new Map(costMap);let n=0;
       movLines.forEach(x=>{if(x[3]==null)return;const v=A.M.get(x[0]),Q=Math.max(0,v?v.reduce((a,b)=>a+b,0):0),old=m.has(x[0])?m.get(x[0]):x[3],nw=Math.round((Q*old+x[1]*x[3])/(Q+x[1])*100)/100;x.push(Q,old,nw);m.set(x[0],nw);n++});
       await writeChunks('pos_cost',[...m.entries()],{src:'receipt',doc:uid},()=>{});costMap=m;costNote=' · дундаж өртөг шинэчилсэн '+n+' бараа'}
     const doc={uid,no,prices:JSON.stringify(prices),type:ty,from,to,at:at.toISOString(),note:(ty==='out'?$('mWhy').value+(($('mNote').value.trim())?' · ':''):'')+$('mNote').value.trim(),supplier:ty==='in'?$('mSup').value.trim():'',invoice:ty==='in'?$('mNote').value.trim():'',reason:ty==='out'?$('mWhy').value:'',file:($('mFile').files[0]||{}).name||'',lines:JSON.stringify(movLines),count:movLines.length,qty:movLines.reduce((a,x)=>a+x[1],0),
@@ -2855,7 +2863,7 @@ async function rcReg(){const er=rcCheck(true);if(er){$('rcM').style.color='';$('
     for(const x of pc){const r=itRow(x.code)||{},price=Math.round(+x.price),base=Math.round(Math.max(+x.base>0?+x.base:(+r.base||0),price));await itSave({...r,code:x.code,price,base},'орлого '+no+': кассын үнэ')}
     // 2) өртөг: жигнэсэн дундаж (бүх байршлын үлдэгдэл × хуучин + ирсэн × шинэ) / нийт
     const lines=R.lines.map(x=>[x.code,Math.round(+x.qty),String(x.name).trim()].concat(rcCost()&&+x.cost>0?[Math.round(+x.cost*100)/100]:[]));let costNote='';
-    if(rcCost()){$('rcM').textContent='Дундаж өртөг тооцоолж байна…';const A=await stockAll(),m=new Map(costMap);let n=0;
+    if(rcCost()){$('rcM').textContent='Дундаж өртөг тооцоолж байна…';const A=await stockAll({fresh:true}),m=new Map(costMap);let n=0;
       lines.forEach(x=>{if(x[3]==null)return;const v=A.M.get(x[0]),Q=Math.max(0,v?v.reduce((a,b2)=>a+b2,0):0),old=m.has(x[0])?m.get(x[0]):x[3],nw=Math.round((Q*old+x[1]*x[3])/(Q+x[1])*100)/100;x.push(Q,old,nw);m.set(x[0],nw);n++});
       await writeChunks('pos_cost',[...m.entries()],{src:'receipt',doc:uid},()=>{});costMap=m;costNote=' · дундаж өртөг '+n+' бараа'}
     // 3) үлдэгдэл: pos_stock_docs (орлого)
@@ -3074,7 +3082,7 @@ let stockHead=[],stockAllMode=false;
 async function calcStock(){
   const st=$('sSt').value;$('sMsg').textContent='Тооцоолж байна…';stockRows=[];
   try{await loadPCat().catch(()=>{});const nmOf=c=>{const x=itRow(c);return x?x.name:''},cash=c=>{const x=itRow(c);return x?x.price:0};
-    if(st==='ALL'){stockAllMode=true;const A=await stockAll();if(!A.SS.length){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">Эхний үлдэгдэл алга.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
+    if(st==='ALL'){stockAllMode=true;const A=await stockAll({fresh:true});if(!A.SS.length){$('sKpi').innerHTML='';$('sTbl').innerHTML='';return $('sMsg').innerHTML='<span class="hot">Эхний үлдэгдэл алга.</span> <button class="btn pri" onclick="stSub(\'open\')">⚙ Эхний үлдэгдэл оруулах</button>'}
       stockHead=['Код','Нэр',...A.SS.map(x=>LOC[x]),'Нийт','Нэгж өртөг','Өртгийн дүн','Кассын үнэ','Кассын дүн',...ST_XH];
       negSrc={sales:A.sales,R:A.R,O:A.O,locs:A.SS};
       stockRows=[...A.M.entries()].map(([c,v])=>{const t=v.reduce((a,b)=>a+b,0),k=costMap.get(c);return {code:c,name:nmOf(c),loc:v,now:t,cost:k==null?null:k,cash:cash(c)}});
@@ -3097,7 +3105,11 @@ let movReady=false,stkBusy=false;
 /* Эхний үлдэгдэлгүй байршил (ж: Food city агуулах): баримт (орлого, шилжүүлэг) байвал 0-ээс эхэлж тооцно — өмнө нь огт харагддаггүй байсан */
 const OPEN0={asOf:'2000-01-01T00:00:00.000Z',d:'[]',virt:true};
 async function openOr0(st){const d=await openGet(st);if(d.exists)return d.data();return (movAll||[]).some(m=>m.status!=='cancel'&&(m.to===st||m.from===st))?OPEN0:null}
-async function stockAll(){for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
+/* 2 мин дотор дахин дуудвал (өөр цэс ч) татсан үлдэгдлийг дахин ашиглана — 2 МБ+ борлуулалтыг дахин татахгүй. {fresh:true} = үргэлж шинээр */
+let STKM=null;
+function stockAll(o){o=o||{};if(!o.fresh&&STKM&&Date.now()-STKM.t<120000)return STKM.p;const p=stockAllRaw();STKM={t:Date.now(),p};p.catch(()=>{if(STKM&&STKM.p===p)STKM=null});return p}
+function stockAllAge(){return STKM?Date.now()-STKM.t:Infinity}
+async function stockAllRaw(){for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
   const SS=[],O={};for(const st of Object.keys(LOC)){const o=await openOr0(st);if(o){SS.push(st);O[st]=o}}
   const M=new Map(),R={};if(!SS.length)return {SS,O,M,R};
   const fr=SS.filter(s=>!O[s].virt).map(s=>O[s].asOf).sort()[0],sales=fr?await salesSince(sDay(fr),null):[];
@@ -3106,7 +3118,7 @@ async function stockAll(){for(let i=0;i<50&&!movReady;i++)await new Promise(r=>s
 async function publishStock(silent){
   if(stkBusy)return;stkBusy=true;const out=$('sPubM');out.textContent='Бүх байршлын үлдэгдлийг тооцоолж байна…';
   try{for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
-    const A=await stockAll();if(!A.SS.length){out.innerHTML='<span class="hot">Эхний үлдэгдэл нэг ч байршилд алга</span>';return}const SS=A.SS,O=A.O,M=A.M;
+    const A=await stockAll({fresh:true});if(!A.SS.length){out.innerHTML='<span class="hot">Эхний үлдэгдэл нэг ч байршилд алга</span>';return}const SS=A.SS,O=A.O,M=A.M;
     const rows=[...M.entries()].map(([c,v])=>[c,...v]).sort((a,b)=>a[0]<b[0]?-1:1),asOf={};SS.forEach(s=>asOf[s]=O[s].asOf);
     const neg={};SS.forEach(s=>{const n=A.R[s].rows.filter(r=>r.now<0).length;if(n)neg[s]=n});
     const r=await writeChunks('pos_stock_view',rows,{stores:SS,asOf,neg},(i,n,w)=>out.textContent='Илгээж байна '+i+'/'+n);
