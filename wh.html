@@ -686,10 +686,12 @@ body.whembed #app{padding-top:4px}
     <div class="filter chips" id="wh-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Скан</button><button data-m="price" aria-pressed="false">🏷 Үнэ шалгах</button><button data-m="ship" aria-pressed="false">🚚 Илгээмж<span class="n badge" id="wh-ship-n" hidden></span></button><button data-m="deliv" aria-pressed="false">🗂 Хүргэлт (трак)</button><button data-m="label" aria-pressed="false">🏷 Шошго хэвлэх</button><button data-m="prod" aria-pressed="false">📈 Бүтээмж</button></div>
 
     <div class="card" id="wh-scan-card">
+      <div id="wh-multi"></div>
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
         <div class="row"><b>Хүргэлт:</b><select id="wh-active" style="width:auto;min-width:260px"></select></div>
         <div class="row"><span class="chip" id="wh-sync">✓ Синк хийгдсэн</span><label class="row note" style="gap:6px;width:auto"><input type="checkbox" id="wh-sound" checked style="width:auto"> Дуу</label></div>
       </div>
+      <div id="wh-cur" style="margin-bottom:8px"></div>
       <div id="wh-prog" class="note" style="margin-bottom:8px"></div>
       <input id="wh-input" autocomplete="off" inputmode="none" placeholder="Баркод уншуулна уу… (скан хийх бүрт Enter)" style="font-size:22px;padding:14px;text-align:center;letter-spacing:1px">
       <div id="wh-mystat" class="note" style="margin:6px 0;font-size:14px"></div>
@@ -786,6 +788,8 @@ body.whembed #app{padding-top:4px}
         <label class="f">LPP жагсаалт (Excel)<input id="wd-file" type="file" accept=".xlsx,.xls"></label>
       </div>
       <div class="row" id="wd-pct" style="margin-top:8px;gap:10px"></div>
+      <div class="row" id="wd-rule" style="margin-top:10px;gap:16px;align-items:center"><b>Хуваарилах дүрэм:</b><label class="row" style="gap:6px;width:auto"><input type="radio" name="wd-rule" value="old" style="width:auto"> Хуучин — хэмжээ бүрийг хувиар</label><label class="row" style="gap:6px;width:auto"><input type="radio" name="wd-rule" value="v2" style="width:auto"> Шинэ v2 — бүтэн коллекц, хэлтсээр</label></div>
+      <div id="wd-v2" hidden style="margin-top:8px"><div class="grid"><label class="f" id="wd-bulk-l">Бөөн рүү бүтнээр (загвар, Загвар 2 эсвэл картон № — таслалаар)<input id="wd-bulk" placeholder="жишээ: 027EM-MLC, 2301B, 4401234"></label><label class="f">Нэг загварын илүүдэл хэдээс дээш бол агуулахад үлдэх<input id="wd-over" inputmode="numeric" style="width:90px"></label></div><div id="wd-v2map" style="margin-top:8px"></div></div>
       <div id="wd-info" class="note" style="margin-top:8px"></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="wd-save" disabled>Хадгалж скан эхлүүлэх</button><span class="note" id="wd-msg"></span></div>
       <div id="up-lpp" style="margin-top:8px"></div>
@@ -3040,6 +3044,7 @@ const WH = (() => {
     desc: ['item_desc', 'нэр (эх хувь, kz/ru)', 'описание', 'наименование', 'opis'],
     eng: ['eng', 'english', 'description'],
     cat: ['category'], catmn: ['ангилал', 'барааны дэд ангилал'], gender: ['gender', 'хүйс', 'барааны хүйс'], brand: ['brand', 'брэнд', 'бренд', 'marka'],
+    hd: ['хэлтэс', 'department', 'dział', 'dzial'], ag2: ['ангилал', 'category group'], sb: ['дэд ангилал', 'барааны дэд ангилал', 'subcategory'], m2: ['загвар 2', 'загвар2', 'model 2', 'base model'],
     price: ['rrp mn2027', 'мн үнэ 2027', 'борлуулах үнэ 2027 (₮)', 'үнэ (₮)', 'кассын үнэ'], carton: ['carton', 'картон №', 'хайрцаг', 'короб'], base: ['үндсэн үнэ', 'худалдах үнэ', 'base price', 'rrp', 'regular price'],
     code: ['барааны ангилал'], color: ['барааны өнгө', 'өнгө', 'color', 'colour', 'kolor'],   // Smart export: model code without colour + colour column
   };
@@ -3089,6 +3094,8 @@ const WH = (() => {
       const name = nameSrc === 'file' ? (fileName || (m && m[2]) || (TR ? TR.tr(raw, '', cat)[0] : raw)) : ((m && m[2]) || fileName || (TR ? TR.tr(raw, '', cat)[0] : raw));
       const it = items[k] = items[k] || {k, m: model, s: size, e, q: 0, n: name, raw: raw || eng, g: (m && m[4]) || String(r[c.gender] || ''), c: cat, b: (m && m[3]) || String(r[c.brand] || ''), p: c.price >= 0 ? num(r[c.price]) : (m ? +m[6] || 0 : 0), bp: c.base >= 0 ? num(r[c.base]) : (m ? +m[7] || 0 : 0)};
       it.q += q; pcs += q; eans[e] = k;
+      { const g = i => i >= 0 && r[i] != null ? String(r[i]).trim() : ''; if (!it.hd) it.hd = g(c.hd); if (!it.ag2) it.ag2 = g(c.ag2); if (!it.sb) it.sb = g(c.sb); if (!it.m2) it.m2 = g(c.m2);
+        const cr = g(c.carton); if (cr){ it.cq = it.cq || {}; it.cq[cr] = (it.cq[cr] || 0) + q; } }
     }
     return {items, eans, pcs, lines: Object.keys(items).length, bad, badEan, mism, unknown, conflicts, cols: Object.fromEntries(Object.entries(c).filter(([, v]) => v >= 0).map(([k, v]) => [k, rows[hi][v]]))};
   }
@@ -3197,6 +3204,108 @@ const WH = (() => {
 })();
 
 // ===================== Inventory count (Тооллого): Smart aging report = book stock, Smart sales list = sales during the count =====================
+// ===================== LPP хуваарилалт v2 (коллекц, хэлтсээр) — work/alloc/alloc2.js-ээс =====================
+const ALLOC2 = (function(){
+'use strict';
+const LET={XXXS:-1,XXS:0,XS:1,S:2,'S/M':2.5,M:3,'M/L':3.5,L:4,'L/X':4.5,'L/XL':4.5,XL:5,XXL:6,'2XL':6,XXXL:7,'3XL':7,'4XL':8};
+const isOne=s=>/^(one|one ?size|os|uni)$/i.test(String(s).trim());
+// хэмжээний систем + эрэмбэ (дэлгүүрийн жижиг/дунд/том бүлэгт)
+function sizeKey(s){s=String(s).trim().toUpperCase();if(isOne(s))return ['one',0];if(LET[s]!=null)return ['let',LET[s]];
+  let m=/^(\d{2})([A-H])$/.exec(s);if(m)return ['bra',+m[1]+(m[2].charCodeAt(0)-65)/10];
+  m=/(\d+)/.exec(s);if(!m)return ['oth',0];let n=+m[1];
+  if(n>=200&&n<500)return ['jean',Math.floor(n/10)];        // 282 = 28/32
+  if(n>=50&&n<=176)return ['kid',n];if(n<60)return ['num',n];return ['oth',n]}
+function planV2(rows,opt){
+  opt=opt||{};const ST=(opt.stores||[{key:'FC',pct:40},{key:'DR',pct:30},{key:'NI',pct:30}]).filter(s=>s.pct>0),SK=ST.map(s=>s.key),PCT=Object.fromEntries(ST.map(s=>[s.key,s.pct]));
+  const MIN_DEPT=opt.minDept||40,SMALL=opt.smallDept||600,DEEP=opt.deep||12,BAL=opt.balance||{},CATMAP=opt.catMap||{},CONT=opt.cont||{},SAFE=(opt.safePP==null?5:opt.safePP)/100;
+  // 1) EAN-ээр нэгтгэх (нэг EAN хэд хэдэн картонд)
+  const E={};let pcs=0;
+  for(const r of rows){const q=+r.q||0;if(!(q>0)||!r.ean)continue;const e=String(r.ean);
+    const x=E[e]||(E[e]={ean:e,m:String(r.m||e).trim(),base:String(r.m2||'').trim()||String(r.m||e).split('-')[0],s:String(r.s||'').trim()||'ONE',q:0,dept:String(r.dept||'').trim()||'Бусад',cat:(CATMAP[String(r.sub||r.cat||'').trim()]||String(r.cat||'').trim()||'Бусад')});x.q+=q;pcs+=q}
+  // 2) хэлтэс: Хэлтэс + Ангилал; Хэлтэс нийт < 600 бол ангилалгүй
+  const dq={};Object.values(E).forEach(x=>dq[x.dept]=(dq[x.dept]||0)+x.q);
+  const D={};Object.values(E).forEach(x=>{const k=dq[x.dept]<SMALL?x.dept:x.dept+' | '+x.cat;(D[k]=D[k]||{k,items:[],q:0}).items.push(x);D[k].q+=x.q});
+  const plan={},give=(e,s,n)=>{if(!n)return;(plan[e]=plan[e]||{})[s]=(plan[e][s]||0)+n};
+  const tTarget=Object.fromEntries(SK.map(s=>[s,pcs*PCT[s]/100])),tGot=Object.fromEntries(SK.map(s=>[s,0])),MT={},stats={n3:0,n2:0,whole:0,single:0,one:0,deep:0,group:0},balOut={},deptOut=[];
+  const sum=o=>Object.values(o).reduce((a,b)=>a+b,0);
+  for(const Dp of Object.values(D).sort((a,b)=>b.q-a.q)){
+    // 4.1 жижиг хэлтэс: дэлгүүрийн тоо = min(3, q/40); <3 бол ачааны хамгийн их дутагдалтай дэлгүүрүүд
+    let n0=Math.max(1,Math.min(SK.length,Math.floor(Dp.q/MIN_DEPT)));const tdef=s=>(tTarget[s]-tGot[s])/(tTarget[s]||1);
+    const DS=n0>=SK.length?SK.slice():SK.slice().sort((a,b)=>tdef(b)-tdef(a)||PCT[b]-PCT[a]).slice(0,n0),P=DS.reduce((a,s)=>a+PCT[s],0);
+    const bal=BAL[Dp.k]||{},T={},G={};DS.forEach(s=>{T[s]=Dp.q*PCT[s]/P+(+bal[s]||0);G[s]=0});
+    const def=s=>T[s]-G[s],byDef=L=>L.slice().sort((a,b)=>def(b)-def(a)||PCT[b]-PCT[a]);
+    const put=(e,s,n)=>{give(e,s,n);G[s]+=n;tGot[s]+=n};
+    // загвар (загвар+өнгө)
+    const M={};Dp.items.forEach(x=>{const m=M[x.m]||(M[x.m]={m:x.m,base:x.base,sz:[],q:0});m.sz.push(x);m.q+=x.q});
+    const ML=Object.values(M);
+    // 4.6 жижиг/дунд/том бүлэг: хэмжээний систем бүрт ширхэгийн терциль
+    const grpOf={};{const sys={};Dp.items.forEach(x=>{const [y,r]=sizeKey(x.s);(sys[y]=sys[y]||{})[r]=(sys[y][r]||0)+x.q});
+      for(const [y,o] of Object.entries(sys)){const ks=Object.keys(o).map(Number).sort((a,b)=>a-b),tot=ks.reduce((a,k)=>a+o[k],0);let c=0;const g={};ks.forEach(k=>{const mid=(c+o[k]/2)/tot;g[k]=mid<1/3?0:mid<2/3?1:2;c+=o[k]});grpOf[y]=g}}
+    const gOf=s=>{const [y,r]=sizeKey(s);return (grpOf[y]||{})[r]??1};
+    const GT=[0,1,2].map(g=>Object.fromEntries(DS.map(s=>[s,0]))),GQ=[0,0,0];Dp.items.forEach(x=>GQ[gOf(x.s)]+=x.q);
+    const putG=(x,s,n)=>{put(x.ean,s,n);GT[gOf(x.s)][s]+=n};
+    // 4.2 загварын төрөл
+    const feas=(m,n)=>{const k=m.sz.length,u=k===1?3:2;if(k===1)return m.sz[0].q>=u*n;
+      const pr=m.sz.reduce((a,x)=>a+Math.min(n,Math.floor(x.q/2)),0),K=k>=3?3:k;return pr>=K*n&&m.q>=(k>=3?6:3)*n};
+    ML.forEach(m=>{const one=m.sz.every(x=>isOne(x.s));
+      if(m.q<=2){m.t='single';m.n=1}else if(one){m.t='one';m.n=Math.min(DS.length,m.q)}
+      else{m.n=1;for(let n=DS.length;n>=2;n--)if(feas(m,n)){m.n=n;break}m.t=m.n>1?'split':'whole'}});
+    // 4.4 хуваагдах загвар: хамгийн гүн хэмжээнээс; ≥2 ш (нэг хэмжээтэй бол ≥3) хувиар
+    const doSplit=(m,S)=>{const Pm=S.reduce((a,s)=>a+PCT[s],0),mt=Object.fromEntries(S.map(s=>[s,m.q*PCT[s]/Pm])),mg=Object.fromEntries(S.map(s=>[s,0])),nz=Object.fromEntries(S.map(s=>[s,0])),u=m.sz.length===1?3:2;
+      const md=s=>mt[s]-mg[s],add=(x,s,n)=>{putG(x,s,n);mg[s]+=n};
+      for(const x of m.sz.slice().sort((a,b)=>b.q-a.q||(sizeKey(a.s)[1]-sizeKey(b.s)[1]))){
+        let R;if(x.q>=u*S.length)R=S.slice();else if(x.q>=u)R=S.slice().sort((a,b)=>nz[a]-nz[b]||md(b)-md(a)||PCT[b]-PCT[a]).slice(0,Math.floor(x.q/u));
+        else{const s=S.slice().sort((a,b)=>nz[a]-nz[b]||md(b)-md(a)||PCT[b]-PCT[a])[0];add(x,s,x.q);nz[s]++;continue}
+        const got=Object.fromEntries(R.map(s=>[s,u]));let left=x.q-u*R.length;
+        while(left>0){const s=R.slice().sort((a,b)=>(md(b)-got[b])-(md(a)-got[a])||PCT[b]-PCT[a])[0];got[s]++;left--}
+        R.forEach(s=>{add(x,s,got[s]);nz[s]++})}
+      return mg};
+    // 4.8 ҮРГЭЛЖЛЭЛ: CONT[model][store] = {st:'good'|'early'|'weak', sold, stock:{size:n}}
+    const contOf=m=>{const c=CONT[m.m];if(!c)return null;const pr=[],ex=new Set();
+      for(const s of DS){const x=c[s];if(!x)continue;const over=(G[s]+0)/(Dp.q||1)-PCT[s]/P>SAFE;   // 5 пп-ээс дээш бол үргэлжлэл үйлчлэхгүй
+        if(over)continue;if(x.st==='weak')ex.add(s);else if(x.st==='good'||x.st==='early')pr.push([s,x.st==='good'?1+(+x.sold||0):+x.sold||0])}
+      return {pr:pr.sort((a,b)=>b[1]-a[1]).map(x=>x[0]),ex}};
+    const pickS=(m,n)=>{const c=contOf(m);let L=byDef(DS);if(c){L=L.filter(s=>!c.ex.has(s));L=c.pr.concat(L.filter(s=>!c.pr.includes(s)))}if(!L.length)L=byDef(DS);return L.slice(0,Math.min(n,L.length))};
+    // дараалал: хуваагдах (том нь эхэнд) → нэг хэмжээ → бүтнээр (өнгөөр бүлэглэж) → ганц ширхэг
+    for(const m of ML.filter(m=>m.t==='split').sort((a,b)=>b.q-a.q)){const S=pickS(m,m.n);doSplit(m,S);MT[m.m]={t:S.length===3?'n3':S.length===2?'n2':'whole',n:S.length,st:S};stats[S.length>=3?'n3':S.length===2?'n2':'whole']++}
+    for(const m of ML.filter(m=>m.t==='one').sort((a,b)=>b.q-a.q)){const S=pickS(m,m.n),x=m.sz[0],Pm=S.reduce((a,s)=>a+PCT[s],0),got=Object.fromEntries(S.map(s=>[s,1]));let left=x.q-S.length;
+      while(left>0){const s=S.slice().sort((a,b)=>(x.q*PCT[b]/Pm-got[b])-(x.q*PCT[a]/Pm-got[a])||def(b)-def(a))[0];got[s]++;left--}
+      // хэд хэдэн ONE EAN (ховор): эхнийх нь л хувиарлагдана, бусдыг ижил дэлгүүрт
+      S.forEach(s=>putG(x,s,got[s]));m.sz.slice(1).forEach(y=>putG(y,S[0],y.q));MT[m.m]={t:'one',n:S.length,st:S};stats.one++}
+    // 4.3 + 4.7: бүтнээр очих загвар — ижил «Загвар 2»-ийн өнгөнүүд нэг дэлгүүрт (үргэлжлэлтэй өнгө тусдаа)
+    const W=ML.filter(m=>m.t==='whole'),grp={};W.forEach(m=>{const c=contOf(m),k=c&&(c.pr.length||c.ex.size)?'c:'+m.m:'b:'+m.base;(grp[k]=grp[k]||[]).push(m)});
+    for(const L of Object.values(grp).sort((a,b)=>sum(Object.fromEntries(b.map(m=>[m.m,m.q])))-sum(Object.fromEntries(a.map(m=>[m.m,m.q]))))){
+      const s0=pickS(L[0],1)[0];if(L.length>1)stats.group++;
+      for(const m of L){const deep=m.sz.filter(x=>x.q>=DEEP);
+        if(deep.length){stats.deep++;let main=null,mainN=-1;
+          for(const x of deep){const k=Math.min(DS.length,Math.floor(x.q/4)),S=pickS(m,k),Pm=S.reduce((a,s)=>a+PCT[s],0),got=Object.fromEntries(S.map(s=>[s,4]));let left=x.q-4*S.length;
+            while(left>0){const s=S.slice().sort((a,b)=>(x.q*PCT[b]/Pm-got[b])-(x.q*PCT[a]/Pm-got[a])||PCT[b]-PCT[a])[0];got[s]++;left--}
+            S.forEach(s=>{putG(x,s,got[s]);if(got[s]>mainN){mainN=got[s];main=s}})}
+          m.sz.filter(x=>x.q<DEEP).forEach(x=>putG(x,main,x.q));MT[m.m]={t:'deep',n:new Set(deep.flatMap(x=>Object.keys(plan[x.ean]||{}))).size,st:[main]}}
+        else{m.sz.forEach(x=>putG(x,s0,x.q));MT[m.m]={t:'whole',n:1,st:[s0]}}
+        stats.whole++}}
+    // 4.6 ганц ширхэг: тухайн хэмжээний бүлэгт хамгийн их дутагдалтай дэлгүүр
+    for(const m of ML.filter(m=>m.t==='single').sort((a,b)=>b.q-a.q)){const x0=m.sz.slice().sort((a,b)=>b.q-a.q)[0],g=gOf(x0.s),c=contOf(m);
+      let L=DS.slice();if(c){L=L.filter(s=>!c.ex.has(s));if(!L.length)L=DS.slice()}
+      const s=(c&&c.pr.length)?c.pr[0]:L.sort((a,b)=>(GQ[g]*PCT[b]/P-GT[g][b])-(GQ[g]*PCT[a]/P-GT[g][a])||def(b)-def(a)||PCT[b]-PCT[a])[0];
+      m.sz.forEach(x=>putG(x,s,x.q));MT[m.m]={t:'single',n:1,st:[s]};stats.single++}
+    balOut[Dp.k]=Object.fromEntries(DS.map(s=>[s,Math.round((T[s]-G[s])*100)/100]));
+    deptOut.push({k:Dp.k,q:Dp.q,stores:DS,T:Object.fromEntries(DS.map(s=>[s,Math.round(T[s]*10)/10])),G:{...G}})}
+  // 5) EAN бүрийн дараалал — хосоор (нэг хэмжээ/ганц ширхэг: 1-ээр)
+  const queue={};for(const [e,p] of Object.entries(plan)){const x=E[e],step=isOne(x.s)||(MT[x.m]&&MT[x.m].t==='single')?1:2,left={...p},Q=[];const ord=SK.filter(s=>left[s]);
+    while(Q.length<x.q){let any=false;for(const s of ord){const k=Math.min(step,left[s]||0);for(let i=0;i<k;i++)Q.push(s);left[s]-=k;if(k)any=true}if(!any)break}queue[e]=Q}
+  const tot=Object.fromEntries(SK.map(s=>[s,0]));Object.values(plan).forEach(p=>SK.forEach(s=>tot[s]+=p[s]||0));
+  return {plan,queue,mt:MT,stats,depts:deptOut,bal:balOut,tot,pcs,ean:E}}
+// скан: дараалал → дараагийн дэлгүүр; дуусвал илүүдэл → энэ загвартай, хувиасаа хамгийн доор байгаа дэлгүүр (шинэ дэлгүүр биш)
+function pickV2(e,model,ctx){const q=ctx.queue[e],i=ctx.done[e]||0;if(q&&i<q.length)return {s:q[i],kind:'q'};
+  const ov=(ctx.overGot||{})[model]||0;if(ov>=(ctx.overMax==null?6:ctx.overMax))return {s:null,kind:'ag'};   // нэг загварын илүүдэл 6-аас их → Агуулах (LPP-ийн алдаа байж магадгүй)
+  const have=ctx.modelGot[model]||{},ST=ctx.stores,P=ST.reduce((a,s)=>a+(s.pct||0),0),tot=Object.values(have).reduce((a,b)=>a+b,0)+1;
+  const L=ST.filter(s=>have[s.key]>0);if(!L.length)return {s:null,kind:'out'};
+  return {s:L.sort((a,b)=>((have[a.key]||0)/tot-a.pct/P)-((have[b.key]||0)/tot-b.pct/P))[0].key,kind:'over'}}
+return {planV2, pickV2, sizeKey, isOne};
+})();
+
+
 const INV = (() => {
   const str = v => v == null ? '' : String(v).trim();
   const num = v => { if (typeof v === 'number') return v; const n = parseFloat(String(v == null ? '' : v).replace(/[\s,]/g, '')); return isNaN(n) ? 0 : n; };
@@ -6269,7 +6378,8 @@ async function loadParts(id){
   for (let i = 0; i < (D.xparts || 0); i++){ const s = await db.doc('delivpart/' + id + '_x' + i).get(); if (!s.exists) continue;
     for (const [k, it] of Object.entries(s.data().items || {})) if (!items[k] || items[k].x) items[k] = {...it, x: 1}; }
   for (const it of Object.values(items)) eans[it.e] = it.k;
-  WS.parts[id] = {items, plan, eans}; return WS.parts[id];
+  const byModel = {}; for (const it of Object.values(items)) (byModel[it.m] = byModel[it.m] || []).push(it.k);
+  WS.parts[id] = {items, plan, eans, byModel}; return WS.parts[id];
 }
 async function loadMaster(){
   if (WS.master || !db) return WS.master;
@@ -6301,6 +6411,7 @@ async function flush(){
       for (const [key, o] of Object.entries(map)){ const [kind, ...rest] = key.split('|'), k = rest.join('|');
         for (const [st, n] of Object.entries(o)){ if (!n) continue; if (kind === 'c') u['c.' + ek(k) + '.' + st] = inc(n); if (kind === 'x') u['x.' + ek(k) + '.' + st] = inc(n); if (kind === 'u') u['u.' + ek(k)] = inc(n); if (kind !== 'u') tot[st] = (tot[st] || 0) + n; } }
       for (const [st, n] of Object.entries(tot)) if (n) u['tot.' + st] = inc(n);
+      { const tn = Object.values(tot).reduce((a, b) => a + b, 0); if (tn){ const w = 'w.' + ek(me), at = new Date().toISOString(); u[w + '.n'] = inc(tn); if (tn > 0){ u.at = at; u[w + '.at'] = at; u[w + '.nm'] = (typeof S !== 'undefined' && S.names && S.names[me]) || (window.VIVIFB && VIVIFB.email) || (firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.email) || ''; } } }
       if (Object.keys(u).length) b.update(db.doc('delivcnt/' + id), u); }
     for (const [sid, x] of Object.entries(SP)){ const ref = db.doc('ship/' + sid); if (x.base) b.set(ref, x.base, {merge: true}); const u = {}; let tq = 0;
       for (const [e, n] of Object.entries(x.l)){ if (!n) continue; u['l.' + ek(e)] = inc(n); tq += n; }
@@ -6327,6 +6438,26 @@ function newShipBase(id, st){
 async function whReady(id){ const ok = () => (WS.shipsSrv || (WS.shipsIn && Date.now() - WS.shipsIn > 8000)) && WS.cnt[id] && !WS.cnt[id]._err;
   if (ok()) return true; showResult('', 'Ачаалж байна…', 'Өчигдрийн илгээмжүүдийг серверээс уншиж байна, түр хүлээнэ үү.');
   for (let i = 0; i < 60 && !ok(); i++) await new Promise(r => setTimeout(r, 250)); return ok(); }
+
+// ---------- v2 скан: EAN бүрийн дараалал хосоор (FC FC DR DR NI NI …), илүүдэл → энэ загвартай дэлгүүр, их бол агуулах ----------
+const isV2 = D => !!(D && D.rule === 'v2');
+function v2Queue(it, p, order){ const step = it.t === 'one' || it.t === 'single' || ALLOC2.isOne(it.s) ? 1 : 2, left = {...p}, Q = [], ord = order.filter(s => left[s] > 0), n = Object.values(p).reduce((a, b) => a + (+b || 0), 0);
+  while (Q.length < n){ let any = false; for (const s of ord){ const k = Math.min(step, left[s] || 0); for (let i = 0; i < k; i++) Q.push(s); left[s] -= k; if (k) any = true; } if (!any) break; } return Q; }
+function cntX(id, k){ const c = {...(((cntOf(id).x) || {})[ek(k)] || {})}; for (const [st, n] of Object.entries((WS.pend[id] || {})['x|' + k] || {})) c[st] = (c[st] || 0) + n; return c; }
+function v2Pick(id, D, P, k, it){
+  const cfg = whCfg(), over = cfg.over.key, p = (!it.x && P.plan[k]) || {}, order = D.order || cfg.stores.map(s => s.key);
+  if (Object.keys(p).length){ const c = cntK(id, k), t = {}; for (const s of v2Queue(it, p, order)){ t[s] = (t[s] || 0) + 1; if (t[s] > (c[s] || 0)) return {st: s, kind: 'ok'}; } }
+  const kind = it.x || !P.items[k] ? 'extra' : 'over', ks = (P.byModel || {})[it.m] || [];
+  if (!ks.some(x => !P.items[x].x && P.plan[x])) return {st: over, kind, why: 'out'};            // жагсаалтаас гадуур (энэ загвар трак дээр алга)
+  const have = {}; let ov = 0;
+  for (const x of new Set([...ks, k])){ const a = cntK(id, x), b = cntX(id, x), pl = Object.values(P.plan[x] || {}).reduce((s2, n) => s2 + n, 0); let sc = 0;
+    for (const o of [a, b]) for (const [s, n] of Object.entries(o)){ sc += n; if (s !== over) have[s] = (have[s] || 0) + n; }
+    ov += Math.max(0, sc - (P.items[x] && !P.items[x].x ? pl : 0)); }
+  if (ov >= (D.overMax == null ? 6 : +D.overMax)) return {st: over, kind, why: 'many'};
+  const S = cfg.stores.filter(s => s.pct > 0 && (D.pct || {})[s.key] > 0 && have[s.key] > 0), PS = S.reduce((a, s) => a + D.pct[s.key], 0), tot = Object.values(have).reduce((a, b) => a + b, 0) + 1;
+  if (!S.length) return {st: over, kind, why: 'out'};
+  return {st: S.sort((a, b) => (have[a.key] / tot - D.pct[a.key] / PS) - (have[b.key] / tot - D.pct[b.key] / PS))[0].key, kind, why: 'model'};
+}
 async function onScan(raw){
   if (qrStop(raw)) return; const e = WH.eanOf(raw); if (!e) return; const id = WS.active; const now = Date.now();
   if (e === WS.lastKey && now - WS.lastAt < 250) return; WS.lastKey = e; WS.lastAt = now;       // the reader sometimes sends one code twice
@@ -6334,20 +6465,22 @@ async function onScan(raw){
   // after a restart the shipments and counters come from the server a moment later; scanning before that would open a second shipment for the store
   if (!(await whReady(id))){ showResult('bad', 'Өгөгдөл ачаалж дуусаагүй', 'Илгээмж, тоолуурын мэдээлэл серверээс ирээгүй байна. Интернэтээ шалгаад дахин скан хийнэ үү — энэ скан тоологдоогүй.'); beep('bad'); return; }
   const P = await loadParts(id); if (!P){ showResult('bad', 'Хүргэлт ачаалж чадсангүй', ''); return; }
-  let k = P.eans[e], it = k ? P.items[k] : null, st, kind = 'ok';
-  if (it && it.x){ st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); statAdd(1); }
+  let k = P.eans[e], it = k ? P.items[k] : null, st, kind = 'ok', why = ''; const DV = WS.delivs.find(d => d.id === id), V2 = isV2(DV);
+  if (!it){ const O = whOtherDeliv(e, id); if (O){ showResult('bad', 'ӨӨР ТРАКЫН БАРАА', `${e} — энэ бараа «${O.name}» тракын жагсаалтад байна, харин энэ төхөөрөмж «${DV ? DV.name : ''}»-г сканнердаж байна. Дээрээс хүргэлтээ шалгаад дахин уншуулна уу — энэ скан тоологдоогүй.`); beep('bad'); pushLast({e, n: '«' + O.name + '»', s: '', st: '', kind: 'bad'}); return; } }
+  if (V2 && it){ const r = v2Pick(id, DV, P, k, it); st = r.st; kind = r.kind; why = r.why || ''; addPend(id, (kind === 'extra' ? 'x|' : 'c|') + k, st, 1); statAdd(1); }
+  else if (it && it.x){ st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); statAdd(1); }
   else if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg(), totOf(id)); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); statAdd(1); }
   else {
     const M = await loadMaster(), m = M && M[e];
     if (!m){ addPend(id, 'u|' + e, '_', 1); statAdd(1); showResult('bad', 'ТӨЛӨВЛӨГӨӨНД БАЙХГҮЙ', `${e} — мастер файлд ч байхгүй. Тусад нь тавиад, дараа шалгана.`); beep('bad'); pushLast({e, n: '—', s: '', st: '', kind: 'bad'}); return; }
-    k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3], p: +m[6] || 0}; st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); statAdd(1);
+    k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3], p: +m[6] || 0, x: 1}; if (V2){ const r = v2Pick(id, DV, P, k, it); st = r.st; why = r.why || ''; } else st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); statAdd(1);
   }
   let sh = openShip(id, st), sid = sh ? sh.id : WS.open[id + '|' + st], base = null;
   if (!sid){ sid = db.collection('ship').doc().id; WS.open[id + '|' + st] = sid; base = newShipBase(id, st); WS.ships.push({id: sid, ...base, _local: true}); }
   const loc = WH.locs(it, st, whCfg());
   addShipPend(sid, base, e, 1, {n: it.n || '', k, l: loc.suf, x: kind === 'extra' ? 1 : 0, p: it.p || 0});
   const c = cntK(id, k), planned = (P.plan[k] || {})[st] || 0;
-  showResult(kind, storeName(st), (it.p ? `<div class="wh-price">${fmt(it.p)}₮</div>` : '<div class="note"><b>үнэ алга</b></div>') + esc(`${it.n || ''} · ${it.m} · ${it.s} — байршил ${loc.to}${kind === 'over' ? ' · төлөвлөгөөнөөс илүү → агуулахад үлдэнэ' : kind === 'extra' ? ' · жагсаалтад байгаагүй (мастер файлаас)' : ` · энэ хэмжээ ${c[st] || 0}/${planned}`}`), st, true);
+  showResult(kind, storeName(st), (it.p ? `<div class="wh-price">${fmt(it.p)}₮</div>` : '<div class="note"><b>үнэ алга</b></div>') + esc(`${it.n || ''} · ${it.m} · ${it.s} — байршил ${loc.to}${why === 'out' ? ' · ЖАГСААЛТААС ГАДУУР — энэ загвар тракт алга → агуулахад тусад нь' : why === 'many' ? ' · энэ загварын илүүдэл хэт их (' + (DV.overMax == null ? 6 : DV.overMax) + '+) → агуулахад, LPP-ийн алдаа байж магадгүй' : why === 'model' ? (kind === 'extra' ? ' · жагсаалтад байгаагүй → энэ загвартай дэлгүүрт' : ' · төлөвлөгөөнөөс илүү → энэ загвартай дэлгүүрт') : kind === 'over' ? ' · төлөвлөгөөнөөс илүү → агуулахад үлдэнэ' : kind === 'extra' ? ' · жагсаалтад байгаагүй (мастер файлаас)' : ` · энэ хэмжээ ${c[st] || 0}/${planned}`}`), st, true);
   beep(kind); pushLast({e, n: it.n, s: it.m + ' ' + it.s, st, kind, k, sid});
   renderWhStores();
 }
@@ -6486,6 +6619,41 @@ function renderWhLast(){
     <td>${x.st ? `<b style="color:${STORE_COLOR[x.st] || '#555'}">${esc(storeName(x.st))}</b>` : '<span class="chip c-bad">байхгүй</span>'}${x.kind === 'extra' ? ' <span class="chip c-warn">жагсаалтгүй</span>' : x.kind === 'over' ? ' <span class="chip">илүү</span>' : ''}</td>
     <td>${!x.undone && x.kind !== 'bad' ? `<button class="btn" data-wh-undo="${i}" title="Буцаах">↶</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">–</td></tr>';
 }
+
+// ---------- хэд хэдэн трак зэрэг: тойм (бүх нээлттэй хүргэлт), өнгө ----------
+const DELIV_COLORS = ['#b3261e', '#2a78d6', '#1f9d6b', '#8a5cd6', '#d68a00', '#0f7c8c'];
+function delivColor(id){ const L = WS.delivs.slice().sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))), i = L.findIndex(d => d.id === id); return DELIV_COLORS[(i < 0 ? 0 : i) % DELIV_COLORS.length]; }
+function agoTxt(iso){ if (!iso) return '—'; const m = Math.round((Date.now() - Date.parse(iso)) / 60000), t = new Date(iso).toTimeString().slice(0, 5); return m < 1 ? t + ' (дөнгөж сая)' : m < 60 ? `${t} (${m} мин өмнө)` : m < 1440 ? `${t} (${Math.floor(m / 60)} цаг өмнө)` : String(iso).slice(0, 10); }
+function whOpenDelivs(){ return WS.delivs.filter(d => d.status !== 'closed').sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))); }
+function renderWhMulti(){
+  const el = $('#wh-multi'); if (!el) return; const L = whOpenDelivs(), cfg = whCfg();
+  if (L.length < 2){ if (el.innerHTML) el.innerHTML = ''; return; }
+  if (WS.multiOpen == null) WS.multiOpen = window.innerWidth >= 900;     // утсан дээр (сканнер) хураангуй — скан талбар дээгүүр үлдэнэ
+  const sum = L.map(D => { const t = WS.cnt[D.id] && WS.cnt[D.id].tot || {}, sc = Object.values(t).reduce((a, b) => a + b, 0); return `<b style="color:${delivColor(D.id)}">${esc(D.name)}</b> ${D.total ? Math.min(100, sc / D.total * 100).toFixed(0) : 0}%`; }).join(' · ');
+  const html = `<details id="wh-multi-d" ${WS.multiOpen ? 'open' : ''} style="margin-bottom:10px"><summary class="note" style="cursor:pointer"><b>Нээлттэй ${L.length} трак зэрэг:</b> ${sum}</summary><div class="note" style="margin:6px 0">Тоо бүх төхөөрөмжөөс шууд нэгдэнэ. «Энд харах» нь зөвхөн энэ дэлгэцийг солино, агуулахын сканнерт нөлөөлөхгүй.</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px;margin-bottom:12px">${L.map(D => {
+    const C = WS.cnt[D.id] || {}, tot = C.tot || {}, sc = Object.values(tot).reduce((a, b) => a + b, 0), pct = D.total ? Math.min(100, sc / D.total * 100) : 0, col = delivColor(D.id), cur = D.id === WS.active;
+    const keys = [...new Set([...cfg.stores.filter(x => (D.planTot || {})[x.key]).map(x => x.key), ...Object.keys(tot)])];
+    const act = Object.values(C.w || {}).filter(w => w.at && Date.now() - Date.parse(w.at) < 15 * 60000);
+    return `<div style="border:1px solid var(--line,#ddd);border-left:8px solid ${col};border-radius:10px;padding:10px 12px;${cur ? 'box-shadow:0 0 0 2px ' + col + '55;' : ''}">
+      <div class="row" style="justify-content:space-between;gap:6px"><b style="color:${col};font-size:15px">${esc(D.name)}</b><span class="chip ${isV2(D) ? 'c-ok' : 'c-grey'}">${isV2(D) ? 'v2' : 'хуучин'}</span></div>
+      <div style="margin:6px 0 4px"><b style="font-size:18px">${fmt(sc)}</b> / ${fmt(D.total)} ш · <b>${pct.toFixed(0)}%</b></div>
+      <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${col}"></div></div>
+      <div class="note" style="margin-top:6px;line-height:1.5">${keys.map(k => `<span style="color:${STORE_COLOR[k] || '#555'}">${esc(storeName(k))}</span> ${fmt(tot[k] || 0)}${(D.planTot || {})[k] ? '/' + fmt(D.planTot[k]) : ''}`).join(' · ')}</div>
+      <div class="note" style="margin-top:4px">Сүүлийн скан: ${agoTxt(C.at)}${act.length ? ` · <b style="color:var(--ok,#1f9d6b)">одоо ${act.length} хүн:</b> ${act.map(w => esc(String(w.nm || '?').split('@')[0])).join(', ')}` : ''}</div>
+      <div style="margin-top:8px">${cur ? `<span class="note" style="color:${col}"><b>◀ энэ дэлгэц одоо үүнийг харуулж байна</b></span>` : `<button class="btn" data-whview="${esc(D.id)}">👁 Энд харах</button>`}</div></div>`; }).join('')}</div></details>`;
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+// энэ төхөөрөмж аль тракыг сканнердаж байгаа — том, өнгөтэй
+function renderWhCur(){ const el = $('#wh-cur'); if (!el) return; const D = WS.delivs.find(d => d.id === WS.active), n = whOpenDelivs().length;
+  const html = D ? `<div style="background:${delivColor(D.id)};color:#fff;border-radius:8px;padding:8px 12px;font-size:${n > 1 ? 18 : 15}px;font-weight:700">▶ ${esc(D.name)}${isV2(D) ? ' · v2' : ''}${n > 1 ? ' <span style="font-weight:400;font-size:13px">— энэ төхөөрөмж ЗӨВХӨН энэ тракыг сканнердана</span>' : ''}</div>` : '';
+  if (el.innerHTML !== html) el.innerHTML = html; const sel = $('#wh-active'); if (sel) sel.style.borderLeft = D ? '8px solid ' + delivColor(D.id) : ''; }
+// бусад нээлттэй тракын EAN-ууд (скан дэлгэц нээгдэхэд арын горимд ачаална)
+function whPreloadOthers(){ if (WS.mode !== 'scan') return; for (const D of whOpenDelivs()) if (D.id !== WS.active && !WS.parts[D.id] && !(WS.preload = WS.preload || {})[D.id]){ WS.preload[D.id] = 1; loadParts(D.id).catch(() => { delete WS.preload[D.id]; }); } }
+function whOtherDeliv(e, id){ for (const D of whOpenDelivs()){ if (D.id === id) continue; const P = WS.parts[D.id]; if (P && P.eans && P.eans[e]) return D; } return null; }
+document.addEventListener('toggle', ev => { if (ev.target && ev.target.id === 'wh-multi-d') WS.multiOpen = ev.target.open; }, true);
+document.addEventListener('click', ev => { const b = ev.target.closest('[data-whview]'); if (!b) return; const sel = $('#wh-active'); if (!sel) return; sel.value = b.dataset.whview; sel.dispatchEvent(new Event('change')); window.scrollTo({top: 0}); });
+setInterval(() => { if (WS.mode === 'scan' && whOpenDelivs().length > 1) renderWhMulti(); }, 60000);
 function renderWhActive(){
   const el = $('#wh-active'); if (!el) return; const L = WS.delivs.filter(d => d.status !== 'closed').sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   if (!WS.active || !L.some(d => d.id === WS.active)){ try{ WS.active = localStorage.getItem('vivi-wh-active') || ''; }catch(e){} if (!L.some(d => d.id === WS.active)) WS.active = L[0] ? L[0].id : ''; }
@@ -6640,16 +6808,73 @@ function wdMatchInfo(){
   if (mix) parts.push(`<b style="color:var(--warn)">${fmt(mix)} ш ангилалгүй</b> → «MIX» байршил`);
   return parts.join('<br>');
 }
+
+// ---------- v2 төлөвлөгөө (шинэ хүргэлт) ----------
+function v2Bal(){ const L = WS.delivs.filter(d => isV2(d) && d.bal).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))); return L[0] ? L[0].bal : {}; }
+// дэд ангилал → том ангилал (KZ-GARMENT-03-аас; админы оноосон нь давуу)
+const V2_CATSEED = {"Эмэгтэй цамц":"Цамц","Эмэгтэй цүнх":"Цүнх","Эмэгтэй нарны шил":"Дагалдах хэрэгсэл","Эмэгтэй оймс":"Дагалдах хэрэгсэл","Эмэгтэй бүс/түрийвч":"Дагалдах хэрэгсэл","Эмэгтэй улирлын гадуур хувцас":"Гадуур хувцас","Эмэгтэй хөнгөн гадуур хувцас":"Гадуур хувцас","Эмэгтэй пальто":"Гадуур хувцас","Эмэгтэй малгайтай спорт цамц":"Трикотаж","Эмэгтэй спорт цамц":"Трикотаж","Эмэгтэй slim жинс":"Өмд","Эмэгтэй mom жинс":"Өмд","Эмэгтэй нэхмэл өмд":"Өмд","Эмэгтэй алчуур":"Дагалдах хэрэгсэл","Эмэгтэй зузаан свитер":"Трикотаж","Эмэгтэй свитер (бусад)":"Трикотаж","Эмэгтэй юбка":"Юбка","Эмэгтэй богино ханцуйт футболк":"Футболк","Эмэгтэй трикотаж шорт":"Шорт","Эмэгтэй нэхмэл шорт":"Шорт","Эмэгтэй урт ханцуйт футболк":"Футболк","Эмэгтэй даашинз":"Даашинз","Эмэгтэй трикотаж өмд (бусад)":"Трикотаж","Эмэгтэй жинс (бусад)":"Өмд","Эмэгтэй жинс шорт":"Шорт","Эмэгтэй wide жинс":"Өмд","Эмэгтэй улирлын свитер":"Трикотаж","Эмэгтэй спорт өмд":"Трикотаж","Эмэгтэй кардиган":"Трикотаж","Эмэгтэй цахилгаантай спорт цамц":"Трикотаж","Эмэгтэй пиджак":"Гадуур хувцас","Эмэгтэй арьсан куртка":"Гадуур хувцас","Эмэгтэй хээтэй футболк":"Футболк","Эмэгтэй усны хувцас":"Усны хувцас","Эмэгтэй пижама":"Пижама","Эмэгтэй ханцуйгүй майк":"Футболк","Эмэгтэй доорх хувцасны иж бүрдэл":"Доорх хувцас","Эмэгтэй бюстгальтер":"Доорх хувцас","Эмэгтэй дотуур өмд":"Доорх хувцас","Эмэгтэй малгай":"Дагалдах хэрэгсэл","Эмэгтэй нимгэн свитер":"Трикотаж","Эмэгтэй легинс":"Өмд","Эмэгтэй өвлийн гадуур хувцас":"Гадуур хувцас","Эмэгтэй гутал":"Гутал","Эмэгтэй бээлий":"Дагалдах хэрэгсэл","Эмэгтэй шаахай":"Доорх хувцас","Эрэгтэй улирлын куртка":"Гадуур хувцас","Эрэгтэй малгайтай спорт цамц":"Трикотаж","Эрэгтэй спорт цамц":"Футболк","Эрэгтэй урт ханцуйт футболк":"Футболк","Эрэгтэй цамц":"Цамц","Эрэгтэй хээтэй футболк":"Футболк","Эрэгтэй цахилгаантай спорт цамц":"Футболк","Эрэгтэй жинс өмд":"Өмд","Эрэгтэй трикотаж шорт":"Шорт","Эрэгтэй жинс шорт":"Шорт","Эрэгтэй нэхмэл өмд":"Өмд","Эрэгтэй трикотаж өмд":"Өмд","Эрэгтэй ханцуйгүй майк":"Футболк","Эрэгтэй нэхмэл шорт":"Шорт","Эрэгтэй малгай":"Дагалдах хэрэгсэл","Эрэгтэй пижама":"Пижама","Эрэгтэй доорх хувцас":"Доорх хувцас","Эрэгтэй цүнх":"Цүнх","Эрэгтэй спорт хувцас":"Футболк","Эрэгтэй алчуур":"Дагалдах хэрэгсэл","Эрэгтэй бээлий":"Дагалдах хэрэгсэл","Эрэгтэй оймс":"Дагалдах хэрэгсэл","Эрэгтэй хөнгөн куртка":"Гадуур хувцас","Эрэгтэй свитер":"Трикотаж","Эрэгтэй хантааз":"Гадуур хувцас","Эрэгтэй гутал":"Гутал","Эрэгтэй шаахай":"Гутал","Эрэгтэй өвлийн куртка":"Гадуур хувцас","Эрэгтэй богино ханцуйт футболк":"Футболк","Эрэгтэй поло цамц":"Футболк","Эрэгтэй ханцуйгүй спорт цамц":"Футболк","Охид урт ханцуйт футболк":"Футболк","Хүүхдийн малгай":"Дагалдах хэрэгсэл","Охид жинс өмд":"Өмд","Тийнэйжер юбка/даашинз":"Юбка","Тийнэйжер өмд":"Өмд","Хөвгүүд урт ханцуйт футболк":"Футболк","Тийнэйжер гадуур куртка":"Гадуур хувцас","Тийнэйжер иж бүрдэл":"Иж бүрдэл","Охид свитер":"Трикотаж","Тийнэйжер футболк":"Футболк","Тийнэйжер свитер":"Трикотаж","BABY легинс":"Өмд","BABY жинс өмд":"Өмд","BABY спорт цамц":"Трикотаж","Тийнэйжер легинс":"Өмд","BABY өмд":"Өмд","Хөвгүүд свитер":"Трикотаж","Охид спорт цамц":"Трикотаж","Тийнэйжер спорт цамц":"Трикотаж","Охид юбка/даашинз":"Даашинз","Хөвгүүд гадуур куртка":"Гадуур хувцас","BABY гадуур куртка":"Гадуур хувцас","Охид легинс":"Өмд","Хүүхдийн ороолт":"Дагалдах хэрэгсэл","Хүүхдийн бээлий":"Дагалдах хэрэгсэл","Хөвгүүд өмд":"Өмд","Хөвгүүд спорт цамц":"Трикотаж","Хөвгүүд трикотаж шорт":"Шорт","Хөвгүүд богино ханцуйт футболк":"Футболк","Хөвгүүд оймс/колгот":"Дагалдах хэрэгсэл","Охид гутал":"Гутал","Охид оймс/колгот":"Дагалдах хэрэгсэл","Хөвгүүд доорх хувцас":"Доорх хувцас","Хүүхдийн цүнх/нуруувч":"Дагалдах хэрэгсэл","BABY оймс/колгот":"Дагалдах хэрэгсэл","Тийнэйжер жинс өмд":"Өмд","Хөвгүүд гутал":"Гутал","Тийнэйжер шорт":"Шорт","Охид гадуур куртка":"Гадуур хувцас","Ширээний бүтээлэг":"Гэр ахуйн хэрэгсэл","Ширээний дэвсгэр":"Гэр ахуйн хэрэгсэл","Орны даавуу":"Гэр ахуйн хэрэгсэл","Нимгэн хөнжил":"Гэр ахуйн хэрэгсэл","Хоолны хэрэгсэл":"Гэр ахуйн хэрэгсэл","Зузаан хөнжил":"Гэр ахуйн хэрэгсэл"};
+function v2CatMap(W){ return {...V2_CATSEED, ...((WS.alloc || {}).catMap || {}), ...(W.learn || {}), ...(W.map || {})}; }
+// үргэлжлэл: сүүлийн 21 хоногийн хүргэлтэд ирсэн загвар → тэр дэлгүүрүүддээ (ЭРТ — борлуулалт хараахан дүгнэгдээгүй)
+async function v2LoadCont(W){
+  const since = Date.now() - 21 * 864e5, cfg = whCfg(), L = WS.delivs.filter(d => Date.parse(d.createdAt) >= since), cont = {};
+  for (const d of L){ const P = await loadParts(d.id); if (!P) continue;
+    for (const [k, p] of Object.entries(P.plan || {})){ const it = P.items[k]; if (!it) continue; for (const [s, n] of Object.entries(p)) if (n > 0 && s !== cfg.over.key && s !== 'ht') (cont[it.m] = cont[it.m] || {})[s] = {st: 'early'}; } }
+  W.cont = cont; W.contN = L.length; if (WD === W) wdPreview();
+}
+function v2Plan(W, c){
+  const S = c.stores.filter(s => s.pct > 0 && s.key !== c.over.key); if (!S.length) return {error: 'Идэвхтэй дэлгүүрийн хувь 0 байна'};
+  const hb = c.stores.find(s => s.key === 'ht'), BT = new Set(String(W.bulk || '').split(/[\s,;]+/).map(x => x.trim().toUpperCase()).filter(Boolean)), rows = [], bulk = {};
+  for (const it of Object.values(W.items)){ let bq = 0;
+    if (hb && BT.size){ if (BT.has(String(it.m).toUpperCase()) || (it.m2 && BT.has(String(it.m2).toUpperCase())) || BT.has(String(it.m).split('-')[0].toUpperCase())) bq = it.q;
+      else if (it.cq) for (const [cr, n] of Object.entries(it.cq)) if (BT.has(String(cr).toUpperCase())) bq += n; }
+    bq = Math.min(bq, it.q); if (bq) bulk[it.k] = bq;
+    if (it.q - bq > 0) rows.push({ean: it.k, m: it.m, m2: it.m2 || '', s: it.s, q: it.q - bq, dept: it.hd || '', cat: it.ag2 || '', sub: it.sb || ''}); }
+  const cm = v2CatMap(W), R2 = ALLOC2.planV2(rows, {stores: S.map(s => ({key: s.key, pct: s.pct})), catMap: cm, balance: v2Bal(), cont: W.cont || {}});
+  const plan = {}; for (const [k, p] of Object.entries(R2.plan)) plan[k] = {...p};
+  let bq = 0; for (const [k, n] of Object.entries(bulk)){ (plan[k] = plan[k] || {})[hb.key] = n; bq += n; }
+  const got = {...R2.tot}; if (bq) got[hb.key] = bq;
+  return {plan, got, total: W.pcs, v2: R2, bulk, bulkQ: bq, order: [...S.map(s => s.key), ...(bq ? [hb.key] : [])], cm};
+}
+// загвар × дэлгүүр бүтэн коллекц эсэх (≥3 хэмжээ тус бүр ≥2 ш; 1–2 хэмжээтэй бол бүгд ≥2 ба ≥3 ш)
+function v2Coll(R2){ const MS = {}, msz = {}; for (const x of Object.values(R2.ean)){ (msz[x.m] = msz[x.m] || new Set()).add(x.s); for (const [s, n] of Object.entries(R2.plan[x.ean] || {})){ const o = MS[s + '|' + x.m] = MS[s + '|' + x.m] || {sz: {}, q: 0}; o.sz[x.s] = (o.sz[x.s] || 0) + n; o.q += n; } }
+  const c = {}, t = {}; for (const [k, o] of Object.entries(MS)){ const i = k.indexOf('|'), s = k.slice(0, i), m = k.slice(i + 1), K = msz[m].size, ok = Object.values(o.sz).filter(n => n >= 2).length, one = [...msz[m]].every(ALLOC2.isOne);
+    t[s] = (t[s] || 0) + o.q; if (one || (K >= 3 ? ok >= 3 : ok >= K && o.q >= 3)) c[s] = (c[s] || 0) + o.q; }
+  return Object.fromEntries(Object.keys(t).map(s => [s, Math.round((c[s] || 0) / t[s] * 100)])); }
+function v2Info(W, r, c){
+  const R2 = r.v2, st = R2.stats, I = Object.values(W.items), has = f => I.some(it => it[f]), coll = v2Coll(R2);
+  const warn = []; if (!has('hd')) warn.push('«Хэлтэс» багана алга — бүх бараа нэг хэлтэс гэж тооцогдоно'); if (!has('ag2') && !has('sb')) warn.push('«Ангилал» багана алга');
+  if (!has('m2')) warn.push('«Загвар 2» багана алга — өнгөний бүлгийг загварын кодоос (зураасны өмнөх хэсэг) авна');
+  return `<div class="banner" style="margin-top:6px"><b>Шинэ дүрэм v2:</b> 3 дэлгүүрт <b>${fmt(st.n3)}</b> загвар · 2 дэлгүүрт <b>${fmt(st.n2)}</b> · бүтнээр 1 дэлгүүрт <b>${fmt(st.whole)}</b>${st.deep ? ` (гүн хэмжээ хуваасан ${fmt(st.deep)})` : ''} · 1–2 ширхэгтэй <b>${fmt(st.single)}</b> · нэг хэмжээ (ONE) <b>${fmt(st.one)}</b> · өнгөөр бүлэглэсэн ${fmt(st.group)} · хэлтэс ${fmt(R2.depts.length)}`
+    + `<br>Бүтэн коллекц болж очих бараа: ${Object.entries(coll).map(([s, v]) => `<b style="color:${STORE_COLOR[s] || '#555'}">${esc(storeName(s))}</b> ${v}%`).join(' · ')}`
+    + (r.bulkQ ? `<br>Бөөн рүү: <b>${fmt(r.bulkQ)} ш</b> (${fmt(Object.keys(r.bulk).length)} хэмжээ)` : '')
+    + (W.cont ? `<br>Үргэлжлэл: сүүлийн 21 хоногийн ${fmt(W.contN || 0)} хүргэлтэд ирсэн <b>${fmt(Object.keys(W.cont).length)}</b> загвар → давтагдвал өмнөх дэлгүүрүүддээ` : '<br><span class="note">Үргэлжлэл (өмнөх хүргэлтүүд) уншиж байна…</span>')
+    + (Object.keys(v2Bal()).length ? '<br>Өмнөх v2 тракын хэлтсийн сальдо тооцогдсон' : '')
+    + (warn.length ? `<br><b style="color:var(--warn)">${warn.map(esc).join(' · ')}</b>` : '') + '</div>';
+}
+// дэд ангилал → том ангилал: файлд том ангилал байхгүй дэд ангиллуудыг нэг удаа онооно (дараагийн тракт хадгалагдана)
+function v2MapHTML(W){
+  const cm = v2CatMap(W), un = {}; for (const it of Object.values(W.items)){ const sb = it.sb || ''; if (!sb || cm[sb] || (it.ag2 && it.ag2 !== sb)) continue; un[sb] = (un[sb] || 0) + it.q; }
+  const L = Object.entries(un).sort((a, b) => b[1] - a[1]); if (!L.length) return '';
+  const cats = [...new Set(Object.values(cm))].sort();
+  return `<details ${W.mapOpen ? 'open' : ''} id="wd-map-d"><summary><b style="color:var(--warn)">${L.length} дэд ангилал том ангилалгүй</b> (${fmt(L.reduce((a, x) => a + x[1], 0))} ш) — оноохгүй бол тус бүр тусдаа бүлэг болно. Оноосныг дараагийн тракт санана.</summary>
+    <datalist id="wd-cats">${cats.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+    <div class="tbl" style="max-height:320px;overflow:auto"><table><thead><tr><th>Дэд ангилал (файлаас)</th><th class="n">Ширхэг</th><th>Том ангилал</th></tr></thead><tbody>${L.map(([sb, q]) => `<tr><td>${esc(sb)}</td><td class="n">${fmt(q)}</td><td><input list="wd-cats" data-wd-map="${esc(sb)}" value="${esc((W.map || {})[sb] || '')}" placeholder="сонгох / бичих"></td></tr>`).join('')}</tbody></table></div></details>`;
+}
 function wdPreview(){
   const c = wdCfg(), sum = c.stores.reduce((a, s) => a + s.pct, 0);
   $('#wd-pct-sum').innerHTML = `нийт <b style="color:${sum === 100 ? 'inherit' : 'var(--bad)'}">${sum}%</b>${sum === 100 ? '' : ` <b style="color:var(--bad)">— нийлбэр 100% байх ёстой (${sum < 100 ? 'дутуу ' + (100 - sum) : 'илүү ' + (sum - 100)}%)</b>`}`;
   const why = !WD ? 'Эхлээд LPP жагсаалтын Excel файлаа сонгоно уу.' : sum !== 100 ? 'Хувийн нийлбэрийг 100% болгоно уу.' : '';
   { const cur = $('#wd-msg').textContent; $('#wd-msg').textContent = !WD && cur.startsWith('Хадгаллаа') ? cur : why; }
   if (!WD){ $('#wd-info').textContent = ''; $('#wd-save').disabled = true; return; }
-  const r = WH.plan(WD.items, c); if (r.error){ $('#wd-info').textContent = r.error; $('#wd-save').disabled = true; return; }
+  const rule = WS.wdRule || ''; $('#wd-v2').hidden = rule !== 'v2';
+  if (rule === 'v2'){ const hb = c.stores.find(s => s.key === 'ht'); $('#wd-bulk-l').hidden = !hb; if (!$('#wd-over').value) $('#wd-over').value = (WS.alloc || {}).overMax == null ? 6 : WS.alloc.overMax;
+    WD.bulk = $('#wd-bulk').value; if (!WD.cont && !WD.contLoading){ WD.contLoading = true; v2LoadCont(WD).catch(e => { console.warn('cont', e); WD.cont = {}; wdPreview(); }); } }
+  if (!rule){ WD.plan = null; $('#wd-info').innerHTML = `${fmt(WD.pcs)} ш · ${fmt(Object.keys(WD.items).length)} хэмжээ<br>${wdMatchInfo()}<br><b style="color:var(--warn)">Хуваарилах дүрмээ сонгоно уу (хуучин эсвэл шинэ v2).</b>`; $('#wd-v2map').innerHTML = ''; $('#wd-save').disabled = true; return; }
+  const r = rule === 'v2' ? v2Plan(WD, c) : WH.plan(WD.items, c); if (r.error){ $('#wd-info').textContent = r.error; $('#wd-save').disabled = true; return; }
   WD.plan = r; const models = new Set(Object.values(WD.items).map(i => i.m)).size;
   const dup = sameDelivs(WD);
-  $('#wd-info').innerHTML = (dup.length ? `<div class="banner bad" style="margin-bottom:6px"><b>⚠ Энэ жагсаалт аль хэдийн оруулсан байна:</b> ${dup.map(d => `«${esc(d.name)}» (${esc(fmtDT(d.createdAt))})`).join(', ')}. Дахин оруулах шаардлагагүй — тэр хүргэлтээ сонгоод скан хийнэ үү.</div>` : '') + `${fmt(WD.pcs)} ш · ${fmt(models)} загвар · ${fmt(WD.lines)} хэмжээ${WD.bad ? ` · ${WD.bad} мөр алгассан` : ''}<br>${wdMatchInfo()}<br>Төлөвлөгөө: ${c.stores.filter(s => s.pct).map(s => `<b style="color:${STORE_COLOR[s.key]}">${esc(s.name)}</b> ${fmt(r.got[s.key] || 0)} ш (${WD.pcs ? (r.got[s.key] / WD.pcs * 100).toFixed(1) : 0}%)`).join(' · ')}`;
+  $('#wd-info').innerHTML = (dup.length ? `<div class="banner bad" style="margin-bottom:6px"><b>⚠ Энэ жагсаалт аль хэдийн оруулсан байна:</b> ${dup.map(d => `«${esc(d.name)}» (${esc(fmtDT(d.createdAt))})`).join(', ')}. Дахин оруулах шаардлагагүй — тэр хүргэлтээ сонгоод скан хийнэ үү.</div>` : '') + `${fmt(WD.pcs)} ш · ${fmt(models)} загвар · ${fmt(WD.lines)} хэмжээ${WD.bad ? ` · ${WD.bad} мөр алгассан` : ''}<br>${wdMatchInfo()}<br>Төлөвлөгөө: ${c.stores.filter(s => s.pct).map(s => `<b style="color:${STORE_COLOR[s.key]}">${esc(s.name)}</b> ${fmt(r.got[s.key] || 0)} ш (${WD.pcs ? (r.got[s.key] / WD.pcs * 100).toFixed(1) : 0}%)`).join(' · ')}` + (r.v2 ? v2Info(WD, r, c) : '');
+  if (r.v2){ const h = v2MapHTML(WD), el = $('#wd-v2map'); if (el.dataset.h !== h){ el.dataset.h = h; el.innerHTML = h; } } else $('#wd-v2map').innerHTML = '';
   $('#wd-save').disabled = sum !== 100;
 }
 // names of an existing delivery (and of its shipments) from an Excel — by barcode, nothing else changes
@@ -6676,15 +6901,20 @@ async function wdSave(){
   try{
     const c = wdCfg(), ref = db.collection('deliv').doc(), id = ref.id, keys = Object.keys(WD.items), CH = 800, parts = Math.ceil(keys.length / CH);
     for (let i = 0; i < parts; i++){ const ks = keys.slice(i * CH, (i + 1) * CH); const items = {}, plan = {};
-      for (const k of ks){ const it = WD.items[k]; items[k] = {k, m: it.m, s: it.s, e: it.e, q: it.q, n: it.n, c: it.c, g: it.g, b: it.b, p: it.p, bp: it.bp || 0, l: WH.suffixOf(it, c)}; if (WD.plan.plan[k]) plan[k] = WD.plan.plan[k]; }
+      const V2 = WD.plan.v2; for (const k of ks){ const it = WD.items[k]; items[k] = {k, m: it.m, s: it.s, e: it.e, q: it.q, n: it.n, c: it.c, g: it.g, b: it.b, p: it.p, bp: it.bp || 0, l: WH.suffixOf(it, c)};
+        if (V2){ const t = (V2.mt[it.m] || {}).t || (WD.plan.bulk[k] ? 'bulk' : ''); if (t) items[k].t = t; if (it.hd) items[k].hd = it.hd; const ca = (V2.ean[k] || {}).cat; if (ca) items[k].ca = ca; } if (WD.plan.plan[k]) plan[k] = WD.plan.plan[k]; }
       await db.doc('delivpart/' + id + '_' + i).set({deliv: id, i, items, plan}); }
     await db.doc('delivcnt/' + id).set({deliv: id, c: {}, x: {}, u: {}, tot: {}});
     if (typeof upLog === 'function') upLog({kind: 'lpp', file: WD.file || name, a: today(), z: today(), n: WD.lines, note: name + ' · ' + fmt(WD.pcs) + ' ш'});
-    await ref.set({name, createdAt: new Date().toISOString(), by: me, status: 'active', total: WD.pcs, lines: WD.lines, fp: WD.fp, parts, pct: Object.fromEntries(c.stores.map(s => [s.key, s.pct])), planTot: WD.plan.got, file: WD.file || ''});
+    await ref.set({name, createdAt: new Date().toISOString(), by: me, status: 'active', total: WD.pcs, lines: WD.lines, fp: WD.fp, parts, pct: Object.fromEntries(c.stores.map(s => [s.key, s.pct])), planTot: WD.plan.got, file: WD.file || '', rule: WD.plan.v2 ? 'v2' : 'old',
+      ...(WD.plan.v2 ? {order: WD.plan.order, overMax: Math.max(1, +$('#wd-over').value || 6), bal: WD.plan.v2.bal, v2: {stats: WD.plan.v2.stats, coll: v2Coll(WD.plan.v2), bulk: WD.plan.bulkQ || 0}} : {})});
+    if (WD.plan.v2){ const A = WS.alloc || {}, cm = WD.plan.cm, om = Math.max(1, +$('#wd-over').value || 6);
+      if (JSON.stringify(cm) !== JSON.stringify(A.catMap || {}) || om !== A.overMax){ try{ await db.doc('config/alloc').set({catMap: cm, overMax: om, at: new Date().toISOString(), by: me}); }catch(e){ console.warn('alloc save', e); } } }
     WS.active = id; try{ localStorage.setItem('vivi-wh-active', id); }catch(e){}
     if (isOwner && WS.master){ const add = {}; for (const [e, k] of Object.entries(WD.eans || {})) if (!WS.master[e]){ const it = WD.items[k]; add[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, it.bp || 0, 0]; }
       if (Object.keys(add).length){ $('#wd-msg').textContent = 'Шинэ баркодуудыг мастер файлд нэмж байна…'; try{ await saveMaster({...WS.master, ...add}, (WS.masterMeta && WS.masterMeta.file) || 'master'); }catch(e){ console.warn('master add', e); } } }
-    WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.'; wdPreview();
+    WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; $('#wd-bulk').value = ''; $('#wd-over').value = ''; WS.wdRule = ''; $$('input[name="wd-rule"]').forEach(x => x.checked = false); $('#wd-v2').hidden = true; $('#wd-v2map').innerHTML = ''; $('#wd-v2map').dataset.h = '';
+    $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.'; wdPreview();
   }catch(err){ whErr(err); $('#wd-msg').textContent = 'Хадгалж чадсангүй.'; $('#wd-save').disabled = false; }
 }
 // ---------- delivery report: list vs really scanned ----------
@@ -6750,7 +6980,7 @@ async function reconFile(id){
 function renderWhDelivs(){
   const tb = $('#wd-list'); if (!tb) return; const L = WS.delivs.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   tb.innerHTML = L.length ? L.map(d => { const t = totOf(d.id), sc = Object.values(t).reduce((a, b) => a + b, 0);
-    return `<tr><td><b>${esc(d.name)}</b></td><td class="note">${esc(fmtDT(d.createdAt))}</td><td class="n">${fmt(d.total)}</td><td class="note">${Object.entries(d.pct || {}).filter(([, p]) => p).map(([k, p]) => `${esc(storeName(k))} ${p}%`).join(' · ')}</td>
+    return `<tr><td><b>${esc(d.name)}</b></td><td class="note">${esc(fmtDT(d.createdAt))}</td><td class="n">${fmt(d.total)}</td><td class="note">${Object.entries(d.pct || {}).filter(([, p]) => p).map(([k, p]) => `${esc(storeName(k))} ${p}%`).join(' · ')}${isV2(d) ? ` <span class="chip c-ok" title="Шинэ дүрэм v2 — бүтэн коллекц, хэлтсээр">v2</span>${d.v2 && d.v2.coll ? `<div class="note">коллекц ${Object.entries(d.v2.coll).map(([k, v]) => esc(storeName(k)) + ' ' + v + '%').join(' · ')}</div>` : ''}` : ''}</td>
       <td class="n">${WS.cnt[d.id] ? (WS.cnt[d.id]._err ? '<span title="Скан тоо уншиж чадсангүй — Firestore rules шалгана уу" style="color:var(--bad)">!</span>' : fmt(sc)) : '…'}</td><td>${d.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Идэвхтэй</span>'}</td>
       <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${isOwner || (window.ALLOWX || {}).wh ? `<button class="btn" data-wd-ren="${esc(d.id)}" title="Барааны нэрийг Excel файлаас (баркодоор) шинэчлэх — хүргэлт, илгээмж, хэвлэх жагсаалт бүгдэд">🔄 Нэр Excel-ээс</button>` : ''}${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}${whCanEdit() ? `<button class="btn" data-wd-del="${esc(d.id)}" title="Буруу жагсаалт оруулсан бол" style="color:var(--bad)">🗑 Устгах</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="7" class="empty">Хүргэлт алга.</td></tr>';
@@ -6998,17 +7228,22 @@ $('#wd-file').addEventListener('change', async e => {
   try{ const M = await loadMaster(); const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
     for (const n of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}); const r = WH.parseList(rows, {master: M, nameSrc: 'file'}); if (!r.error && (!best || r.pcs > best.pcs)) best = {...r, sheet: n}; }
     if (!best){ $('#wd-info').textContent = 'Жагсаалт олдсонгүй — баркод (EAN) болон тоо ширхэгийн багана байх ёстой.'; WD = null; return; }
-    WD = {...best, file: f.name, hasMaster: !!M}; WD.fp = listFp(WD.items); if (!$('#wd-name').value) $('#wd-name').value = f.name.replace(/\.[^.]+$/, ''); wdPreview();
+    WD = {...best, file: f.name, hasMaster: !!M}; WD.fp = listFp(WD.items);
+    WD.learn = {}; for (const it of Object.values(WD.items)) if (it.sb && it.ag2 && it.sb !== it.ag2) WD.learn[it.sb] = it.ag2; if (!$('#wd-name').value) $('#wd-name').value = f.name.replace(/\.[^.]+$/, ''); wdPreview();
   }catch(err){ console.warn(err); $('#wd-info').textContent = 'Уншиж чадсангүй.'; }
 });
 document.addEventListener('input', e => { if (e.target.closest('#wd-pct')) wdPreview(); });
+document.addEventListener('change', e => { const t = e.target;
+  if (t.name === 'wd-rule'){ WS.wdRule = t.value; if (WD) wdPreview(); }
+  if (t.id === 'wd-bulk' || t.id === 'wd-over'){ if (WD) wdPreview(); }
+  if (t.dataset && t.dataset.wdMap != null && WD){ WD.map = WD.map || {}; const v = t.value.trim(); if (v) WD.map[t.dataset.wdMap] = v; else delete WD.map[t.dataset.wdMap]; WD.mapOpen = true; wdPreview(); } });
 $('#wd-save').addEventListener('click', wdSave);
 window.addEventListener('online', syncChip); window.addEventListener('offline', syncChip);
 
 function renderWh(){
   if (!$('section[data-panel="wh"]')) return;
   $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-price-card').hidden = WS.mode !== 'price'; { const pc = $('#wh-prod-card'); if (pc){ pc.hidden = WS.mode !== 'prod'; if (WS.mode === 'prod' && typeof prodRender === 'function') prodRender(); } } renderMyStat(); { const lc = $('#wh-label-card'); if (lc){ lc.hidden = WS.mode !== 'label'; if (WS.mode === 'label' && typeof lbRender === 'function') lbRender(); } } restoreLast(); renderSession(); $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
-  renderWhActive(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip(); { const h = $('#wh-hist'); if (h) h.innerHTML = WS.mode === 'ship' && whCanEdit() ? whHistHTML(() => true, 200) : ''; }
+  renderWhActive(); renderWhMulti(); renderWhCur(); whPreloadOthers(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip(); { const h = $('#wh-hist'); if (h) h.innerHTML = WS.mode === 'ship' && whCanEdit() ? whHistHTML(() => true, 200) : ''; }
   { const sig = JSON.stringify(whCfg().stores); if (!WD && WS.pctSig !== sig){ WS.pctSig = sig; wdPctInputs(); } }
   try{ renderRcv(); }catch(err){ console.warn('rcv', err); }
 }
@@ -9501,6 +9736,7 @@ else VIVIFB.start(async () => {
   LZ.inv = () => { if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); };
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
   LZ.wh = () => { if (ALLOW.wh){
+    db.doc('config/alloc').onSnapshot(d => { WS.alloc = d.exists ? d.data() : null; }, err => console.warn('alloc', err));
     db.collection('deliv').onSnapshot(s => { WS.delivs = s.docs.map(d => ({id: d.id, ...d.data()}));
       for (const D of WS.delivs) if (!WS.cntSub || !WS.cntSub[D.id]){ (WS.cntSub = WS.cntSub || {})[D.id] = true; db.doc('delivcnt/' + D.id).onSnapshot(x => { WS.cnt[D.id] = x.exists ? x.data() : {}; render(); }, err => { console.warn('delivcnt', D.id, err); WS.cnt[D.id] = {_err: 1}; render(); }); }
       render(); }, onErr);
