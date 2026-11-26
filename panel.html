@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="20.7">
+<meta name="vivi-ver" content="20.8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -331,6 +331,9 @@ main textarea{max-width:100%}
       <div class="scroll" id="negTbl" style="max-height:520px;overflow:auto"></div></div>
     
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>Кассууд:</b><button id="sPub" class="btn">Кассууд руу илгээх</button><span id="sPubM" class="small" style="flex:1"></span><span class="small">Кассчин «Үлдэгдэл (F2)» цонхонд бүх дэлгүүрийн үлдэгдлийг харна. 1 цагаас хуучин бол автоматаар шинэчилнэ.</span></div>
+    <div id="ssBox" hidden style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>⚡ Хурдан үлдэгдэл (сервер):</b><span id="ssSt" class="small" style="flex:1"></span>
+      <button id="ssChk" class="btn">🔍 Шалгах: хуучин = шинэ?</button><button id="ssReq" class="btn">🔄 Сервер дээр одоо бүтээх</button><label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ssUse"> Ашиглах</label>
+      <div id="ssRes" class="small" style="flex-basis:100%"></div></div>
   </div>
 
   <!-- 2-4. Орлого / Шилжүүлэг / Зарлага (нэг маягт) -->
@@ -1368,7 +1371,7 @@ const SCN={};function scanBad(v,key,dup){const o0=SCN[key]||(SCN[key]={});if(isQ
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
 function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
-  if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchPlists();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();if(can('cost'))watchSup();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
+  if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchPlists();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();if(can('cost'))watchSup();ssWatch();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
@@ -3107,18 +3110,35 @@ const OPEN0={asOf:'2000-01-01T00:00:00.000Z',d:'[]',virt:true};
 async function openOr0(st){const d=await openGet(st);if(d.exists)return d.data();return (movAll||[]).some(m=>m.status!=='cancel'&&(m.to===st||m.from===st))?OPEN0:null}
 /* 2 мин дотор дахин дуудвал (өөр цэс ч) татсан үлдэгдлийг дахин ашиглана — 2 МБ+ борлуулалтыг дахин татахгүй. {fresh:true} = үргэлж шинээр */
 let STKM=null;
-function stockAll(o){o=o||{};if(!o.fresh&&STKM&&Date.now()-STKM.t<120000)return STKM.p;const p=stockAllRaw();STKM={t:Date.now(),p};p.catch(()=>{if(STKM&&STKM.p===p)STKM=null});return p}
+function stockAll(o){o=o||{};if(!o.fresh&&STKM&&Date.now()-STKM.t<120000)return STKM.p;const p=stockAllRaw(o);STKM={t:Date.now(),p};p.catch(()=>{if(STKM&&STKM.p===p)STKM=null});return p}
 function stockAllAge(){return STKM?Date.now()-STKM.t:Infinity}
-async function stockAllRaw(){for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
-  const SS=[],O={};for(const st of Object.keys(LOC)){const o=await openOr0(st);if(o){SS.push(st);O[st]=o}}
+async function stockAllRaw(o){o=o||{};for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
+  const SS=[],O={};for(const st of Object.keys(LOC)){const x=await openOr0(st);if(x){SS.push(st);O[st]=x}}
   const M=new Map(),R={};if(!SS.length)return {SS,O,M,R};
-  const fr=SS.filter(s=>!O[s].virt).map(s=>O[s].asOf).sort()[0],sales=fr?await salesSince(sDay(fr),null):[];
+  const fr=SS.filter(s=>!O[s].virt).map(s=>O[s].asOf).sort()[0];let sales=null,how='full',why='';
+  // ⚡ сервер нэгтгэл: «Шинэчлэх»/«fresh» биш үед, ашиглахыг зөвшөөрсөн бол (самбарын хөдөлгөөн үргэлж шууд тооцогдоно)
+  if(fr&&o.snap!=='off'&&(o.snap==='force'||!o.fresh)){try{const x=await snapSales(fr,SS,O,o.snap==='force');if(x.docs){sales=x.docs;how='snap'}else why=x.why}catch(e){why=String(e.code||e.message||e);console.warn('stocksnap',e)}}
+  if(!sales)sales=fr?await salesSince(sDay(fr),null):[];
   SS.forEach((st,k)=>{R[st]=stockCalc(st,O[st],sales);R[st].rows.forEach(r=>{if(!r.now)return;let v=M.get(r.code);if(!v){v=SS.map(()=>0);M.set(r.code,v)}v[k]=r.now})});
-  return {SS,O,M,R,sales}}
+  return {SS,O,M,R,sales,how,why}}
+/* ⚡ Үлдэгдлийн хурдан тооцоо: сервер (stockSnap функц) байршил бүрээр «эхний үлдэгдлээс T хүртэл зарсан/буцаасан»-ыг нэгтгэнэ.
+   Энд: тэр нэгтгэлийг псевдо баримт болгоод + зөвхөн T-ээс хойшхи баримт (≤1 цаг) → stockCalc ЯГ өмнөх шиг тооцоолно.
+   Нэгтгэл хуучирсан (хоцорсон/устгасан баримт), эхний үлдэгдэл солигдсон, хагас бичигдсэн бол → хуучин бүрэн арга. */
+let SNM=null,SND=null;
+async function snapMeta(){if(SNM&&Date.now()-SNM.t<10000)return SNM.v;const d=await db.collection('pos_config').doc('stocksnap').get();SNM={t:Date.now(),v:d.exists?d.data():null};return SNM.v}
+async function snapSales(fr,SS,O,force){const m=await snapMeta();
+  if(!m||!m.gen)return {why:'сервер нэгтгэл хараахан алга'};if(!force&&!m.use)return {why:'ашиглахыг асаагаагүй'};if(m.stale)return {why:'сервер шинэчилж байна (хоцорсон/засагдсан баримт)'};if(m.F!==fr)return {why:'эхний үлдэгдлийн огноо зөрүүтэй'};
+  if(!SND||SND.gen!==m.gen){const q=await db.collection('pos_stock_snap').get(),by={},as={};let ok=true;
+    q.docs.forEach(d=>{const x=d.data();if(x.gen!==m.gen)ok=false;as[x.loc]=x.asOf;(by[x.loc]=by[x.loc]||[]).push(...JSON.parse(x.d||'[]'))});
+    if(!ok)return {why:'нэгтгэл бичигдэж байна'};
+    SND={gen:m.gen,as,docs:Object.entries(by).map(([loc,rows])=>({store:loc,stockFrom:loc,iso:m.T,date:sDay(m.T),pseudo:true,lines:rows.flatMap(([c,a,b])=>[...(a?[{code:c,qty:a}]:[]),...(b?[{code:c,qty:-b}]:[])])}))}}
+  for(const st of SS){const e=SND.as[st];if(e!==undefined&&e!==(O[st].virt?'virt':O[st].asOf))return {why:LOC[st]+': эхний үлдэгдэл солигдсон'}}
+  const after=(await db.collection('pos_sales').where('iso','>=',m.T).get()).docs.map(d=>d.data());
+  return {docs:SND.docs.concat(after),T:m.T,after:after.length}}
 async function publishStock(silent){
   if(stkBusy)return;stkBusy=true;const out=$('sPubM');out.textContent='Бүх байршлын үлдэгдлийг тооцоолж байна…';
   try{for(let i=0;i<50&&!movReady;i++)await new Promise(r=>setTimeout(r,200));
-    const A=await stockAll({fresh:true});if(!A.SS.length){out.innerHTML='<span class="hot">Эхний үлдэгдэл нэг ч байршилд алга</span>';return}const SS=A.SS,O=A.O,M=A.M;
+    const A=await stockAll();if(!A.SS.length){out.innerHTML='<span class="hot">Эхний үлдэгдэл нэг ч байршилд алга</span>';return}const SS=A.SS,O=A.O,M=A.M;
     const rows=[...M.entries()].map(([c,v])=>[c,...v]).sort((a,b)=>a[0]<b[0]?-1:1),asOf={};SS.forEach(s=>asOf[s]=O[s].asOf);
     const neg={};SS.forEach(s=>{const n=A.R[s].rows.filter(r=>r.now<0).length;if(n)neg[s]=n});
     const r=await writeChunks('pos_stock_view',rows,{stores:SS,asOf,neg},(i,n,w)=>out.textContent='Илгээж байна '+i+'/'+n);
@@ -3376,6 +3396,25 @@ async function stHist(code,loc,kind){const locs=loc==='*'?negSrc.locs:[loc],nm=(
   $('pm').classList.remove('hide');draw(sel);
   document.querySelectorAll('[data-sthk]').forEach(b=>b.onclick=()=>draw(b.dataset.sthk));$('sthX').onclick=()=>xtXlsx('sth','tuuh_'+code+'_'+loc,'Түүх')}
 $('sPub').onclick=()=>publishStock(false);
+// ⚡ админ: серверийн нэгтгэлийн төлөв, шалгах, асаах
+let SSOK=false;
+function ssWatch(){if(!(ME&&ME.admin))return;$('ssBox').hidden=false;db.collection('pos_config').doc('stocksnap').onSnapshot(d=>{const m=d.exists?d.data():null;SNM={t:Date.now(),v:m};ssDraw(m)},e=>{$('ssSt').textContent='уншиж чадсангүй: '+(e.code||e.message)})}
+function ssDraw(m){if(!m||!m.gen){$('ssSt').innerHTML='Сервер нэгтгэл хараахан бүтээгдээгүй — функц (stockSnap) суулгасны дараа «🔄 одоо бүтээх» дарна уу.'+(m&&m.err?' <b style="color:var(--red)">Алдаа: '+esc(m.err)+'</b>':'');$('ssUse').checked=false;return}
+  const L=m.last||{};$('ssSt').innerHTML=(m.use?'<b style="color:#1a7f37">✓ ашиглаж байна</b>':'<b>ашиглаагүй</b> (хуучин аргаар)')+' · '+lt(m.T)+' хүртэл нэгтгэсэн'+' · бүтээсэн '+lt(m.builtAt)+(L.mode?' ('+(L.mode==='full'?'бүрэн':'нэмэлт')+', '+fmtN(L.receipts||0)+' баримт)':'')+(m.stale?' · <b style="color:#b26a00">⏳ хоцорсон баримт ирсэн — сервер шинэчилж байна (тэр хооронд хуучин аргаар)</b>':'')+(m.req?' · ⏳ бүтээх хүсэлт илгээсэн':'')+(m.err?' · <b style="color:var(--red)">Алдаа: '+esc(m.err)+'</b>':'');
+  $('ssUse').checked=!!m.use}
+$('ssReq').onclick=async()=>{try{await db.collection('pos_config').doc('stocksnap').set({req:true,reqAt:new Date().toISOString(),reqBy:auth.currentUser.email||''},{merge:true});$('ssRes').textContent='Хүсэлт илгээлээ — сервер 1–5 минутад бүтээнэ.'}catch(e){$('ssRes').textContent='Алдаа: '+(e.code||e.message)}};
+$('ssUse').onchange=async()=>{const on=$('ssUse').checked;if(on&&!SSOK&&!confirm('Эхлээд «🔍 Шалгах» дарж, хуучин ба шинэ арга ижил гарсныг шалгахыг зөвлөж байна. Шалгахгүйгээр асаах уу?')){$('ssUse').checked=false;return}
+  try{await db.collection('pos_config').doc('stocksnap').set({use:on,useAt:new Date().toISOString(),useBy:auth.currentUser.email||''},{merge:true});STKM=null}catch(e){$('ssUse').checked=!on;$('ssRes').textContent='Алдаа: '+(e.code||e.message)}};
+$('ssChk').onclick=async()=>{const b=$('ssChk'),out=$('ssRes');b.disabled=true;out.textContent='Хуучин аргаар тооцоолж байна…';SNM=null;
+  try{const t1=Date.now(),A=await stockAllRaw({snap:'off'}),t2=Date.now();out.textContent='Шинэ аргаар тооцоолж байна…';const B=await stockAllRaw({snap:'force'}),t3=Date.now();
+    if(B.how!=='snap'){out.innerHTML='<b style="color:#b26a00">Шинэ аргаар тооцоолж чадсангүй:</b> '+esc(B.why||'?');return}
+    const D=[];let n=0;const ix=new Map(B.SS.map((s,i)=>[s,i]));
+    for(const c of new Set([...A.M.keys(),...B.M.keys()])){const a=A.M.get(c)||[],bb=B.M.get(c)||[];A.SS.forEach((s,i)=>{n++;const x=a[i]||0,y=bb[ix.get(s)]||0;if(x!==y)D.push([c,s,x,y])})}
+    const sz=x=>fmtN(x.sales.filter(s=>!s.pseudo).length);
+    SSOK=!D.length;out.innerHTML=(D.length?'<b style="color:var(--red)">✗ '+D.length+' зөрүү</b> — шинэ аргыг асаахгүй байна уу, надад (Claude) энэ жагсаалтыг илгээнэ үү:<br>'+D.slice(0,40).map(([c,s,x,y])=>esc(c)+' · '+esc(LOC[s]||s)+': хуучин '+x+' / шинэ '+y).join('<br>'):'<b style="color:#1a7f37">✓ Ижил</b> — '+fmtN(A.M.size)+' бараа × '+A.SS.length+' байршил, нэг ч зөрүүгүй. «Ашиглах»-ыг асааж болно.')+
+      '<br>Хуучин: '+sz(A)+' баримт татсан, '+((t2-t1)/1000).toFixed(1)+' сек · Шинэ: '+sz(B)+' баримт + нэгтгэл, '+((t3-t2)/1000).toFixed(1)+' сек'}
+  catch(e){out.textContent='Алдаа: '+(e.code||e.message||e)}finally{b.disabled=false}};
+
 $('sXl').onclick=()=>{if(!stockRows.length)return $('sMsg').textContent='Эхлээд «Тооцоолох» дарна уу';xtXlsx('stock','uldegdel_'+$('sSt').value+'_'+iso(new Date()),'Үлдэгдэл')};
 
 /* ==== Хасах үлдэгдэл: баримт, кассчин, огноо + ижил загварын бусад хэмжээ; «Шалгасан» тэмдэглэл pos_stock_chk/{байршил_код} ==== */
