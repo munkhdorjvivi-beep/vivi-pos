@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="21.6">
+<meta name="vivi-ver" content="21.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -4979,16 +4979,27 @@ $('xB').onclick=()=>smartXlsx('b');$('xP').onclick=()=>smartXlsx('p');
 function watchCat(){db.collection('pos_catalog').doc('meta').onSnapshot(d=>{if(d.exists){const m=d.data();catLists={sups:m.sups||[],grps:m.grps||[]};$('itSL').innerHTML=catLists.sups.map(x=>'<option value="'+esc(x)+'">').join('');$('itGL').innerHTML=catLists.grps.map(x=>'<option value="'+esc(x)+'">').join('')}if(!d.exists)return $('catNow').textContent='Үүлэнд барааны жагсаалт алга. Smart-ын файлаас оруулна уу.';const m=d.data();$('catNow').innerHTML='Үүлэн дэх жагсаалт: <b>'+Number(m.count).toLocaleString('en-US')+'</b> бараа · '+esc(new Date(m.version).toLocaleString('sv-SE').slice(0,16))+' · '+esc(m.by||'')},()=>{})}
 $('d1').value=$('d2').value=iso(new Date());$('a2').value=iso(new Date());$('a1').value=iso(new Date(Date.now()-30*864e5));
 // Нэг хугацаа бүх самбар, тайланд: аль ч огнооны талбарт өөрчилбөл бүгд шинэчлэгдэнэ
-function syncDates(){document.querySelectorAll('.dr1').forEach(e=>e.value=$('d1').value);document.querySelectorAll('.dr2').forEach(e=>e.value=$('d2').value);
+function syncDates(){const ae=document.activeElement,w=(e,v)=>{if(e!==ae||e.value!==v)e.value=v};document.querySelectorAll('.dr1').forEach(e=>w(e,$('d1').value));document.querySelectorAll('.dr2').forEach(e=>w(e,$('d2').value));
   const f=$('d1').value,t=$('d2').value,txt=f===t?f:f+' → '+t;$('stPer').textContent=txt;$('rdInfo').textContent='Доорх бүх тайлан, Excel, CSV, SaleMany энэ хугацаагаар';}
 // Хугацаа сонгоход шууд ачаалахгүй — «Харах» дарахад сангаас уншина (хүлээгдэж буй үед товч улаанаар анивчина)
 let RANGE_LOADED='';const rangeKey=()=>$('d1').value+'|'+$('d2').value;
 function rangePend(){const p=rangeKey()!==RANGE_LOADED;document.querySelectorAll('.dgo').forEach(b=>b.classList.toggle('pend',p))}
-function setRange(f,t,go){if(f&&t&&f>t)[f,t]=[t,f];$('d1').value=f;$('d2').value=t;syncDates();if(go&&db&&auth.currentUser){RANGE_LOADED=rangeKey();listen()}rangePend()}
-$('d1').onchange=$('d2').onchange=()=>setRange($('d1').value,$('d2').value);
+function setRange(f,t,go){if(f&&t&&f>t)[f,t]=[t,f];const ae=document.activeElement;if(ae!==$('d1')||$('d1').value!==f)$('d1').value=f;if(ae!==$('d2')||$('d2').value!==t)$('d2').value=t;syncDates();if(go&&db&&auth.currentUser){RANGE_LOADED=rangeKey();listen()}rangePend()}
+// «-ээс»-ийн он өөр бол «хүртэл» = тухайн оны эцэс (өнөөдрөөс хэтрэхгүй); «хүртэл» < «-ээс» бол «-ээс» = тухайн оны эхлэл
+function rangeFix(f,t,w){const td=iso(new Date());if(w==='f'&&f&&t&&(f.slice(0,4)!==t.slice(0,4)||t<f)){t=f.slice(0,4)+'-12-31';if(t>td)t=td;if(t<f)t=f}else if(w==='t'&&f&&t&&t<f)f=t.slice(0,4)+'-01-01';return [f,t]}
+$('d1').onchange=()=>setRange(...rangeFix($('d1').value,$('d2').value,'f'));$('d2').onchange=()=>setRange(...rangeFix($('d1').value,$('d2').value,'t'));
 $('dGo').onclick=()=>setRange($('d1').value,$('d2').value,true);
 document.querySelectorAll('.drng').forEach(box=>{if(!box.querySelector('.dgo')){const b=document.createElement('button');b.className='btn dgo';b.textContent='Харах';b.style.minHeight='36px';b.onclick=()=>setRange(box.querySelector('.dr1').value,box.querySelector('.dr2').value,true);box.appendChild(b)}});
-document.querySelectorAll('.dr1,.dr2').forEach(e=>e.onchange=()=>{const box=e.closest('.drng');setRange(box.querySelector('.dr1').value,box.querySelector('.dr2').value)});
+document.querySelectorAll('.dr1,.dr2').forEach(e=>e.onchange=()=>{const box=e.closest('.drng');setRange(...rangeFix(box.querySelector('.dr1').value,box.querySelector('.dr2').value,e.classList.contains('dr1')?'f':'t'))});document.querySelectorAll('#d1,#d2,.dr1,.dr2').forEach(e=>e.required=true);
+// Огноог гараар бичих: бичиж байх үед (dd.mm.yyyy) хэсэг бүрт өөрчлөлт дамжуулахгүй — талбараас гарах, Enter дарахад нэг удаа.
+// Он дуусаагүй бол өмнөх утга. Календараас сонговол шууд.
+(()=>{const ok=v=>!v||(+v.slice(0,4)>=2000&&+v.slice(0,4)<=2099),isD=t=>t&&t.tagName==='INPUT'&&t.type==='date';
+  const flush=t=>{t._ty=0;if(!ok(t.value)||(!t.value&&t.required&&t._dl)){t.value=t._dl||'';t._dp=0;return}if(t._dp&&t.value!==t._dl){t._dp=0;t._dl=t.value;t.dispatchEvent(new Event('input',{bubbles:true}));t.dispatchEvent(new Event('change',{bubbles:true}))}t._dp=0};
+  document.addEventListener('focusin',e=>{if(isD(e.target)){e.target._dl=e.target.value;e.target._ty=0;e.target._dp=0}},true);
+  document.addEventListener('keydown',e=>{const t=e.target;if(!isD(t))return;if(e.key==='Enter'){if(t._ty||t._dp)flush(t);return}if(e.key.length===1||['Backspace','Delete','ArrowUp','ArrowDown'].includes(e.key))t._ty=1},true);
+  ['input','change'].forEach(ev=>document.addEventListener(ev,e=>{const t=e.target;if(!isD(t)||!e.isTrusted)return;if(t._ty||!ok(t.value)){e.stopImmediatePropagation();t._dp=1}},true));
+  document.addEventListener('focusout',e=>{if(isD(e.target))flush(e.target)},true)})();
+
 syncDates();
 init();
 

@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.3">
+<meta name="vivi-ver" content="9.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -1931,6 +1931,15 @@ function chatListen(){if(chatListen.u||!(fb.ready&&fb.user))return;const st=curA
     const fresh=chatSeen?L.filter(m=>m.from==='panel'&&!chatSeen.has(m.id)):[];chatSeen=new Set(L.map(m=>m.id));chatMsgs=L;
     if(fresh.length){CHAT.beep();if(!chatOpen())flash('💬 Оффисоос шинэ мессеж: '+(fresh[fresh.length-1].text||'хавсралт').slice(0,60))}
     if(chatOpen()){chatDraw();chatRead()}chatBadge()},e=>{$('chatSt').textContent='Чат: '+(e.code||e)})}
+
+// Огноог гараар бичих: бичиж байх үед (dd.mm.yyyy) хэсэг бүрт өөрчлөлт дамжуулахгүй — талбараас гарах, Enter дарахад нэг удаа.
+// Он дуусаагүй бол өмнөх утга. Календараас сонговол шууд.
+(()=>{const ok=v=>!v||(+v.slice(0,4)>=2000&&+v.slice(0,4)<=2099),isD=t=>t&&t.tagName==='INPUT'&&t.type==='date';
+  const flush=t=>{t._ty=0;if(!ok(t.value)||(!t.value&&t.required&&t._dl)){t.value=t._dl||'';t._dp=0;return}if(t._dp&&t.value!==t._dl){t._dp=0;t._dl=t.value;t.dispatchEvent(new Event('input',{bubbles:true}));t.dispatchEvent(new Event('change',{bubbles:true}))}t._dp=0};
+  document.addEventListener('focusin',e=>{if(isD(e.target)){e.target._dl=e.target.value;e.target._ty=0;e.target._dp=0}},true);
+  document.addEventListener('keydown',e=>{const t=e.target;if(!isD(t))return;if(e.key==='Enter'){if(t._ty||t._dp)flush(t);return}if(e.key.length===1||['Backspace','Delete','ArrowUp','ArrowDown'].includes(e.key))t._ty=1},true);
+  ['input','change'].forEach(ev=>document.addEventListener(ev,e=>{const t=e.target;if(!isD(t)||!e.isTrusted)return;if(t._ty||!ok(t.value)){e.stopImmediatePropagation();t._dp=1}},true));
+  document.addEventListener('focusout',e=>{if(isD(e.target))flush(e.target)},true)})();
 /* ---------- 📨 Хүсэлтүүд: самбар руу илгээсэн бүх хүсэлт хаана явж байна + дансаар буцаах мөнгө (Kontrola) ----------
    Шийдвэр (зөвшөөрсөн/татгалзсан) ирээд хараахан нээгээгүй, эсвэл зөвшөөрсөн буцаалт гүйцээгээгүй бол улаан тоо. */
 let KFA=[];const RQX={old:null,st:{f:{},sort:null}};
