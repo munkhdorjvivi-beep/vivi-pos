@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.1">
+<meta name="vivi-ver" content="9.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -180,7 +180,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
     </div></div>
     <div class="grp"><h3>Баримт</h3><div class="g">
       <button id="bPark">Түр хадгалах <kbd>F6</kbd></button><button id="bParked">Хадгалсан <span id="pCnt"></span><kbd>F7</kbd></button>
-      <button id="bRet">Буцаалт <kbd>F8</kbd></button><button id="bClear" class="warn">Баримт цуцлах</button><button id="bExch">Солилт <kbd>F3</kbd></button><button id="bPfix">Төлбөр засах</button><button id="bRep1" style="grid-column:1/3">Сүүлийн баримт дахин хэвлэх <kbd>F9</kbd></button>
+      <button id="bRet">Буцаалт <kbd>F8</kbd></button><button id="bClear" class="warn">Баримт цуцлах</button><button id="bExch">Солилт <kbd>F3</kbd></button><button id="bPfix">Төлбөр засах</button><button id="bOver" title="Үйлчлүүлэгч дансаар илүү мөнгө шилжүүлсэн бол зөрүүг буцаах хүсэлт">Илүү төлбөр буцаах</button><button id="bRep1">Сүүлийн баримт дахин хэвлэх <kbd>F9</kbd></button>
     </div></div>
     <div class="grp"><h3>Ээлж</h3><div class="g">
       <button id="bHist">Борлуулалтын түүх <kbd>F10</kbd></button><button id="bStk">Үлдэгдэл <kbd>F2</kbd></button>
@@ -260,7 +260,7 @@ const APP_VER=document.querySelector('meta[name=vivi-ver]').content;document.que
 let device=store.get('device',{store:'',reg:''});
 // 6.1: баримт нэг хувь хэвлэх нь анхдагч — хуучин «2 хувь» тохиргоог нэг удаа 1 болгоно (дараа нь Тохиргоо → Төхөөрөмжөөс өөрчилж болно)
 if(device.cpv!==1){device.copies=1;device.cpv=1;store.set('device',device)}
-let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false,payFixHours:24},store.get('cfg',{})),requests=[];
+let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false,payFixHours:24,returnAllReq:false},store.get('cfg',{})),requests=[];
 const pfH=()=>{const h=Number(cfg.payFixHours);return cfg.payFixHours==null||cfg.payFixHours===''||!(h>=0)?24:h};
 // Хүргэлтийн бүс, үнийг самбараас (Касс, ажилтан → Хүргэлтийн төлбөр) өөрчилнө
 const DLV_DEF=[{n:'А бүс',p:8000},{n:'Б бүс',p:10000},{n:'Алслагдсан бүс',p:12000}];
@@ -927,6 +927,7 @@ function returnLines(s){
     const days=Math.floor((Date.now()-new Date(s.iso).getTime())/864e5),flags=[];
     if(days>cfg.returnDays)flags.push('хугацаа хэтэрсэн ('+days+' хоног)');
     if(-tot>cfg.returnLimit)flags.push('дүн босгоос их');
+    if(cfg.returnAllReq&&!flags.length)flags.push('самбарын зөвшөөрөл');
     const r={ref:s.id,refUid:s.uid,refStore:s.store,refDate:s.date,refTotal:s.total,lines,total:tot,qty,base,form,pay,reason:why,cust};
     if(flags.length){
       if(fb.ready&&fb.user&&navigator.onLine){
@@ -935,6 +936,7 @@ function returnLines(s){
         try{await fb.db.collection('pos_requests').doc(rq.uid).set(rq)}catch(e){return $('rm').textContent='Хүсэлт илгээгдсэнгүй: '+(e&&e.code||e)}
         log('return_request',{ref:s.id,total:tot,flags});closeModal();return flash('Буцаалтын хүсэлт илгээгдлээ. Зөвшөөрсний дараа «Буцаалт» цэснээс гүйцээнэ.');
       }
+      if(cfg.returnAllReq)return $('rm').textContent='Интернэт холболтгүй байна. Буцаалтыг эхлээд самбар зөвшөөрдөг тул холболт сэргэсний дараа хүсэлт илгээнэ үү.';
       if(!(await askPin('Буцаалт: '+flags.join(', ')+' — зөвшөөрөл')))return;r.approvedBy=askPin.by;
     }else if(cfg.returnPin){if(!(await askPin('Буцаалт '+fmt(-tot)+' ₮ — зөвшөөрөл')))return;r.approvedBy=askPin.by}
     finishReturn(r);
@@ -1340,6 +1342,41 @@ function payFix(s){
     reqOut({...rqBase('paychange'),ref:s.id,saleUid:s.uid,refDate:s.date,refCashier:s.cashier,total:s.total,before:s.payments,after,reason:why});
     log('paychange_request',{ref:s.id,before:s.payments,after});closeModal();flash('Төлбөр засах хүсэлт илгээгдлээ. Нягтлан баталсны дараа өөрчлөгдөнө.')};
 }
+/* ---------- Илүү төлбөр буцаах: үйлчлүүлэгч дансаар илүү шилжүүлсэн (жишээ: 1 000-ийн оронд 10 000) ----------
+   Касс хүсэлт илгээнэ (баримт заавал) → самбар «Хүсэлт» зөвшөөрнө → VIVI Kontrola-д нягтлан үйлчлүүлэгчийн данс руу зөрүүг шилжүүлнэ.
+   Борлуулалт, үлдэгдэл, Z тайланд нөлөөлөхгүй. */
+const OV_ST={pending:['самбар зөвшөөрөхийг хүлээж байна','b30'],approved:['✓ зөвшөөрсөн — нягтлан шилжүүлнэ',''],rejected:['✗ татгалзсан','man'],done:['✓ шилжүүлсэн','']};
+function ovMine(){const st=S.user.store,A=requests.filter(r=>r.kind==='overpay'&&r.store===st),Q=reqq.filter(r=>r.kind==='overpay'&&r.store===st&&!A.some(x=>x.uid===r.uid)).map(r=>({...r,_q:1}));
+  return A.concat(Q).sort((a,b)=>a.created<b.created?1:-1)}
+function openOver(){
+  if(S.exch)return flash('Эхлээд солилтоо дуусгана уу');
+  const L=ovMine().slice(0,8);
+  openModal('<h2>Илүү төлбөр буцаах — баримт сонгох</h2><div class="small" style="margin-bottom:6px">Үйлчлүүлэгч дансаар (банк, QPay) илүү мөнгө шилжүүлсэн бол баримтаа сонгоно. Зөвшөөрсний дараа нягтлан зөрүүг үйлчлүүлэгчийн данс руу шилжүүлнэ.</div>'+
+    (L.length?'<b>Сүүлийн хүсэлтүүд</b><div class="list"><table><tbody>'+L.map(r=>{const t=r._q?['илгээж байна…','b30']:(OV_ST[r.status]||[r.status,'']);return '<tr><td>'+esc(r.ref)+'<div class="small">'+esc(r.cashier)+' · '+esc((r.created||'').slice(0,10))+'</div></td><td class="n"><b>'+fmt(r.over)+'</b></td><td><span class="badge '+t[1]+'">'+esc(t[0])+'</span>'+(r.note?'<div class="small">'+esc(r.note)+'</div>':'')+'</td></tr>'}).join('')+'</tbody></table></div>':'')+
+    RCPT_UI+'<div class="rowbtn"><button id="pc">Болих</button></div>');
+  $('mbox').classList.add('wide');$('pc').onclick=closeModal;rcptBind(overForm);
+}
+function overForm(s){
+  const BP=(s.payments||[]).map((p,i)=>({p,i})).filter(x=>x.p.form==='Банкаар'&&(+x.p.amount||0)>0);
+  if(!BP.length){$('pm2').innerHTML='<b style="color:var(--red)">'+esc(s.id)+' — дансаар (банк, QPay) төлсөн төлбөр алга. Илүү төлбөр зөвхөн шилжүүлгээр үүснэ.</b>';return}
+  const dup=requests.concat(reqq).find(r=>r.kind==='overpay'&&r.refUid===s.uid&&r.status!=='rejected');
+  if(dup){$('pm2').innerHTML='<b style="color:var(--red)">'+esc(s.id)+' — энэ баримтад илүү төлбөр буцаах хүсэлт аль хэдийн байна ('+esc((OV_ST[dup.status]||[dup.status])[0])+').</b>';return}
+  openModal('<h2>Илүү төлбөр буцаах — '+esc(s.id)+'</h2><div class="small">'+esc(s.date)+' '+esc((s.time||'').slice(0,5))+' · '+esc(s.cashier)+' · баримтын дүн <b>'+fmt(s.total)+' ₮</b><br>'+(s.payments||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:''))+': '+fmt(p.amount)).join('<br>')+'</div>'+
+    (BP.length>1?'<label>Аль төлбөрөөр илүү шилжүүлсэн</label><select id="ovP">'+BP.map(x=>'<option value="'+x.i+'">'+esc(x.p.bank||x.p.form)+' — '+fmt(x.p.amount)+'</option>').join('')+'</select>':'')+
+    '<div class="two" style="grid-template-columns:1fr 1fr"><div><label>Баримтад бичигдсэн (₮)</label><input id="ovA" readonly></div><div><label>Үйлчлүүлэгч бодитоор шилжүүлсэн (₮) *</label><input id="ovT" inputmode="numeric" placeholder="жишээ 10000"></div></div>'+
+    '<div id="ovS" style="margin:6px 0;font-size:15px"></div>'+custForm('o')+
+    '<label>Шалтгаан / тайлбар *</label><input id="ovW" placeholder="жишээ: 1 000-ийн оронд 10 000 шилжүүлсэн"><div id="ovM" class="small" style="color:var(--red);min-height:18px"></div>'+
+    '<div class="rowbtn"><button id="ovC">Болих</button><button class="pri" id="ovO">Хүсэлт илгээх</button></div>',true);
+  const pay=()=>s.payments[$('ovP')?+$('ovP').value:BP[0].i],over=()=>Math.round(num($('ovT').value))-Math.round(+pay().amount||0);
+  const upd=()=>{$('ovA').value=fmt(pay().amount);const o=over();$('ovS').innerHTML=num($('ovT').value)?(o>0?'Буцааж шилжүүлэх зөрүү: <b>'+fmt(o)+' ₮</b>':'<span style="color:var(--red)">Шилжүүлсэн дүн баримтынхаас их байх ёстой</span>'):''};
+  if($('ovP'))$('ovP').onchange=upd;$('ovT').oninput=upd;upd();custBind('o',()=>true);$('ovC').onclick=closeModal;$('ovT').focus();
+  $('ovO').onclick=()=>{const o=over(),why=$('ovW').value.trim(),m=t=>$('ovM').textContent=t;
+    if(!(o>0))return m('Үйлчлүүлэгчийн бодитоор шилжүүлсэн дүнг зөв оруулна уу');
+    const cust=custRead('o',m);if(!cust)return;if(!why)return $('ovW').focus();
+    const p=pay(),r={...rqBase('overpay'),ref:s.id,refUid:s.uid,refStore:s.store,refDate:s.date,refTime:(s.time||'').slice(0,5),refCashier:s.cashier,refTotal:s.total,refPay:s.payments,
+      payBank:p.bank||'',payBankCode:p.bankCode||'',payAmt:Math.round(+p.amount||0),paid:Math.round(num($('ovT').value)),over:o,cust,reason:why};
+    reqOut(r);log('overpay_request',{ref:s.id,over:o,paid:r.paid});closeModal();flash('Илүү төлбөр буцаах хүсэлт илгээгдлээ ('+fmt(o)+' ₮). Самбар зөвшөөрсний дараа нягтлан шилжүүлнэ.')};
+}
 // Батлагдсан төлбөрийн засварыг энэ кассын хадгалсан баримтад тусгана
 function applyPayFix(){let ch=0;requests.filter(r=>r.kind==='paychange'&&r.status==='approved').forEach(r=>{const s=sales.find(x=>x.uid===r.saleUid);if(s&&s.payFix!==r.uid){s.payments=r.after;s.payFix=r.uid;ch++}});if(ch)store.set('sales',sales)}
 /* ---- Шинэ хувилбар шалгах. GitHub Pages хуудсыг 10 минут кэшлэдэг тул файлын толгойг кэшгүй татаж хувилбарыг харьцуулна ---- */
@@ -1524,7 +1561,7 @@ function openSettings(tab){
   if(tab==='promo')body='<div class="list"><table><thead><tr><th>Нэр</th><th>Төрөл</th><th>Хамрах бараа</th><th>Хугацаа</th><th>Төлөв</th></tr></thead><tbody>'+(promos.map((p,i)=>{const s=PST[promoState(p)];return '<tr data-i="'+i+'"><td><b>'+esc(p.name)+'</b></td><td class="nw">'+(p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):p.type==='gift'?'Бэлэг · 0 ₮':p.type==='plist'?'Үнийн жагсаалт · '+Object.keys(p.prices||{}).length+' бараа':p.type==='price'?'Тогтмол үнэ '+fmt(p.price)+' ₮':p.type==='amount'?'−'+fmt(p.amount)+' ₮':'−'+p.pct+'%')+'</td><td class="small">'+esc(scopeText(p))+(p.stores.length?' · '+p.stores.map(s=>STORES[s]).join(', '):'')+'</td><td class="nw">'+(p.start||'…')+' → '+(p.end||'хугацаагүй')+'</td><td><span class="badge '+s[1]+'">'+s[0]+'</span></td></tr>'}).join('')||'<tr><td class="small">Урамшуулал алга</td></tr>')+'</tbody></table></div><div class="small" style="margin-top:8px">Урамшууллыг хяналтын самбараас (panel) нэмж, засна. Энд зөвхөн харагдана.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
   else body='<div class="list"><table><thead><tr><th>Нэр</th><th>Эрх</th><th>Дэлгүүр</th><th>Төлөв</th></tr></thead><tbody>'+users.map((u,i)=>'<tr data-i="'+i+'"><td><b>'+esc(u.name)+'</b></td><td>'+ROLEN[u.role]+'</td><td class="small">'+(u.stores.length?u.stores.map(s=>STORES[s]).join(', '):'Бүх дэлгүүр')+'</td><td><span class="badge '+(u.active?'':'man')+'">'+(u.active?'Идэвхтэй':'Идэвхгүй')+'</span>'+(u.pin==='1111'?' <span class="badge b30">анхны ПИН</span>':'')+'</td></tr>').join('')+'</tbody></table></div><div class="small" style="margin-top:8px">Ажилтан, ПИН-ийг хяналтын самбараас (panel) нэмж, засна. Энд зөвхөн харагдана.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
   if(tab==='dev')body='<div class="small">Энэ компьютерийг нэг дэлгүүр, нэг кассад бэхэлж, баримтын хувийн тоог тохируулна. Бэхэлсэн бол нэвтрэх үед дэлгүүр, касс сонгох боломжгүй. Тохиргоо зөвхөн энэ компьютер дээр хадгалагдана.</div><div class="frm"><div><label>Дэлгүүр</label><select id="v_st"><option value="">— бэхлэхгүй —</option>'+STL.map(x=>'<option value="'+x[0]+'">'+esc(x[1])+'</option>').join('')+'</select></div><div><label>Касс №</label><select id="v_rg">'+[1,2,3,4,5,6].map(n=>'<option>'+n+'</option>').join('')+'</select></div><div><label>Баримт хэвлэх хувь</label><select id="v_cp"><option>1</option><option>2</option><option>3</option></select></div></div><div class="frm"><div><label>Хувь хоорондын хүлээлт (секунд)</label><select id="v_gap"><option value="1500">1,5</option><option value="2500">2,5</option><option value="4000">4</option><option value="6000">6</option></select></div></div><label class="inl"><input type="checkbox" id="v_oj"> Бүх хувийг нэг даалгавраар хэвлэх (хайчлахгүй, нэг урт цаас)</label><div id="c_msg" class="small" style="color:var(--ok);min-height:18px"></div><div class="rowbtn"><button class="pri" id="v_ok">Хадгалах</button><button id="sX">Хаах</button></div>';
-  if(tab==='ret')body='<table><tr><td>Буцаалт, солилт хийх хугацаа</td><td class="n"><b>'+cfg.returnDays+' хоног</b></td></tr><tr><td>Хүсэлт шаардах дүнгийн босго</td><td class="n"><b>'+fmt(cfg.returnLimit)+' ₮</b></td></tr><tr><td>Энгийн буцаалтад менежерийн ПИН</td><td class="n"><b>'+(cfg.returnPin?'Тийм':'Үгүй')+'</b></td></tr><tr><td>Төлбөрийн хэлбэр засах хугацаа</td><td class="n"><b>'+(pfH()?pfH()+' цаг':'хязгааргүй')+'</b></td></tr></table><div class="small" style="margin-top:8px">Буцаалтын тохиргоог хяналтын самбараас (panel) өөрчилнө.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
+  if(tab==='ret')body='<table><tr><td>Буцаалт, солилт хийх хугацаа</td><td class="n"><b>'+cfg.returnDays+' хоног</b></td></tr><tr><td>Хүсэлт шаардах дүнгийн босго</td><td class="n"><b>'+fmt(cfg.returnLimit)+' ₮</b></td></tr><tr><td>Энгийн буцаалтад менежерийн ПИН</td><td class="n"><b>'+(cfg.returnPin?'Тийм':'Үгүй')+'</b></td></tr><tr><td>Бүх буцаалтыг эхлээд самбар зөвшөөрнө</td><td class="n"><b>'+(cfg.returnAllReq?'Тийм':'Үгүй')+'</b></td></tr><tr><td>Төлбөрийн хэлбэр засах хугацаа</td><td class="n"><b>'+(pfH()?pfH()+' цаг':'хязгааргүй')+'</b></td></tr></table><div class="small" style="margin-top:8px">Буцаалтын тохиргоог хяналтын самбараас (panel) өөрчилнө.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
   openModal('<h2>Тохиргоо</h2><div class="tabs"><button data-t="promo" class="'+(tab==='promo'?'on':'')+'">Урамшуулал (харах)</button><button data-t="users" class="'+(tab==='users'?'on':'')+'">Ажилтнууд (харах)</button><button data-t="ret" class="'+(tab==='ret'?'on':'')+'">Буцаалт (харах)</button><button data-t="dev" class="'+(tab==='dev'?'on':'')+'">Энэ касс</button></div>'+(users.some(u=>u.active&&u.role!=='cashier'&&(u.pin==='9999'||u.pin==='1111'))?'<div class="small" style="color:var(--red);font-weight:650;margin-top:8px">Анхаар: менежер/админы ПИН анхны утгаараа (9999) байна. Хяналтын самбараас солино уу.</div>':'')+'<div class="small" style="margin:8px 0">'+(fb.user?'Тохиргоо үүлэнд хадгалагдаж, холбогдсон бүх кассад зэрэг үйлчилнэ.':'Үүлэнд холбоогүй тул тохиргоо зөвхөн энэ касс дээр хадгалагдана.')+'</div>'+body);
   $('mbox').querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>openSettings(b.dataset.t));
   $('sX').onclick=()=>{closeModal();render()};
@@ -1678,7 +1715,7 @@ function logout(){if(S.cart.length)return flash('Эхлээд баримтаа �
 $('scan').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();onScan()}};
 $('bSearch').onclick=()=>openSearch($('scan').value.trim());
 $('bPay').onclick=openPay;$('bPlus').onclick=()=>chgQty(1);$('bMinus').onclick=()=>chgQty(-1);$('bDel').onclick=delLine;
-$('bHist').onclick=openHist;$('bDlv').onclick=addDelivery;$('bMov').onclick=()=>openMov();$('bCash').onclick=openCash;$('bExch').onclick=openExch;$('bPfix').onclick=openPayFix;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
+$('bHist').onclick=openHist;$('bDlv').onclick=addDelivery;$('bMov').onclick=()=>openMov();$('bCash').onclick=openCash;$('bExch').onclick=openExch;$('bPfix').onclick=openPayFix;$('bOver').onclick=openOver;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
 document.addEventListener('keydown',e=>{
   if($('sale').classList.contains('hide'))return;
   const m=modalOpen(),pay=m&&$('psave');
@@ -1902,7 +1939,7 @@ function kfListen(){if(kfListen.u||!(fb.ready&&fb.user))return;const st=curAcc()
     kfListen.seen=true;$('kfBtn').classList.toggle('hide',!KF.length);$('kfN').textContent=KF.length;if($('kfList'))kfDraw()},()=>{})}
 function kfDraw(){const box=$('kfList');if(!box)return;if(!KF.length){box.innerHTML='<div class="small">Засах зүйл алга ✓</div>';return}
   box.innerHTML=KF.map((f,i)=>{const c=f.cust||{},ret=f.st==='returned';return '<div style="border:1px solid '+(ret?'#f0b429':'#e5a3a8')+';border-radius:10px;padding:10px 12px;margin-bottom:10px;background:'+(ret?'#fffbea':'#fff5f5')+'">'+
-    '<div><span style="font-weight:700">'+esc(f.saleId||'')+'</span> · '+esc(String(f.date||''))+' · <span style="font-weight:700">'+fmt(f.amount||0)+' ₮</span> · '+(f.kind==='exchange'?'солилтын зөрүү':'буцаалт')+'</div>'+
+    '<div><span style="font-weight:700">'+esc(f.saleId||'')+'</span> · '+esc(String(f.date||''))+' · <span style="font-weight:700">'+fmt(f.amount||0)+' ₮</span> · '+(f.kind==='exchange'?'солилтын зөрүү':f.kind==='overpay'?'илүү шилжүүлсэн мөнгө':'буцаалт')+'</div>'+
     '<div class="small">Үйлчлүүлэгч: '+esc([c.name,c.phone].filter(Boolean).join(' · '))+' · одоогийн данс: '+esc([c.bank,c.acct,c.holder].filter(Boolean).join(' · '))+'</div>'+
     '<div style="margin:6px 0"><span style="font-weight:700">'+(ret?'↩ Нягтлан буцаасан':'✗ Нягтлан татгалзсан')+':</span> '+esc(f.comment||'(тайлбаргүй)')+'</div>'+
     (ret?'<div class="two" style="grid-template-columns:1fr 1fr"><div><label>Банк *</label><select id="kfB'+i+'">'+MN_BANKS.map(b=>'<option'+(b===c.bank?' selected':'')+'>'+b+'</option>').join('')+'</select></div><div><label>Дансны дугаар *</label><input id="kfA'+i+'" inputmode="numeric" value="'+esc(c.acct||'')+'"></div></div><label>Дансны эзэмшигчийн нэр *</label><input id="kfH'+i+'" value="'+esc(c.holder||'')+'">'+

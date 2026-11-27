@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="21.1">
+<meta name="vivi-ver" content="21.2">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -164,7 +164,7 @@ main textarea{max-width:100%}
   <div class="card hide" id="rqCard" style="border-color:var(--red)"><h2>Хүсэлтүүд — шийдвэр хүлээж байна <span id="rqCnt"></span></h2><div class="small" style="margin:-4px 0 6px">Буцаалт (зөвшөөрөл) · Солилт (касс дээр хийгдсэн, баталгаажуулна) · Төлбөрийн хэлбэр засах (батлахад баримт өөрчлөгдөнө)</div><div id="cReq"></div></div>
   <div id="rqDone"></div>
   <div class="card" id="rqNone"><h2>Хүсэлтүүд — шийдвэр хүлээж байна</h2><div class="small">Шийдвэр хүлээж буй хүсэлт алга.</div></div>
-  <div class="card" style="margin-top:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Хүсэлтийн түүх</h2><input type="date" id="rqA" class="inp" style="width:auto"><span>→</span><input type="date" id="rqB" class="inp" style="width:auto"><button id="rqX" class="btn">⬇ Excel</button><select id="rhK" class="inp" style="width:auto"><option value="">Бүх төрөл</option><option value="return">Буцаалт</option><option value="exchange">Солилт</option><option value="paychange">Төлбөр засах</option></select></div><div class="scroll" id="cRqH" style="max-height:360px;overflow:auto;margin-top:8px"></div></div>
+  <div class="card" style="margin-top:12px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Хүсэлтийн түүх</h2><input type="date" id="rqA" class="inp" style="width:auto"><span>→</span><input type="date" id="rqB" class="inp" style="width:auto"><button id="rqX" class="btn">⬇ Excel</button><select id="rhK" class="inp" style="width:auto"><option value="">Бүх төрөл</option><option value="return">Буцаалт</option><option value="exchange">Солилт</option><option value="paychange">Төлбөр засах</option><option value="overpay">Илүү төлбөр буцаах</option></select></div><div class="scroll" id="cRqH" style="max-height:360px;overflow:auto;margin-top:8px"></div></div>
   <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0;flex:1">Буцаалтын маягт — нягтлан шалгах <span id="rfCnt" class="small"></span></h2><span id="finInfo" class="small"></span><select id="rfFlt" class="inp" style="width:auto"><option value="">Бүгд</option><option value="no">Шалгаагүй</option><option value="yes">Шалгасан</option></select></div>
   <div class="small" style="margin:4px 0 8px">Касс дээр бөглөсөн буцаалт, солилтын маягт (цаасны оронд). Огноо, дэлгүүрийг дээрх шүүлтүүрээр сонгоно. Шалгасны дараа «Шалгах» дарна. <b>Дансаар</b> буцаах мөнгө (буцаалт, зөрүүтэй солилт) <b>VIVI Kontrola</b>-гийн «Ажилтны хүсэлт» рүү автоматаар очно (хэдхэн секундэд; солилтыг баталсны дараа) — «Kontrola» баганад төлөв нь харагдана.</div><div class="scroll" id="cRetF" style="max-height:520px;overflow:auto"></div></div>
 </section>
@@ -590,6 +590,7 @@ main textarea{max-width:100%}
   <div class="card"><h2>Ажилтнууд, ПИН (бүх кассад)</h2><div class="scroll" id="cUsers"></div><div style="margin-top:10px"><button id="uNew" class="btn pri">+ Шинэ ажилтан</button></div></div>
   <div class="card"><h2>Буцаалтын тохиргоо</h2>
     <div class="frm"><div><label class="f" style="font-size:12.5px;font-weight:650;color:var(--mut)">Буцаалт, солилт хийх хугацаа (хоног)</label><input type="number" id="r_days" class="inp"></div><div><label class="f" style="font-size:12.5px;font-weight:650;color:var(--mut)">Хүсэлт шаардах дүнгийн босго (₮)</label><input type="number" id="r_lim" class="inp"></div><div><label class="f" style="font-size:12.5px;font-weight:650;color:var(--mut)">Төлбөрийн хэлбэр засах хугацаа (цаг)</label><input type="number" id="r_pfh" class="inp" min="0" max="720" title="Кассчин баримтын төлбөрийн хэлбэрийг засах хүсэлтийг баримтаас хойш хэдэн цагийн дотор илгээж болох вэ. 0 = хязгааргүй"><div class="small" style="color:var(--mut)">0 = хязгааргүй</div></div></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="r_all"> <b>Бүх буцаалтыг эхлээд самбар зөвшөөрнө</b> <span class="small" style="color:var(--mut)">— касс хугацаа, дүнгээс үл хамааран хүсэлт илгээнэ; интернэтгүй үед буцаалт хийхгүй. Солилт өмнөх шигээ (хийгээд дараа нь баталгаажуулна).</span></label>
     <label class="inl" style="margin-top:10px"><input type="checkbox" id="r_pin"> Энгийн буцаалтад ч менежерийн ПИН шаардах</label>
     <div class="small" style="margin-top:6px">Хугацаандаа, босгоос бага буцаалтыг кассчин өөрөө хийнэ. Бусад нь энэ самбарт хүсэлтээр ирнэ.</div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center"><button id="r_ok" class="btn pri">Хадгалах</button><span id="r_msg" class="small"></span></div></div>
@@ -751,10 +752,13 @@ const canSome=m=>can(m)||(PERM_SUB[m]||[]).some(x=>can(x[0]));
 const canTab=t=>t==='users'?!!(ME&&ME.admin):t==='guide'?!!ME:t==='till'?canSome('till')||['cash','rep.disc','rep.trip'].some(can):canSome(t);
 function applyPerms(){try{if($('pfCard'))$('pfCard').hidden=!(ME&&ME.admin);perfUi()}catch(e){}if($('lppCard'))$('lppCard').style.display=can('stock')?'':'none';if($('tillMain'))$('tillMain').style.display=can('till.cfg')?'contents':'none';if($('bnWrap'))$('bnWrap').hidden=!can('bonus');document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.hidden=!canTab(b.dataset.tab));document.body.classList.toggle('nocost',!can('cost'));showTab(location.hash.slice(1)||'home')}
 /* ---- Хүсэлтүүд: буцаалт (зөвшөөрөл), солилт (хийгдсэн — нягтлан баталгаажуулна), төлбөрийн хэлбэр засах (батлахад баримт өөрчлөгдөнө) ---- */
-const RQK={return:'Буцаалт',exchange:'Солилт',paychange:'Төлбөр засах'};
+const RQK={return:'Буцаалт',exchange:'Солилт',paychange:'Төлбөр засах',overpay:'Илүү төлбөр буцаах'};
 const payTxt=L=>(L||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))+' <b>'+money(p.amount)+'</b>').join('<br>');
 const bstyle='font:inherit;min-height:40px;border:0;border-radius:8px;color:#fff;padding:6px 14px;cursor:pointer';
 function rqBody(r){const k=r.kind||'return';
+  if(k==='overpay')return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip b">Илүү төлбөр буцаах</span><b>'+money(r.over)+'</b><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+' '+esc(r.refTime||'')+', '+esc(r.refCashier||'')+')</span></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,auto);gap:4px 18px;justify-content:start;margin-top:6px;padding:8px 10px;background:var(--soft);border-radius:8px" class="small"><span>Баримтад бичигдсэн ('+esc(r.payBank||'банк')+')</span><span>Үйлчлүүлэгч шилжүүлсэн</span><span>Буцааж шилжүүлэх</span><b>'+money(r.payAmt)+'</b><b>'+money(r.paid)+'</b><b style="color:var(--red)">'+money(r.over)+'</b></div>'+
+    '<div class="small" style="margin-top:4px">Шалтгаан: '+esc(r.reason)+'</div><div class="small" style="margin-top:2px;opacity:.8">Банкны хуулгаас '+money(r.paid)+' орж ирснийг шалгаад зөвшөөрнө үү. «Зөвшөөрөх» — хүсэлт VIVI Kontrola руу очиж нягтлан үйлчлүүлэгчийн данс руу шилжүүлнэ. Борлуулалт, үлдэгдэлд нөлөөлөхгүй.</div>';
   if(k==='exchange')return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip b">Солилт · '+esc(r.diffType||'')+' · хийгдсэн</span><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">эх баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+') → буцаалт '+esc(r.retId||'')+', шинэ '+esc(r.saleId||'')+'</span></div>'+
     '<div class="small">Буцааж авсан <b>'+money(r.credit)+'</b> · шинэ бараа <b>'+money(r.newTotal)+'</b> · зөрүү <b>'+money(r.diff)+'</b>'+(r.diff?' ('+(r.diff>0?'төлсөн':'буцаасан')+': '+esc(r.form||'')+')':'')+(r.approver?' · ПИН: '+esc(r.approver):'')+' · Шалтгаан: '+esc(r.reason)+'</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="small"><b>Буцааж өгсөн</b><br>'+(r.back||[]).map(l=>l.qty+' × '+esc(l.name)+' — '+money(l.sum)).join('<br>')+'</div><div class="small"><b>Шинээр авсан</b><br>'+(r.take||[]).map(l=>l.qty+' × '+esc(l.name)+' — '+money(l.sum)).join('<br>')+'</div></div>';
@@ -764,8 +768,8 @@ function rqBody(r){const k=r.kind||'return';
   return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><span class="chip r">Буцаалт</span><b>'+money(-r.total)+'</b><span>'+esc(r.storeName)+' · '+esc(r.cashier)+'</span><span class="small">эх баримт '+esc(r.ref)+' ('+esc(r.refDate||'')+') · '+esc(r.form)+'</span></div><div>'+(r.flags||[]).map(f=>'<span class="chip r">'+esc(f)+'</span> ').join('')+'<span class="small">Шалтгаан: '+esc(r.reason)+'</span></div>'+(r.lines||[]).map(l=>'<div class="small">'+(-l.qty)+' × '+esc(l.name)+' — '+money(-l.sum)+'</div>').join('')}
 function drawReq(){
   const L=reqs.filter(r=>!gSt||r.store===gSt);$('rqCard').classList.toggle('hide',!L.length);$('rqCnt').textContent=L.length?'('+L.length+')':'';
-  $('rqNone').classList.toggle('hide',!!L.length);$('tnReq').textContent=L.length;$('tnReq').classList.toggle('hide',!L.length);$('rqBan').classList.toggle('hide',!L.length);$('rqBan').textContent='⚠ '+L.length+' хүсэлт шийдвэр хүлээж байна (буцаалт, солилт, төлбөр засах) — харах ›';
-  $('cReq').innerHTML=L.sort((a,b)=>a.created<b.created?-1:1).map(r=>{const k=r.kind||'return',ok=k==='exchange'?'Баталгаажуулах':k==='paychange'?'✓ Батлах — төлбөр өөрчлөх':'Зөвшөөрөх',no=k==='exchange'?'Тодруулга шаардах':k==='paychange'?'✗ Татгалзах — өөрчлөхгүй':'Татгалзах';
+  $('rqNone').classList.toggle('hide',!!L.length);$('tnReq').textContent=L.length;$('tnReq').classList.toggle('hide',!L.length);$('rqBan').classList.toggle('hide',!L.length);$('rqBan').textContent='⚠ '+L.length+' хүсэлт шийдвэр хүлээж байна (буцаалт, солилт, төлбөр засах, илүү төлбөр) — харах ›';
+  $('cReq').innerHTML=L.sort((a,b)=>a.created<b.created?-1:1).map(r=>{const k=r.kind||'return',ok=k==='exchange'?'Баталгаажуулах':k==='paychange'?'✓ Батлах — төлбөр өөрчлөх':k==='overpay'?'✓ Зөвшөөрөх — Kontrola руу':'Зөвшөөрөх',no=k==='exchange'?'Тодруулга шаардах':k==='paychange'?'✗ Татгалзах — өөрчлөхгүй':'Татгалзах';
     return '<div style="border-top:1px solid var(--line);padding:10px 0"><div class="small" style="opacity:.7">'+lt(r.created)+'</div>'+rqBody(r)+custLine(r.cust)+'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><input data-n="'+r.uid+'" placeholder="Тайлбар'+(k==='exchange'?' (тодруулга шаардвал заавал)':' (заавал биш)')+'" style="font:inherit;flex:1;min-width:160px;min-height:40px;border:1px solid var(--line);border-radius:8px;padding:6px 10px"><button data-a="approved" data-u="'+r.uid+'" style="'+bstyle+';background:var(--ok)">'+ok+'</button><button data-a="rejected" data-u="'+r.uid+'" style="'+bstyle+';background:var(--red)">'+no+'</button></div></div>'}).join('');
 }
 $('cReq').onclick=async e=>{const b=e.target.closest('button[data-u]');if(!b)return;const r=reqs.find(x=>x.uid===b.dataset.u);if(!r)return;const n=$('cReq').querySelector('input[data-n="'+r.uid+'"]'),note=n?n.value.trim():'';
@@ -782,6 +786,7 @@ $('cReq').onclick=async e=>{const b=e.target.closest('button[data-u]');if(!b)ret
 function rqDoneMsg(r,a,note){const k=r.kind||'return',ok=a==='approved';let t;
   if(k==='paychange')t=ok?'✓ <b>Баталлаа.</b> Баримт <b>'+esc(r.ref)+'</b>-ийн төлбөрийн хэлбэр <b>өөрчлөгдлөө</b>: '+payTxt(r.before).replace(/<br>/g,', ')+' &nbsp;→&nbsp; '+payTxt(r.after).replace(/<br>/g,', ')+'. Борлуулалтын тайлан, «Баримтууд»-д шинэ хэлбэрээр харагдана.'
     :'✗ <b>Татгалзлаа.</b> Баримт <b>'+esc(r.ref)+'</b>-ийн төлбөр <b>өөрчлөгдөөгүй</b> ('+payTxt(r.before).replace(/<br>/g,', ')+'). Кассчинд «татгалзсан» гэж харагдана.';
+  else if(k==='overpay')t=ok?'✓ <b>Илүү төлбөр буцаахыг зөвшөөрлөө</b> ('+esc(r.ref)+', '+money(r.over)+'). Хүсэлт VIVI Kontrola руу очлоо — нягтлан шилжүүлнэ.':'✗ <b>Илүү төлбөр буцаахаас татгалзлаа</b> ('+esc(r.ref)+'). Кассчинд «татгалзсан» гэж харагдана.';
   else if(k==='exchange')t=ok?'✓ <b>Солилтыг баталгаажууллаа</b> ('+esc(r.ref)+').':'⚠ <b>Солилтод тодруулга шаардлаа</b> ('+esc(r.ref)+'): '+esc(note);
   else t=ok?'✓ <b>Буцаалтыг зөвшөөрлөө</b> ('+esc(r.ref)+', '+money(-r.total)+'). Касс одоо буцаалтыг гүйцээнэ.':'✗ <b>Буцаалтаас татгалзлаа</b> ('+esc(r.ref)+'). Буцаалт хийгдэхгүй.';
   const el=document.createElement('div');el.className='card';el.style.cssText='margin-bottom:12px;border-color:'+(ok?'var(--ok)':'var(--red)')+';background:'+(ok?'#effaf3':'#fff3f3');
@@ -796,14 +801,16 @@ $('rqA').onchange=rqhListen;$('rqB').onchange=rqhListen;$('rqX').onclick=()=>xtX
 function drawReqHist(){const k=$('rhK').value,L=allReqs.filter(r=>(!gSt||r.store===gSt)&&(!k||(r.kind||'return')===k)).sort((a,b)=>a.created<b.created?1:-1);
   const SN={pending:['хүлээгдэж байна','b'],approved:['баталсан',''],rejected:['татгалзсан / тодруулах','r'],done:['гүйцээсэн','']};
   const stOf=r=>{const kk=r.kind||'return';if(kk==='paychange')return r.status==='approved'?['✓ баталсан — төлбөр өөрчлөгдсөн','']:r.status==='rejected'?['✗ татгалзсан — өөрчлөгдөөгүй','r']:['хүлээгдэж байна — өөрчлөгдөөгүй','b'];
+    if(kk==='overpay'){if(r.status==='approved'){const f=finSt({uid:r.uid,payments:[{form:'Банкаар',amount:-(r.over||0)}],iso:'9'});return [f.t&&!/илгээж/.test(f.t)?'✓ зөвшөөрсөн · Kontrola: '+f.t:'✓ зөвшөөрсөн — Kontrola руу илгээж байна',f.c||'']}
+      return r.status==='rejected'?['✗ татгалзсан','r']:['хүлээгдэж байна','b']}
     if(kk==='return')return r.status==='approved'?['✓ зөвшөөрсөн — касс гүйцээнэ','']:r.status==='done'?['✓ буцаалт хийгдсэн','']:r.status==='rejected'?['✗ татгалзсан','r']:['хүлээгдэж байна','b'];
     return SN[r.status]||[r.status,'']};
   const chg=r=>{const kk=r.kind||'return',pt=L=>(L||[]).map(p=>esc(p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:''))+' '+money(p.amount)).join(', ');
     if(kk==='paychange')return pt(r.before)+' <b>→</b> '+pt(r.after);if(kk==='exchange')return 'буцаасан '+money(r.credit)+' · шинэ '+money(r.newTotal);return esc(r.form||'')};
   const ptx=L=>(L||[]).map(p=>p.form+(p.bank?' · '+p.bank:'')+(p.partner?' · '+p.partner:'')+' '+nfx(p.amount)).join(', ');
-  const chgT=r=>{const kk=r.kind||'return';if(kk==='paychange')return ptx(r.before)+' → '+ptx(r.after);if(kk==='exchange')return 'буцаасан '+nfx(r.credit||0)+' · шинэ '+nfx(r.newTotal||0);return r.form||''};
+  const chgT=r=>{const kk=r.kind||'return';if(kk==='paychange')return ptx(r.before)+' → '+ptx(r.after);if(kk==='overpay')return 'баримт '+nfx(r.payAmt||0)+' · шилжүүлсэн '+nfx(r.paid||0)+' → буцаах '+nfx(r.over||0)+((r.cust||{}).acct?' · '+(r.cust.bank||'')+' '+r.cust.acct+' ('+(r.cust.holder||'')+')':'');if(kk==='exchange')return 'буцаасан '+nfx(r.credit||0)+' · шинэ '+nfx(r.newTotal||0);return r.form||''};
   xtable('cRqH','reqhist',['Огноо','Төрөл','Дэлгүүр','Кассчин','Баримт','Дүн','Юу өөрчлөгдөх / өөрчлөгдсөн','Төлөв','Шийдвэрлэсэн','Шийдсэн огноо','Тайлбар'],
-    L.map(r=>{const kk=r.kind||'return',st=stOf(r);return [lt(r.created),RQK[kk]+(r.diffType?' ('+r.diffType+')':''),r.storeName||'',r.cashier||'',r.ref||'',kk==='exchange'?(r.diff||0):kk==='paychange'?(r.total||0):-(r.total||0),chgT(r),st[0],(r.decidedBy||'').split('@')[0],r.decidedAt?lt(r.decidedAt):'',r.note||r.reason||'']}),
+    L.map(r=>{const kk=r.kind||'return',st=stOf(r);return [lt(r.created),RQK[kk]+(r.diffType?' ('+r.diffType+')':''),r.storeName||'',r.cashier||'',r.ref||'',kk==='exchange'?(r.diff||0):kk==='paychange'?(r.total||0):kk==='overpay'?(r.over||0):-(r.total||0),chgT(r),st[0],(r.decidedBy||'').split('@')[0],r.decidedAt?lt(r.decidedAt):'',r.note||r.reason||'']}),
     {cell:(x,c)=>c===7?'<span class="chip '+(/татгалз|✗/.test(x[7])?'r':/хүлээгд/.test(x[7])?'b':'')+'">'+esc(x[7])+'</span>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}
 /* ==== 📋 Борлуулалтын жагсаалт: Smart-ын шүүлтийн нөхцөл + баримтаар бүлэглэсэн Excel ==== */
 let SL={key:'',lines:[],rows:[]};
@@ -1843,7 +1850,7 @@ $('rfFlt').onchange=drawRetForms;
 /* ==== POS → VIVI Kontrola: дансаар буцаах мөнгө (vivi-auto/fin.js илгээнэ, төлөвийг pos_fin-д бичнэ) ==== */
 let FIN={},FINCFG={};const FIN_START0='2026-11-19T00:00:00+08:00';
 const finAmt=s=>Math.round(-(s.payments||[]).filter(p=>p.form==='Банкаар'&&(+p.amount||0)<0).reduce((a,p)=>a+(+p.amount||0),0));
-function watchFin(){if(!can('req')&&!can('rcpt')&&!can('rep'))return;db.collection('pos_fin').onSnapshot(q=>{FIN={};q.docs.forEach(d=>FIN[d.id]=d.data());drawRetForms()},()=>{});
+function watchFin(){if(!can('req')&&!can('rcpt')&&!can('rep'))return;db.collection('pos_fin').onSnapshot(q=>{FIN={};q.docs.forEach(d=>FIN[d.id]=d.data());drawRetForms();try{drawReqHist()}catch(e){}},()=>{});
   db.collection('pos_config').doc('fin_bridge').onSnapshot(d=>{FINCFG=d.exists?d.data():{};{const L=[FINCFG.lastSync,FINCFG.lastRun].filter(Boolean).sort().pop();$('finInfo').textContent=L?'Kontrola гүүр: шууд · төлөв шалгасан '+lt(L):'Kontrola гүүр: хараахан ажиллаагүй'};drawRetForms()},()=>{})}
 function finSt(s){const a=finAmt(s);if(a<=0)return {t:''};const f=FIN[s.uid]||{},no=f.no?' · '+f.no:'',start=new Date(FINCFG.start||FIN_START0).toISOString();
   if(f.queue)return {t:f.fix?'засаад дахин илгээж байна…':'илгээж байна…',c:'b'};
@@ -2540,7 +2547,7 @@ function editPromo(i){
   };
 }
 /* ---- ажилтнууд: pos_config/users {list}; буцаалт: pos_config/settings {list:[cfg]} ---- */
-let users=[],rcfg={returnDays:14,returnLimit:100000,returnPin:false,payFixHours:24};
+let users=[],rcfg={returnDays:14,returnLimit:100000,returnPin:false,payFixHours:24,returnAllReq:false};
 const ROLEN={cashier:'Кассчин',manager:'Менежер',admin:'Админ'};
 // Firestore undefined утга, массив доторх массивыг хүлээж авахгүй (invalid-argument) → цэвэрлэнэ
 const fsClean=o=>JSON.parse(JSON.stringify(o===undefined?null:o,(k,v)=>Array.isArray(v)&&v.some(Array.isArray)?JSON.stringify(v):v));
@@ -2593,7 +2600,7 @@ function editUser(i){
     catch(e){$('u_ok').disabled=false;err('Хадгалсангүй: '+(e.code||e))}
   };
 }
-function watchCfg(){db.collection('pos_config').doc('settings').onSnapshot(d=>{if(d.exists&&Array.isArray(d.data().list)&&d.data().list[0])rcfg=Object.assign(rcfg,d.data().list[0]);$('r_days').value=rcfg.returnDays;$('r_lim').value=rcfg.returnLimit;$('r_pfh').value=rcfg.payFixHours==null?24:rcfg.payFixHours;$('r_pin').checked=!!rcfg.returnPin;dlDraw()},()=>{})}
+function watchCfg(){db.collection('pos_config').doc('settings').onSnapshot(d=>{if(d.exists&&Array.isArray(d.data().list)&&d.data().list[0])rcfg=Object.assign(rcfg,d.data().list[0]);$('r_days').value=rcfg.returnDays;$('r_lim').value=rcfg.returnLimit;$('r_pfh').value=rcfg.payFixHours==null?24:rcfg.payFixHours;$('r_pin').checked=!!rcfg.returnPin;if($('r_all'))$('r_all').checked=!!rcfg.returnAllReq;dlDraw()},()=>{})}
 /* ---- Хүргэлтийн бүс, үнэ: pos_config/settings.list[0].delivery=[{n,p}], dlvStores=['ON',…] ---- */
 const DLV_DEF=[{n:'А бүс',p:8000},{n:'Б бүс',p:10000},{n:'Алслагдсан бүс',p:12000}];
 function dlDraw(rows){const Z=rows||(Array.isArray(rcfg.delivery)&&rcfg.delivery.length?rcfg.delivery:DLV_DEF),S=Array.isArray(rcfg.dlvStores)?rcfg.dlvStores:['ON'];
@@ -2609,7 +2616,7 @@ $('dlOk').onclick=async()=>{const m=$('dlMsg'),Z=dlRead().filter(z=>z.n||z.p),st
 $('r_ok').onclick=async()=>{const d=Number($('r_days').value),l=Number($('r_lim').value),ph=$('r_pfh').value===''?24:Number($('r_pfh').value),m=$('r_msg');
   if(!(ph>=0&&ph<=720))return m.innerHTML='<span class="hot">Төлбөр засах хугацаа 0–720 цаг байна</span>';
   if(!(d>=0&&d<=365))return m.innerHTML='<span class="hot">Хоног 0–365 байна</span>';if(!(l>=0))return m.innerHTML='<span class="hot">Босго 0-ээс бага байж болохгүй</span>';
-  const before={...rcfg},after={...rcfg,returnDays:Math.floor(d),returnLimit:Math.round(l),returnPin:$('r_pin').checked,payFixHours:Math.floor(ph)};
+  const before={...rcfg},after={...rcfg,returnDays:Math.floor(d),returnLimit:Math.round(l),returnPin:$('r_pin').checked,payFixHours:Math.floor(ph),returnAllReq:!!($('r_all')&&$('r_all').checked)};
   try{await db.collection('pos_config').doc('settings').set({list:[after],updated:new Date().toISOString(),by:auth.currentUser.email||''});await auditCfg('settings_save',{by:auth.currentUser.email,before,after});m.innerHTML='<span class="chip">Хадгаллаа</span>'}
   catch(e){m.innerHTML='<span class="hot">Хадгалсангүй: '+esc(e.code||e)+'</span>'}};
 /* ---- баримт устгах: эхлээд pos_sales_deleted архивт, дараа нь pos_sales-аас (дүрэм энэ дарааллыг шаардана) ---- */
