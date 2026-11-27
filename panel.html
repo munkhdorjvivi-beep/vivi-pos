@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="21.2">
+<meta name="vivi-ver" content="21.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1381,18 +1381,18 @@ const SCN={};function scanBad(v,key,dup){const o0=SCN[key]||(SCN[key]={});if(isQ
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
 function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
-  if(!reqOn){reqOn=true;rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchPlists();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();if(can('cost'))watchSup();ssWatch();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
+  if(!reqOn){reqOn=true;pos0Load().then(()=>{if(POS0&&$('d1').value===$('d2').value&&$('d1').value.replace(/-/g,'/')<POS0)listen()});rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchPlists();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();if(can('cost'))watchSup();ssWatch();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
   const err=e=>{done();$('live').textContent='алдаа: '+(e.code||e);$('live').className=''};
   const ok=()=>{$('live').textContent='шууд · '+new Date().toTimeString().slice(0,5);$('live').className='on'};
-  if(A===B){SUMM=null;unsub.push(db.collection('pos_sales').where('date','>=',A).where('date','<=',B).onSnapshot(s=>{allSales=s.docs.map(d=>d.data());ok();drawSoon();done()},err))}
+  if(A===B&&!(POS0&&A<POS0)){SUMM=null;unsub.push(db.collection('pos_sales').where('date','>=',A).where('date','<=',B).onSnapshot(s=>{allSales=s.docs.map(d=>d.data());ok();drawSoon();done()},err))}
   else{const td=iso(new Date()).replace(/-/g,'/'),yd=(()=>{const t=new Date();t.setDate(t.getDate()-1);return iso(t).replace(/-/g,'/')})();
     const my=SUMM={A,B,P:B<td?B:yd,pd:[],raw:[],live:[],rawAll:null,fb:[],cache:null,ready:false};allSales=[];
     const ok2=()=>{if(SUMM!==my)return;ok();$('live').textContent='шууд · '+new Date().toTimeString().slice(0,5)+' · нэгтгэл';sumApply();drawSoon()};
     if(td>=A&&td<=B)unsub.push(db.collection('pos_sales').where('date','==',td).onSnapshot(s=>{my.live=s.docs.map(d=>d.data());if(my.ready)ok2()},err));
-    sumLoad(my).then(()=>{my.ready=true;ok2();done()}).catch(err)}
+    sumLoad(my).then(()=>sumHist(my)).then(()=>{my.ready=true;ok2();done()}).catch(err)}
   // кассчны үйлдлийн лог (өдөрт ~600 бичлэг) — зөвхөн «Хяналт: кассчны үйлдэл» нээхэд татна
   if(AUDQ){AUDQ.un();AUDQ=null}allAudit=[];AUDK=[t1,t2];setTimeout(audWatch,0);
   unsub.push(db.collection('pos_shifts').where('opened','>=',t1).where('opened','<=',t2).onSnapshot(s=>{allShifts=s.docs.map(d=>d.data());drawSoon()},err));
@@ -1483,7 +1483,7 @@ return {DAYV,empty,apply,badOf}})();
 let SUMM=null;
 const sumLine=code=>{const r=(typeof itRow==='function'&&itRow(code))||{};return {code,sup:r.sup||''}};
 function sumAgg(list){const M=new Map();list.forEach(x=>{if(!x||!x.date||!x.store)return;const K=String(x.date).replace(/\//g,'-')+'_'+x.store;let D=M.get(K);if(!D)M.set(K,D=DSA.empty(K));DSA.apply(D,x,1)});return [...M.values()]}
-function sumDays(){const my=SUMM;if(!my)return [];if(!my.cache)my.cache=my.rawAll?sumAgg(my.rawAll.concat(my.live)):my.pd.concat(sumAgg(my.raw.concat(my.live)));return my.cache}
+function sumDays(){const my=SUMM;if(!my)return [];if(!my.cache)my.cache=(my.rawAll?sumAgg(my.rawAll.concat(my.live)):my.pd.concat(sumAgg(my.raw.concat(my.live)))).concat(my.hd||[]);return my.cache}
 /* pos_day санах ой (сессэд): өчигдрөөс өмнөх, бүрэн (v3, dirty биш) өдрүүдийг дахин татахгүй — хугацаа солиход шууд */
 const PDC=new Map();
 async function sumLoad(my){const A=my.A,P=my.P;if(A>P)return;
@@ -1517,19 +1517,21 @@ async function sumRets(my){if(my.retP)return my.retP;return my.retP=(async()=>{c
 function stStatD(DL){const pay={};let sale=0,ret=0,n=0,nr=0,q=0,a=0,c=0;
   DL.forEach(D=>{sale+=+D.sale||0;ret+=+D.ret||0;n+=+D.n||0;nr+=+D.nr||0;q+=+D.sq||0;
     Object.entries(D.pays||{}).forEach(([k,v])=>{const f=k.split(' · ')[0],b=f==='Бэлнээр'?'Бэлэн':f==='Зээлээр'?'Зээл':f==='Ваучер'?'Ваучер':'Карт/QR';pay[b]=(pay[b]||0)+(+v||0)});
-    Object.entries(D.item||{}).forEach(([code,it])=>{const u=unitCost(sumLine(code));if(u!=null){a+=+it[1]||0;c+=u*(+it[0]||0)}})});
+    if(D.src==='smart'){a+=+D.hk||0;c+=+D.hc||0}Object.entries(D.item||{}).forEach(([code,it])=>{const u=unitCost(sumLine(code));if(u!=null){a+=+it[1]||0;c+=u*(+it[0]||0)}})});
   return {net:sale+ret,n,avg:n?sale/n:0,qty:q,ret:nr,retV:-ret,pay,mg:a?Math.round((a-c)/a*100):null,last:''}}
 // тойм (KPI, касс, төлбөр, кассчин, цаг) — нэгтгэлээс
 function drawSumK(){const DL=sumDays().filter(D=>!gSt||D.store===gSt),T=f=>DL.reduce((a,D)=>a+(+D[f]||0),0),sale=T('sale'),ret=T('ret'),n=T('n'),nr=T('nr');
-  let a=0,c=0,ni=0,m=0;DL.forEach(D=>Object.entries(D.item||{}).forEach(([code,it])=>{ni++;const u=unitCost(sumLine(code));if(u!=null){m++;a+=+it[1]||0;c+=u*(+it[0]||0)}}));
+  let a=0,c=0,ni=0,m=0;DL.forEach(D=>{if(D.src==='smart'){ni+=+D.hl||0;m+=+D.hlc||0;a+=+D.hk||0;c+=+D.hc||0}Object.entries(D.item||{}).forEach(([code,it])=>{ni++;const u=unitCost(sumLine(code));if(u!=null){m++;a+=+it[1]||0;c+=u*(+it[0]||0)}})});
+  const SMD=DL.filter(D=>D.src==='smart');
   $('kpi').innerHTML=[['Цэвэр борлуулалт',money(sale+ret),1],['Баримт',n],['Дундаж баримт',money(n?sale/n:0)],['Борлуулсан тоо',T('sq')+' ш'],['Буцаалт',nr+' · '+money(-ret)],['И-баримт өгсөн',T('eb')],['Ашиг (өртөгтэй мөрөөр)',ni?money(a-c)+(a?' · '+Math.round((a-c)/a*100)+'%':'')+(m<ni?' ('+m+'/'+ni+')':''):'—']]
-    .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('');
+    .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('')+
+    (SMD.length?'<div class="small" style="grid-column:1/-1;padding:6px 10px;background:var(--soft);border-radius:8px">📥 <b>Smart-ын өгөгдөл</b> орсон: '+new Set(SMD.map(D=>D.date)).size+' өдөр ('+[...new Set(SMD.map(D=>STN[D.store]||D.store))].join(', ')+') — '+money(SMD.reduce((x,D)=>x+(+D.sale||0)+(+D.ret||0),0))+'. Smart-д цаг, касс, И-баримтын мэдээлэл байхгүй; «Кассчин» = Smart-ын «Борлуулагч» (бөглөөгүй бол «—»).</div>':'');
   const G=()=>new Map(),add=(M,k,nn,v)=>{const x=M.get(k)||M.set(k,{k,n:0,v:0}).get(k);x.n+=nn;x.v+=v},srt=M=>[...M.values()].sort((x,y)=>y.v-x.v),max=g=>Math.max(1,...g.map(x=>x.v));
   const bars=(g,name)=>tbl([name,'Баримт','Дүн'],g.map(x=>'<tr><td>'+esc(x.k)+'<div class="bar"><i style="width:'+Math.max(0,x.v)/max(g)*100+'%"></i></div></td><td class="n">'+x.n+'</td><td class="n"><b>'+money(x.v)+'</b></td></tr>'));
   const St=G(),Py=G(),Ca=G(),Hr=G();
-  DL.forEach(D=>{const sn=STN[D.store]||D.store;Object.entries(D.tsum||{}).forEach(([k,t])=>add(St,sn+' · Касс '+k.split('-').pop(),(+t[2]||0)+(+t[3]||0),(+t[0]||0)+(+t[1]||0)));
+  DL.forEach(D=>{const sn=STN[D.store]||D.store;if(D.src==='smart')add(St,sn+' · Smart',+D.n||0,(+D.sale||0)+(+D.ret||0));Object.entries(D.tsum||{}).forEach(([k,t])=>add(St,sn+' · Касс '+k.split('-').pop(),(+t[2]||0)+(+t[3]||0),(+t[0]||0)+(+t[1]||0)));
     Object.entries(D.pays||{}).forEach(([k,v])=>add(Py,k,+(D.payn||{})[k]||0,+v||0));
-    Object.entries(D.cashier||{}).forEach(([k,x])=>add(Ca,k+' · '+sn,(+x.n||0)+(+x.nr||0),+x.s||0));
+    Object.entries(D.cashier||{}).forEach(([k,x])=>add(Ca,(D.src==='smart'&&k==='—'?'Борлуулагч тодорхойгүй (Smart)':k)+' · '+sn,(+x.n||0)+(+x.nr||0),+x.s||0));
     Object.entries(D.hour||{}).forEach(([k,x])=>{if(+x.n)add(Hr,k+':00',+x.n||0,(+x.s||0)-(+x.r||0))})});
   $('cStore').innerHTML=bars(srt(St),'Дэлгүүр · касс');
   $('cPay').innerHTML=tbl(['Хэлбэр','Тоо','Дүн'],srt(Py).map(x=>'<tr><td>'+esc(x.k)+'</td><td class="n">'+x.n+'</td><td class="n"><b>'+money(x.v)+'</b></td></tr>'));
@@ -1543,7 +1545,7 @@ function stStat(L){const S=L.filter(s=>s.type==='sale'),R=L.filter(s=>s.type!=='
 function drawStores(){const SM=!!SUMM,SRC=SM?sumDays():allSales,stat=SM?stStatD:stStat,val=L=>SM?L.reduce((a,D)=>a+(+D.sale||0)+(+D.ret||0),0):L.reduce((a,s)=>a+s.total,0),cnt=L=>SM?L.reduce((a,D)=>a+(+D.n||0),0):L.filter(s=>s.type==='sale').length;
   const today=iso(new Date()),single=$('d1').value===$('d2').value,isToday=single&&$('d1').value===today;
   const open=st=>{const last={};allShifts.filter(h=>h.store===st).forEach(h=>{const k=h.reg||'';if(!last[k]||h.opened>last[k].opened)last[k]=h});return Object.values(last).filter(h=>!h.closed).length};
-  const tiles=[['',SRC,'Бүх дэлгүүр']].concat(ST_ORDER.map(st=>[st,SRC.filter(s=>s.store===st),st==='YV'&&PTRIP?STN[st]+' · '+PTRIP:STN[st]]));
+  const tiles=[['',SRC,'Бүх дэлгүүр']].concat(stOrd(SRC).map(st=>[st,SRC.filter(s=>s.store===st),st==='YV'&&PTRIP?STN[st]+' · '+PTRIP:(STN[st]||st)]));
   const tot=val(SRC)||1;
   $('stTiles').innerHTML=tiles.map(([st,L,nm])=>{const x=stat(L),o=st?open(st):0;
     return '<button class="stt'+(gSt===st?' on':'')+(st?'':' all')+'" data-st="'+st+'"><div class="h"><span>'+esc(nm)+'</span>'+(st?(o?'<span class="dot g" title="Нээлттэй ээлж">● '+o+' касс нээлттэй</span>':(isToday&&L.length?'<span class="dot">ээлж хаагдсан</span>':'')):'')+'</div>'+
@@ -1555,10 +1557,10 @@ function drawStores(){const SM=!!SUMM,SRC=SM?sumDays():allSales,stat=SM?stStatD:
   // өдөр бүрээр
   if(single){$('cDays').innerHTML='';$('daysCard').classList.add('hide');return}
   $('daysCard').classList.remove('hide');
-  const days=[...new Set(SRC.map(s=>s.date))].sort().reverse(),cols=ST_ORDER.filter(st=>SRC.some(s=>s.store===st));
+  const days=[...new Set(SRC.map(s=>s.date))].sort().reverse(),cols=stOrd(SRC).filter(st=>SRC.some(s=>s.store===st)),yr=days.length&&days[0].slice(0,4)!==days[days.length-1].slice(0,4);
   const cell=(L)=>{const v=val(L),n=cnt(L);return '<td class="n">'+(L.length?'<b>'+money(v)+'</b><div class="small">'+n+' баримт</div>':'<span class="small">—</span>')+'</td>'};
   const wd=['Ня','Да','Мя','Лх','Пү','Ба','Бя'];
-  $('cDays').innerHTML=tbl(['Огноо'].concat(cols.map(c=>STN[c]),['Нийт']),days.map(d=>{const L=SRC.filter(s=>s.date===d);return '<tr><td>'+esc(d.slice(5))+' <span class="small">'+wd[new Date(d.replace(/\//g,'-')+'T12:00:00').getDay()]+'</span></td>'+cols.map(c=>cell(L.filter(s=>s.store===c))).join('')+cell(L)+'</tr>'}).concat(['<tr class="xtot" style="border-top:2px solid var(--ink)"><td><b>Нийт</b></td>'+cols.map(c=>cell(SRC.filter(s=>s.store===c))).join('')+cell(SRC)+'</tr>']));
+  $('cDays').innerHTML=tbl(['Огноо'].concat(cols.map(c=>STN[c]||c),['Нийт']),days.map(d=>{const L=SRC.filter(s=>s.date===d);return '<tr><td>'+esc(yr?d:d.slice(5))+' <span class="small">'+wd[new Date(d.replace(/\//g,'-')+'T12:00:00').getDay()]+'</span></td>'+cols.map(c=>cell(L.filter(s=>s.store===c))).join('')+cell(L)+'</tr>'}).concat(['<tr class="xtot" style="border-top:2px solid var(--ink)"><td><b>Нийт</b></td>'+cols.map(c=>cell(SRC.filter(s=>s.store===c))).join('')+cell(SRC)+'</tr>']));
 }
 function quickRange(k){const t=new Date(),f=new Date();if(k==='y'){t.setDate(t.getDate()-1);f.setDate(f.getDate()-1)}else if(k==='w')f.setDate(f.getDate()-6);else if(k==='m')f.setDate(1);else if(k==='pm'){f.setMonth(f.getMonth()-1,1);t.setDate(0)}
   setRange(iso(f),iso(t),true)}
@@ -3801,20 +3803,35 @@ $('pcP').onchange=drawPchk;$('pcAll').onchange=drawPchk;$('pcX').onclick=()=>xtX
 function smartLoc(n){const x=String(n||'').trim(),l=x.toLowerCase();if(!l)return '';for(const [k,v] of Object.entries(LOC))if(v.toLowerCase()===l)return k;
   if(/food/.test(l))return 'FC';if(/драгон|dragon/.test(l))return 'DR';if(/нийслэл|niislel/.test(l))return 'NS';if(/онлайн|online/.test(l))return 'ON';if(/фэйшн|явуул/.test(l))return 'YV';if(/агуулах/.test(l))return 'AG';return x}
 const HAGG=`function hAgg(a,kind,ORION){const N=s=>String(s==null?'':s).toLowerCase().replace(/\\s+/g,' ').trim();
-  let h=-1,ci={};for(let i=0;i<Math.min(20,a.length);i++){const r=(a[i]||[]).map(N);const f=(...ks)=>{for(const k of ks){const j=r.findIndex(x=>x===k);if(j>=0)return j}for(const k of ks){const j=r.findIndex(x=>x.includes(k));if(j>=0)return j}return -1};
-    if(kind==='s'){const L=f('байршил'),D=f('огноо');if(L>=0&&D>=0){h=i;ci={L,D,S:(()=>{const j=r.findIndex(x=>x.includes('нийлүүлэгч')&&x.endsWith('нэр'));return j>=0?j:f('бэлтгэн нийлүүлэгч','нийлүүлэгч')})(),G:f('барааны бүлэг','барааны ангилал','бүлэг'),Q:f('тоо хэмжээ','тоо ширхэг','тоо'),V:f('цэвэр борлуулалт','борлуулалтын дүн','борлуулалт'),C:f('өртөг','нийт өртөг')};break}}
+  let h=-1,ci={};for(let i=0;i<Math.min(20,a.length);i++){const r=Array.from(a[i]||[],N);const f=(...ks)=>{for(const k of ks){const j=r.findIndex(x=>x===k);if(j>=0)return j}for(const k of ks){const j=r.findIndex(x=>x.includes(k));if(j>=0)return j}return -1};
+    if(kind==='s'){const L=f('байршил'),D=f('огноо');if(L>=0&&D>=0){h=i;ci={K:f('барааны код'),NM:f('барааны нэр'),DS:f('хөнгөлөлт'),RT:f('буцаалтын дүн'),TT:f('нийт дүн'),BS:f('үндсэн дүн'),SL:f('борлуулагч'),L,D,S:(()=>{const j=r.findIndex(x=>x.includes('нийлүүлэгч')&&x.endsWith('нэр'));return j>=0?j:f('бэлтгэн нийлүүлэгч','нийлүүлэгч')})(),G:f('барааны бүлэг','барааны ангилал','бүлэг'),Q:f('тоо хэмжээ','тоо ширхэг','тоо'),V:f('цэвэр борлуулалт','борлуулалтын дүн','борлуулалт'),C:f('өртөг','нийт өртөг')};break}}
     else{const L=f('дэлгүүр','байршил'),D=f('огноо'),A=f('дүн');if(D>=0&&A>=0){h=i;ci={L,D,A,F:f('төлбөрийн хэлбэр'),B:f('банкны нэр','банк')};break}}}
   if(h<0)return {err:kind==='s'?'«Огноо», «Байршил» багана олдсонгүй':'«Огноо», «Дүн» багана олдсонгүй'};
   const day=v=>{if(v==null||v==='')return '';if(typeof v==='number'){const d=new Date(Math.round(Math.floor(v+1e-6)-25569)*864e5);return d.toISOString().slice(0,10)}if(v instanceof Date)return new Date(v.getTime()-v.getTimezoneOffset()*6e4).toISOString().slice(0,10);
     const m=/(\\d{4})[.\\/-](\\d{1,2})[.\\/-](\\d{1,2})/.exec(String(v));return m?m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0'):''};
   const num=v=>typeof v==='number'?v:Number(String(v==null?'':v).replace(/[^0-9.\\-]/g,''))||0,D={};let rows=0,skip=0;
   const add=(o,k,q,n,c)=>{const x=o[k]||(o[k]=[0,0,0,0]);x[0]+=q;x[1]+=n;x[2]+=c;if(c>0)x[3]=(x[3]||0)+n};
-  for(let i=h+1;i<a.length;i++){const r=a[i];if(!r)continue;const d=day(r[ci.D]);if(!d){skip++;continue}
+  const DET=kind==='s'&&(ci.TT>=0||ci.K>=0),HD={},IT={},NM={},RC=new Map(),PL={};let rk='',hasRk=false;
+  for(let i=h+1;i<a.length;i++){const r=a[i];if(!r)continue;
+    if(DET&&typeof r[0]==='string'&&r[0].trim().toLowerCase().indexOf('баримт')===0){rk=r[0].trim()+'#'+i;hasRk=true;continue}
+    const d=day(r[ci.D]);if(!d){skip++;continue}
     if(kind==='s'){const loc=String(r[ci.L]==null?'':r[ci.L]).trim();if(!loc){skip++;continue}const sup=ci.S>=0?String(r[ci.S]||'').trim():'',g=ci.G>=0?String(r[ci.G]||'').trim():'',q=ci.Q>=0?num(r[ci.Q]):0,n=ci.V>=0?num(r[ci.V]):0;let c=ci.C>=0?num(r[ci.C]):0;
       if(sup===ORION&&!(c>0)&&q)c=6500*q;  // ORION өртөггүй бол 6 500 ₮/ш
-      const o=D[d]||(D[d]={st:{},ss:{},grp:{}});add(o.st,loc,q,n,c);add(o.ss[loc]||(o.ss[loc]={}),sup||'—',q,n,c);if(g)add(o.grp,g,q,n,c);rows++}
-    else{const f=ci.F>=0?String(r[ci.F]||'').trim():'',b=ci.B>=0?String(r[ci.B]||'').trim():'',k=(/банк/i.test(f)&&b?b:f)||'—',amt=num(r[ci.A]);if(!amt)continue;const o=D[d]||(D[d]={pay:{}});o.pay=o.pay||{};o.pay[k]=(o.pay[k]||0)+amt;rows++}}
-  return {D,rows,skip}}`;
+      const o=D[d]||(D[d]={st:{},ss:{},grp:{}});add(o.st,loc,q,n,c);add(o.ss[loc]||(o.ss[loc]={}),sup||'—',q,n,c);if(g)add(o.grp,g,q,n,c);rows++;
+      if(DET){const tt=ci.TT>=0?num(r[ci.TT]):n,rt=ci.RT>=0?num(r[ci.RT]):0,ds=ci.DS>=0?num(r[ci.DS]):0,bs=ci.BS>=0?num(r[ci.BS]):tt+ds,sl=ci.SL>=0?String(r[ci.SL]==null?'':r[ci.SL]).trim():'',qn=tt?q*n/tt:(n?q:0);
+        const LH=HD[loc]||(HD[loc]={}),x=LH[d]||(LH[d]={sale:0,ret:0,n:0,nr:0,sq:0,qty:0,base:0,disc:0,hc:0,hk:0,hl:0,hlc:0,cashier:{},sup:{},grp:{}});
+        x.sale+=tt;x.ret-=rt;x.qty+=q;x.sq+=qn;x.base+=bs;x.disc+=ds;x.hl++;if(c>0){x.hc+=c;x.hk+=n;x.hlc++}add(x.sup,sup||'—',qn,n,c);if(g)add(x.grp,g,qn,n,c);
+        const rid=hasRk?rk:'';if(rid){let B=RC.get(rid);if(!B)RC.set(rid,B={loc,d,sl:'',net:0,tt:0,rt:0});B.net+=n;B.tt+=tt;B.rt+=rt;if(sl&&!B.sl)B.sl=sl}
+        else{const cs=sl||'—',y=x.cashier[cs]||(x.cashier[cs]={n:0,nr:0,s:0});y.s+=n}
+        if(ci.K>=0){const code=String(r[ci.K]==null?'':r[ci.K]).trim();if(code){const I=IT[loc]||(IT[loc]={}),J=I[d]||(I[d]={}),z=J[code]||(J[code]=[0,0,0]);z[0]+=qn;z[1]+=n;z[2]+=c;if(ci.NM>=0&&!NM[code])NM[code]=String(r[ci.NM]==null?'':r[ci.NM]).trim()}}}}
+    else{const f=ci.F>=0?String(r[ci.F]||'').trim():'',b=ci.B>=0?String(r[ci.B]||'').trim():'',k=(/банк/i.test(f)&&b?b:f)||'—',amt=num(r[ci.A]);if(!amt)continue;const o=D[d]||(D[d]={pay:{}});o.pay=o.pay||{};o.pay[k]=(o.pay[k]||0)+amt;rows++;
+      if(ci.L>=0){const loc=String(r[ci.L]==null?'':r[ci.L]).trim();if(loc){const fl=f.toLowerCase(),pk=fl.indexOf('бэлэн')>=0?'Бэлнээр':fl.indexOf('зээл')>=0?'Зээлээр':(fl.indexOf('ваучер')>=0||fl.indexOf('бэлгийн')>=0)?'Ваучер':'Банкаар'+(b?' · '+b:(f?' · '+f:''));
+        const P=(PL[loc]=PL[loc]||{})[d]||(PL[loc][d]={pays:{},payn:{}});P.pays[pk]=(P.pays[pk]||0)+amt;P.payn[pk]=(P.payn[pk]||0)+1}}}}
+  const r2=v=>Math.round(v*100)/100,rr=o=>{for(const k in o){const v=o[k];if(typeof v==='number')o[k]=r2(v);else if(Array.isArray(v))v.forEach((x,j)=>v[j]=r2(x));else if(v&&typeof v==='object')rr(v)}return o};
+  if(DET){RC.forEach(B=>{const x=HD[B.loc][B.d],cs=B.sl||'—',y=x.cashier[cs]||(x.cashier[cs]={n:0,nr:0,s:0});if(B.tt>0||B.net>0){x.n++;y.n++}if(B.rt>0){x.nr++;y.nr++}y.s+=B.net});
+    for(const l in IT)for(const d in IT[l])for(const c in IT[l][d]){const z=IT[l][d][c];z[0]=Math.round(z[0]*1000)/1000;z[1]=r2(z[1]);z[2]=r2(z[2])}
+    return {D,rows,skip,HD:rr(HD),IT,NM,rcpt:hasRk}}
+  return kind==='p'?{D,rows,skip,PL:rr(PL)}:{D,rows,skip}}`;
 function histParse(buf,kind){return new Promise((ok,no)=>{let w;const src=`importScripts('${XLSX_URL}');${HAGG};onmessage=e=>{try{const wb=XLSX.read(e.data.buf,{type:'array',cellDates:false,dense:true,cellFormula:false,cellHTML:false,cellText:false,cellStyles:false});let best=null;
     for(const n of wb.SheetNames){const r=hAgg(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true}),e.data.kind,e.data.orion);if(!r.err&&(!best||r.rows>best.rows))best=r;else if(!best)best=r}postMessage({ok:1,r:best})}catch(err){postMessage({ok:0,err:String(err&&err.message||err)})}}`;
   const fallback=async()=>{await xlsx();const H=new Function(HAGG+';return hAgg')();const wb=XLSX.read(buf,{type:'array',cellDates:false});let best=null;for(const n of wb.SheetNames){const r=H(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true}),kind,ORION);if(!r.err&&(!best||r.rows>best.rows))best=r;else if(!best)best=r}return best};
@@ -3830,15 +3847,55 @@ async function histImport(files,kind){const m=$('hsMsg');let tot=0,days=0;
       for(const [mo,D] of Object.entries(byM)){m.textContent=f.name+' — '+mo+' хадгалж байна…';const cur=await histMonth(mo,true);
         Object.entries(D).forEach(([d,v])=>{const o=cur[d]||{};if(kind==='s'){o.st=v.st;o.ss=v.ss;o.grp=v.grp}else o.pay=v.pay;cur[d]=o;days++});
         await db.collection('pos_hist').doc(mo).set({days:cur,updated:new Date().toISOString(),by:auth.currentUser.email||''});HIST[mo]=cur}
+      if(r.HD){m.textContent=f.name+' — дэлгүүр, өдрөөр (баримт, бараа) хадгалж байна…';await hdaySave(r.HD,r.IT||{},r.NM||{},m,f.name)}
+      if(r.PL){m.textContent=f.name+' — дэлгүүр бүрийн төлбөр хадгалж байна…';await hpaySave(r.PL)}
       tot+=r.rows}
+    HDC.clear();
     await auditCfg('hist_import',{by:auth.currentUser.email,kind,files:files.map(f=>f.name),rows:tot});m.innerHTML='<span class="chip">Оруулсан</span> '+tot.toLocaleString('en-US')+' мөр, '+days+' өдөр ('+(kind==='s'?'бараагаар':'төлбөрийн хэлбэрээр')+')';histCov()}
   catch(e){m.innerHTML='<span class="hot">'+esc(e.message||e)+'</span>'}}
+/* pos_hday/{YYYY-MM}_{дэлгүүр}: {m,loc,st,parts,days:{'YYYY/MM/DD':{sale,ret,n,nr,sq,qty,base,disc,hc,hk,hl,hlc,cashier,sup,grp,pays,payn}}} — «Тойм»-д POS-гүй өдрийн нэгтгэл
+   pos_hitem/{YYYY-MM}_{дэлгүүр}_{p}: {m,loc,st,p,nm:{код:нэр},days:{огноо:{код:[тоо,цэвэр,өртөг]}}} — ~700 КБ-аар хуваана */
+var HDC=new Map(),POS0=null;
+function hKey(loc){const c=smartLoc(loc);return (LOC[c]?c:String(loc).trim()).replace(/[\/\s.#$\[\]]+/g,'-').slice(0,60)||'x'}
+function hSt(loc){const c=smartLoc(loc);return LOC[c]?c:String(loc).trim()}
+async function hdaySave(HD,IT,NM,m,fname){const by=auth.currentUser.email||'',now=new Date().toISOString();
+  for(const [loc,DD] of Object.entries(HD)){const byM={};Object.entries(DD).forEach(([d,v])=>{(byM[d.slice(0,7)]=byM[d.slice(0,7)]||{})[d.replace(/-/g,'/')]=v});
+    for(const [mo,days] of Object.entries(byM)){const id=mo+'_'+hKey(loc);m.textContent=fname+' — '+(STN[hSt(loc)]||loc)+' '+mo+'…';
+      const ref=db.collection('pos_hday').doc(id),old=(await ref.get()).data()||{},OD=old.days||{};
+      Object.entries(days).forEach(([d,v])=>{const o=OD[d]||{};v.pays=o.pays||{};v.payn=o.payn||{};OD[d]=v});
+      // бараа: хуучин хэсгүүдийг уншиж нийлүүлээд дахин хуваана
+      const IDY={},oldN=+old.parts||0,names={};
+      for(let p=0;p<oldN;p++){const x=(await db.collection('pos_hitem').doc(id+'_'+p).get()).data();if(x){Object.assign(IDY,x.days||{});Object.assign(names,x.nm||{})}}
+      const NI=(IT[loc]||{});Object.keys(days).forEach(d=>{const k=d.replace(/\//g,'-');if(NI[k])IDY[d]=NI[k];else delete IDY[d]});
+      Object.values(IDY).forEach(J=>Object.keys(J).forEach(c=>{if(NM[c])names[c]=NM[c]}));
+      const parts=[];let cur={days:{},nm:{}},sz=0;
+      Object.keys(IDY).sort().forEach(d=>{const J=IDY[d];let add=JSON.stringify(J).length+20;Object.keys(J).forEach(c=>{if(!cur.nm[c]&&names[c])add+=(names[c].length*2+c.length+8)});
+        if(sz&&sz+add>700000){parts.push(cur);cur={days:{},nm:{}};sz=0}cur.days[d]=J;Object.keys(J).forEach(c=>{if(names[c]&&!cur.nm[c]){cur.nm[c]=names[c];sz+=names[c].length*2+c.length+8}});sz+=JSON.stringify(J).length+20});
+      if(Object.keys(cur.days).length)parts.push(cur);
+      for(let p=0;p<parts.length;p++)await db.collection('pos_hitem').doc(id+'_'+p).set({m:mo,loc,st:hSt(loc),p,nm:parts[p].nm,days:parts[p].days,upd:now,by});
+      for(let p=parts.length;p<oldN;p++)await db.collection('pos_hitem').doc(id+'_'+p).delete();
+      await ref.set({m:mo,loc,st:hSt(loc),parts:parts.length,days:OD,upd:now,by})}}}
+async function hpaySave(PL){const now=new Date().toISOString();
+  for(const [loc,DD] of Object.entries(PL)){const byM={};Object.entries(DD).forEach(([d,v])=>{(byM[d.slice(0,7)]=byM[d.slice(0,7)]||{})[d.replace(/-/g,'/')]=v});
+    for(const [mo,days] of Object.entries(byM)){const ref=db.collection('pos_hday').doc(mo+'_'+hKey(loc)),old=(await ref.get()).data()||{m:mo,loc,st:hSt(loc),parts:0,days:{}},OD=old.days||{};
+      Object.entries(days).forEach(([d,v])=>{const o=OD[d]||{sale:0,ret:0,n:0,nr:0,sq:0,qty:0,base:0,disc:0,hc:0,hk:0,hl:0,hlc:0,cashier:{},sup:{},grp:{}};o.pays=v.pays;o.payn=v.payn;OD[d]=o});
+      await ref.set({...old,days:OD,upd:now,by:auth.currentUser.email||''})}}}
+// «Тойм»: POS-гүй өдөр×дэлгүүрт Smart-ын нэгтгэл (POS үргэлж давуу)
+async function sumHist(my){if(my.A>my.P)return;const ms=[];for(let mo=my.A.slice(0,7).replace('/','-');mo<=my.P.slice(0,7).replace('/','-');mo=nextM(mo))ms.push(mo);
+  await Promise.all(ms.filter(mo=>!HDC.has(mo)).map(async mo=>{try{HDC.set(mo,(await db.collection('pos_hday').where('m','==',mo).get()).docs.map(d=>d.data()))}catch(e){HDC.set(mo,[])}}));
+  const pos=new Set(my.pd.concat(my.raw).map(x=>String(x.date)+'_'+x.store)),out=[];
+  ms.forEach(mo=>(HDC.get(mo)||[]).forEach(doc=>Object.entries(doc.days||{}).forEach(([d,v])=>{if(d<my.A||d>my.P)return;const st=doc.st||hSt(doc.loc);if(pos.has(d+'_'+st))return;
+    out.push(Object.assign(DSA.empty(d.replace(/\//g,'-')+'_x'),v,{date:d,store:st,src:'smart',sloc:doc.loc}))})));
+  my.hd=out}
+function stOrd(L){const x=[...new Set(L.map(s=>s.store))].filter(s=>s&&!ST_ORDER.includes(s)).sort();return ST_ORDER.concat(x)}
 $('hsFile').onchange=e=>{const F=[...e.target.files];e.target.value='';if(F.length)histImport(F,'s')};
 $('hpFile').onchange=e=>{const F=[...e.target.files];e.target.value='';if(F.length)histImport(F,'p')};
+async function pos0Load(){if(POS0!==null)return;POS0='';try{const q=await db.collection('pos_day').orderBy('date').limit(1).get();POS0=q.docs.length?q.docs[0].data().date:''}catch(e){}}
 async function histCov(){if(!$('hsCov'))return;try{const s=await db.collection('pos_hist').get();const R=s.docs.map(d=>{const D=d.data().days||{},ks=Object.keys(D);let q=0,n=0,c=0,pd=0;
     ks.forEach(k=>{Object.values(D[k].st||{}).forEach(x=>{q+=x[0];n+=x[1];c+=x[2]});if(D[k].pay)pd++});return [d.id,ks.filter(k=>D[k].st).length,pd,Math.round(n),Math.round(q),n?Math.round(c/n*100)+'%':'',d.id]}).sort((a,b)=>a[0]<b[0]?1:-1);
   xtable('hsCov','hscov',['Сар','Өдөр (бараагаар)','Өдөр (төлбөр)','Цэвэр борлуулалт','Тоо ширхэг','Өртөг / борлуулалт',''],R,{cell:(x,c)=>c===6?'<button class="btn" data-hdel="'+esc(x[6])+'" style="min-height:28px;padding:1px 10px">Устгах</button>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}catch(e){}}
-document.addEventListener('click',async e=>{const b=e.target.closest('[data-hdel]');if(!b)return;if(!confirm(b.dataset.hdel+' сарын түүхийг устгах уу?'))return;await db.collection('pos_hist').doc(b.dataset.hdel).delete();delete HIST[b.dataset.hdel];auditCfg('hist_delete',{by:auth.currentUser.email,month:b.dataset.hdel});histCov()});
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-hdel]');if(!b)return;if(!confirm(b.dataset.hdel+' сарын түүхийг устгах уу?'))return;await db.collection('pos_hist').doc(b.dataset.hdel).delete();
+  for(const c of ['pos_hday','pos_hitem']){const q=await db.collection(c).where('m','==',b.dataset.hdel).get();for(const d of q.docs)await db.collection(c).doc(d.id).delete()}HDC.clear();delete HIST[b.dataset.hdel];auditCfg('hist_delete',{by:auth.currentUser.email,month:b.dataset.hdel});histCov()});
 
 
 /* ==== ⏱ Цагаар харьцуулах: сонгосон өдрүүдийн борлуулалтыг ижил цаг хүртэл, цаг бүрээр ==== */
