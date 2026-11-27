@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="21.4">
+<meta name="vivi-ver" content="21.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -3819,8 +3819,8 @@ const HAGG=`function hAgg(a,kind,ORION){const N=s=>String(s==null?'':s).toLowerC
       if(sup===ORION&&!(c>0)&&q)c=6500*q;  // ORION өртөггүй бол 6 500 ₮/ш
       const o=D[d]||(D[d]={st:{},ss:{},grp:{}});add(o.st,loc,q,n,c);add(o.ss[loc]||(o.ss[loc]={}),sup||'—',q,n,c);if(g)add(o.grp,g,q,n,c);rows++;
       if(DET){const tt=ci.TT>=0?num(r[ci.TT]):n,rt=ci.RT>=0?num(r[ci.RT]):0,ds=ci.DS>=0?num(r[ci.DS]):0,bs=ci.BS>=0?num(r[ci.BS]):tt+ds,sl=ci.SL>=0?String(r[ci.SL]==null?'':r[ci.SL]).trim():'',qn=tt?q*n/tt:(n?q:0);
-        const LH=HD[loc]||(HD[loc]={}),x=LH[d]||(LH[d]={sale:0,ret:0,n:0,nr:0,sq:0,qty:0,base:0,disc:0,hc:0,hk:0,hl:0,hlc:0,cashier:{},sup:{},grp:{}});
-        x.sale+=tt;x.ret-=rt;x.qty+=q;x.sq+=qn;x.base+=bs;x.disc+=ds;x.hl++;if(c>0){x.hc+=c;x.hk+=n;x.hlc++}add(x.sup,sup||'—',qn,n,c);if(g)add(x.grp,g,qn,n,c);
+        const LH=HD[loc]||(HD[loc]={}),x=LH[d]||(LH[d]={sale:0,ret:0,n:0,nr:0,sq:0,qty:0,base:0,disc:0,hc:0,hk:0,hl:0,hlc:0,cashier:{}});
+        x.sale+=tt;x.ret-=rt;x.qty+=q;x.sq+=qn;x.base+=bs;x.disc+=ds;x.hl++;if(c>0){x.hc+=c;x.hk+=n;x.hlc++}
         const rid=hasRk?rk:'';if(rid){let B=RC.get(rid);if(!B)RC.set(rid,B={loc,d,sl:'',net:0,tt:0,rt:0});B.net+=n;B.tt+=tt;B.rt+=rt;if(sl&&!B.sl)B.sl=sl}
         else{const cs=sl||'—',y=x.cashier[cs]||(x.cashier[cs]={n:0,nr:0,s:0});y.s+=n}
         if(ci.K>=0){const code=String(r[ci.K]==null?'':r[ci.K]).trim();if(code){const I=IT[loc]||(IT[loc]={}),J=I[d]||(I[d]={}),z=J[code]||(J[code]=[0,0,0]);z[0]+=qn;z[1]+=n;z[2]+=c;if(ci.NM>=0&&!NM[code])NM[code]=String(r[ci.NM]==null?'':r[ci.NM]).trim()}}}}
@@ -3840,20 +3840,30 @@ function histParse(buf,kind){return new Promise((ok,no)=>{let w;const src=`impor
   w.onmessage=e=>{clearTimeout(t);w.terminate();e.data.ok?ok(e.data.r):fallback().then(ok,no)};w.onerror=()=>{clearTimeout(t);w.terminate();fallback().then(ok,no)};
   w.postMessage({buf:buf.slice(0),kind,orion:ORION})})}
 const HIST={};  // сар → {days}
-async function histMonth(m,fresh){if(!fresh&&HIST[m])return HIST[m];const d=await db.collection('pos_hist').doc(m).get();return HIST[m]=d.exists?(d.data().days||{}):{}}
+const HISTP={};  // сар → хэсгийн тоо
+async function histMonth(m,fresh){if(!fresh&&HIST[m])return HIST[m];const d=await db.collection('pos_hist').doc(m).get(),x=d.exists?d.data():{},days={...(x.days||{})},n=+x.parts||1;
+  for(let i=1;i<n;i++){const p=await db.collection('pos_hist').doc(m+'_p'+i).get();if(p.exists)Object.assign(days,p.data().days||{})}
+  HISTP[m]=d.exists?n:0;return HIST[m]=days}
+// 900 КБ-аас ихгүй хэсгүүдэд хувааж хадгална (Firestore баримт 1 МБ хүртэл)
+async function histPut(mo,days){const enc=new TextEncoder(),P=[];let cur={},sz=0;
+  Object.keys(days).sort().forEach(d=>{const b=enc.encode(JSON.stringify(days[d])).length+16;if(sz&&sz+b>900000){P.push(cur);cur={};sz=0}cur[d]=days[d];sz+=b});P.push(cur);
+  const by=auth.currentUser.email||'',now=new Date().toISOString(),old=HISTP[mo]||1;
+  for(let i=1;i<P.length;i++)await db.collection('pos_hist').doc(mo+'_p'+i).set({m:mo,part:i,days:P[i],updated:now,by});
+  await db.collection('pos_hist').doc(mo).set({days:P[0],parts:P.length,updated:now,by});
+  for(let i=P.length;i<old;i++)await db.collection('pos_hist').doc(mo+'_p'+i).delete();HISTP[mo]=P.length;HIST[mo]=days}
 async function histImport(files,kind){const m=$('hsMsg');let tot=0,days=0;
   try{for(const f of files){m.textContent=f.name+' — уншиж байна…';const r=await histParse(await fileBuf(f),kind);if(!r||r.err)throw new Error(f.name+': '+(r&&r.err||'уншиж чадсангүй'));
       const byM={};Object.entries(r.D).forEach(([d,v])=>(byM[d.slice(0,7)]=byM[d.slice(0,7)]||{})[d]=v);
       for(const [mo,D] of Object.entries(byM)){m.textContent=f.name+' — '+mo+' хадгалж байна…';const cur=await histMonth(mo,true);
         Object.entries(D).forEach(([d,v])=>{const o=cur[d]||{};if(kind==='s'){o.st=v.st;o.ss=v.ss;o.grp=v.grp}else o.pay=v.pay;cur[d]=o;days++});
-        await db.collection('pos_hist').doc(mo).set({days:cur,updated:new Date().toISOString(),by:auth.currentUser.email||''});HIST[mo]=cur}
+        await histPut(mo,cur)}
       if(r.HD){m.textContent=f.name+' — дэлгүүр, өдрөөр (баримт, бараа) хадгалж байна…';await hdaySave(r.HD,r.IT||{},r.NM||{},m,f.name)}
       if(r.PL){m.textContent=f.name+' — дэлгүүр бүрийн төлбөр хадгалж байна…';await hpaySave(r.PL)}
       tot+=r.rows}
     HDC.clear();
     await auditCfg('hist_import',{by:auth.currentUser.email,kind,files:files.map(f=>f.name),rows:tot});m.innerHTML='<span class="chip">Оруулсан</span> '+tot.toLocaleString('en-US')+' мөр, '+days+' өдөр ('+(kind==='s'?'бараагаар':'төлбөрийн хэлбэрээр')+')';histCov()}
   catch(e){m.innerHTML='<span class="hot">'+esc(e.message||e)+'</span>'}}
-/* pos_hday/{YYYY-MM}_{дэлгүүр}: {m,loc,st,parts,days:{'YYYY/MM/DD':{sale,ret,n,nr,sq,qty,base,disc,hc,hk,hl,hlc,cashier,sup,grp,pays,payn}}} — «Тойм»-д POS-гүй өдрийн нэгтгэл
+/* pos_hday/{YYYY-MM}_{дэлгүүр}: {m,loc,st,parts,days:{'YYYY/MM/DD':{sale,ret,n,nr,sq,qty,base,disc,hc,hk,hl,hlc,cashier,pays,payn}}} — «Тойм»-д POS-гүй өдрийн нэгтгэл
    pos_hitem/{YYYY-MM}_{дэлгүүр}_{p}: {m,loc,st,p,nm:{код:нэр},days:{огноо:{код:[тоо,цэвэр,өртөг]}}} — ~700 КБ-аар хуваана */
 var HDC=new Map(),POS0=null;
 function hKey(loc){const c=smartLoc(loc);return (LOC[c]?c:String(loc).trim()).replace(/[\/\s.#$\[\]]+/g,'-').slice(0,60)||'x'}
@@ -3878,7 +3888,7 @@ async function hdaySave(HD,IT,NM,m,fname){const by=auth.currentUser.email||'',no
 async function hpaySave(PL){const now=new Date().toISOString();
   for(const [loc,DD] of Object.entries(PL)){const byM={};Object.entries(DD).forEach(([d,v])=>{(byM[d.slice(0,7)]=byM[d.slice(0,7)]||{})[d.replace(/-/g,'/')]=v});
     for(const [mo,days] of Object.entries(byM)){const ref=db.collection('pos_hday').doc(mo+'_'+hKey(loc)),old=(await ref.get()).data()||{m:mo,loc,st:hSt(loc),parts:0,days:{}},OD=old.days||{};
-      Object.entries(days).forEach(([d,v])=>{const o=OD[d]||{sale:0,ret:0,n:0,nr:0,sq:0,qty:0,base:0,disc:0,hc:0,hk:0,hl:0,hlc:0,cashier:{},sup:{},grp:{}};o.pays=v.pays;o.payn=v.payn;OD[d]=o});
+      Object.entries(days).forEach(([d,v])=>{const o=OD[d]||{sale:0,ret:0,n:0,nr:0,sq:0,qty:0,base:0,disc:0,hc:0,hk:0,hl:0,hlc:0,cashier:{}};o.pays=v.pays;o.payn=v.payn;OD[d]=o});
       await ref.set({...old,days:OD,upd:now,by:auth.currentUser.email||''})}}}
 // «Тойм»: POS-гүй өдөр×дэлгүүрт Smart-ын нэгтгэл (POS үргэлж давуу)
 async function sumHist(my){if(my.A>my.P)return;const ms=[];for(let mo=my.A.slice(0,7).replace('/','-');mo<=my.P.slice(0,7).replace('/','-');mo=nextM(mo))ms.push(mo);
@@ -3891,10 +3901,11 @@ function stOrd(L){const x=[...new Set(L.map(s=>s.store))].filter(s=>s&&!ST_ORDER
 $('hsFile').onchange=e=>{const F=[...e.target.files];e.target.value='';if(F.length)histImport(F,'s')};
 $('hpFile').onchange=e=>{const F=[...e.target.files];e.target.value='';if(F.length)histImport(F,'p')};
 async function pos0Load(){if(POS0!==null)return;POS0='';try{const q=await db.collection('pos_day').orderBy('date').limit(1).get();POS0=q.docs.length?q.docs[0].data().date:''}catch(e){}}
-async function histCov(){if(!$('hsCov'))return;try{const s=await db.collection('pos_hist').get();const R=s.docs.map(d=>{const D=d.data().days||{},ks=Object.keys(D);let q=0,n=0,c=0,pd=0;
+async function histCov(){if(!$('hsCov'))return;try{const s=await db.collection('pos_hist').get(),G=new Map();s.docs.forEach(d=>{const k=d.id.split('_p')[0];G.set(k,Object.assign(G.get(k)||{},d.data().days||{}))});
+  const R=[...G.entries()].map(([id,D])=>{const d={id},ks=Object.keys(D);let q=0,n=0,c=0,pd=0;
     ks.forEach(k=>{Object.values(D[k].st||{}).forEach(x=>{q+=x[0];n+=x[1];c+=x[2]});if(D[k].pay)pd++});return [d.id,ks.filter(k=>D[k].st).length,pd,Math.round(n),Math.round(q),n?Math.round(c/n*100)+'%':'',d.id]}).sort((a,b)=>a[0]<b[0]?1:-1);
   xtable('hsCov','hscov',['Сар','Өдөр (бараагаар)','Өдөр (төлбөр)','Цэвэр борлуулалт','Тоо ширхэг','Өртөг / борлуулалт',''],R,{cell:(x,c)=>c===6?'<button class="btn" data-hdel="'+esc(x[6])+'" style="min-height:28px;padding:1px 10px">Устгах</button>':x[c]==null?'':typeof x[c]==='number'?nfx(x[c]):esc(x[c])})}catch(e){}}
-document.addEventListener('click',async e=>{const b=e.target.closest('[data-hdel]');if(!b)return;if(!confirm(b.dataset.hdel+' сарын түүхийг устгах уу?'))return;await db.collection('pos_hist').doc(b.dataset.hdel).delete();
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-hdel]');if(!b)return;if(!confirm(b.dataset.hdel+' сарын түүхийг устгах уу?'))return;await histMonth(b.dataset.hdel,true);for(let i=1;i<(HISTP[b.dataset.hdel]||1);i++)await db.collection('pos_hist').doc(b.dataset.hdel+'_p'+i).delete();await db.collection('pos_hist').doc(b.dataset.hdel).delete();delete HISTP[b.dataset.hdel];
   for(const c of ['pos_hday','pos_hitem']){const q=await db.collection(c).where('m','==',b.dataset.hdel).get();for(const d of q.docs)await db.collection(c).doc(d.id).delete()}HDC.clear();delete HIST[b.dataset.hdel];auditCfg('hist_delete',{by:auth.currentUser.email,month:b.dataset.hdel});histCov()});
 
 
