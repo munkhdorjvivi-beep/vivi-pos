@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.2">
+<meta name="vivi-ver" content="9.3">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -102,6 +102,7 @@ tr.ret td{color:var(--red)}
 .hfb{font:inherit;font-size:11px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);background:none;border:0;padding:8px;cursor:pointer;width:100%;text-align:inherit;white-space:normal;line-height:1.25;min-height:0}
 .hfb span{opacity:.6;margin-left:2px}.hfb:hover{background:#eef}.hfb.on{color:var(--blue);background:#e1edfa}.hfb.on span{opacity:1}
 tr.hrec{cursor:pointer}tr.hrec:hover td{background:#f3f6fb}tr.hrec.on td{background:#e1edfa;font-weight:600}.hcar{color:var(--mut);display:inline-block;width:12px}
+#mqL th:nth-child(5),#mqL td:nth-child(5){display:table-cell!important}#mqL td{vertical-align:top}
 .hpr{padding:2px 7px;min-height:0;font-size:15px;line-height:1.2;border-radius:6px}
 tr.hdet>td{background:#f8f9fb;padding:6px 10px 10px 26px}.hin{width:100%;border-collapse:collapse;font-size:13px}.hin th{font-size:11px;color:var(--mut);text-align:left;padding:3px 6px;text-transform:uppercase}.hin td{padding:4px 6px;border-top:1px solid var(--line)}.hin tr.hit td{background:#fff3c4}
 .htab tfoot td{border-top:2px solid var(--line);padding:7px 8px}
@@ -139,7 +140,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
 <body>
 <div id="top" class="hide">
   <b>VIVI</b><span class="ver">POS <span class="appver"></span></span><span class="tag" id="tStore"></span><span class="tag" id="tCash"></span><span class="tag" id="tShift"></span>
-  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="kfBtn" class="tag chatb hide" title="Нягтлан буцаасан / татгалзсан шилжүүлэг (үйлчлүүлэгчид мөнгө буцаах)" style="background:#c1121f;color:#fff">⚠ Kontrola<span id="kfN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="offBar" class="hide"></span><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
+  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="rqBtn" class="tag chatb" title="Самбар руу илгээсэн хүсэлтүүд хаана явж байна" style="background:#1d4ed8;color:#fff">📨 Хүсэлт<span id="rqN" class="chn hide"></span></button><button id="kfBtn" class="tag chatb hide" title="Нягтлан буцаасан / татгалзсан шилжүүлэг (үйлчлүүлэгчид мөнгө буцаах)" style="background:#c1121f;color:#fff">⚠ Kontrola<span id="kfN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="offBar" class="hide"></span><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
 </div>
 
 <div id="login">
@@ -519,7 +520,7 @@ function cloudListen(){
   fb.db.collection('pos_config').doc('trip').onSnapshot(d=>{const v=d.exists?String(d.data().name||'').trim():'';if(v!==TRIP){TRIP=v;store.set('trip',v);if(S.user)header()}},()=>{});
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
   fb.db.collection('pos_catalog').doc('meta').onSnapshot(d=>{if(d.exists)catSync(d.data())},e=>{fb.err='каталог: '+(e&&e.code||e);cloudStatus()});
-  const rqFrom=new Date(Date.now()-30*864e5).toISOString(),rqSt=curAcc();(rqSt?fb.db.collection('pos_requests').where('store','==',rqSt):fb.db.collection('pos_requests').where('created','>=',rqFrom)).onSnapshot(s=>{requests=s.docs.map(d=>d.data()).filter(r=>(r.created||'')>=rqFrom);applyPayFix();if($('rqs')&&$('pq')&&!$('pq').value)openReturn()},e=>{fb.err=e&&e.code||String(e);cloudStatus()});
+  const rqFrom=new Date(Date.now()-30*864e5).toISOString(),rqSt=curAcc();(rqSt?fb.db.collection('pos_requests').where('store','==',rqSt):fb.db.collection('pos_requests').where('created','>=',rqFrom)).onSnapshot(s=>{requests=s.docs.map(d=>d.data()).filter(r=>(r.created||'')>=rqFrom);applyPayFix();try{rqBadge();if($('mqL'))myReqDraw()}catch(e){}if($('rqs')&&$('pq')&&!$('pq').value)openReturn()},e=>{fb.err=e&&e.code||String(e);cloudStatus()});
   // 💲 шинэ үнийн жагсаалт: зөвхөн идэвхтэй (live) жагсаалтын мэдээлэл + үнэ (архив татахгүй); хуучин хадгалалт (pos_config/pricelists)-ийг шилжилтийн үед нэмж уншина
   let PLN=[],PLO=[];const PLC={},plSet=()=>{PLISTS=PLN.concat(PLO.filter(o=>!PLN.some(x=>x.id===o.id)));store.set('pricelists',PLISTS)};
   fb.db.collection('pos_pricelists').where('live','==',true).onSnapshot(async q=>{const out=[];
@@ -1398,7 +1399,7 @@ const H={rows:[],src:'',range:'',all:false,by:''};
 const PERM_DEF={cashier:{hist:'own',xl:true,stock:true},manager:{hist:'store',xl:true,stock:true},admin:{hist:'store',xl:true,stock:true}};
 function perm(){const u=S.user&&users.find(x=>x.id===S.user.uid);return Object.assign({},PERM_DEF[(u||S.user||{}).role]||PERM_DEF.cashier,u&&u.perm||{})}
 function mine(s){return s.cashierId?s.cashierId===S.user.uid:s.cashier===S.user.name}
-function permButtons(){if(!S.user)return;$('bDlv').classList.toggle('hide',!dlvOn());const p=perm();$('bHist').classList.toggle('hide',p.hist==='none');$('bStk').classList.toggle('hide',!p.stock)}
+function permButtons(){if(!S.user)return;$('bDlv').classList.toggle('hide',!dlvOn());const p=perm();$('bHist').classList.toggle('hide',p.hist==='none');$('bStk').classList.toggle('hide',!p.stock);try{rqBadge()}catch(e){}}
 const ymd=d=>d.toLocaleDateString('sv-SE');
 async function loadXlsx(){if(!window.XLSX)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('Excel сан ачаалагдсангүй (интернэт хэрэгтэй)'));document.head.appendChild(s)})}
 function openHist(keep){
@@ -1930,10 +1931,71 @@ function chatListen(){if(chatListen.u||!(fb.ready&&fb.user))return;const st=curA
     const fresh=chatSeen?L.filter(m=>m.from==='panel'&&!chatSeen.has(m.id)):[];chatSeen=new Set(L.map(m=>m.id));chatMsgs=L;
     if(fresh.length){CHAT.beep();if(!chatOpen())flash('💬 Оффисоос шинэ мессеж: '+(fresh[fresh.length-1].text||'хавсралт').slice(0,60))}
     if(chatOpen()){chatDraw();chatRead()}chatBadge()},e=>{$('chatSt').textContent='Чат: '+(e.code||e)})}
+/* ---------- 📨 Хүсэлтүүд: самбар руу илгээсэн бүх хүсэлт хаана явж байна + дансаар буцаах мөнгө (Kontrola) ----------
+   Шийдвэр (зөвшөөрсөн/татгалзсан) ирээд хараахан нээгээгүй, эсвэл зөвшөөрсөн буцаалт гүйцээгээгүй бол улаан тоо. */
+let KFA=[];const RQX={old:null,st:{f:{},sort:null}};
+const RQKN={return:'Буцаалт',exchange:'Солилт',paychange:'Төлбөр засах',overpay:'Илүү төлбөр буцаах',fin:'Дансаар буцаалт'};
+function finTxt(f){if(!f)return '';if(f.queue)return 'Kontrola руу илгээж байна…';const no=f.no?' · '+f.no:'';
+  switch(f.st){case 'wait':return 'солилтыг батлахыг хүлээж байна';case 'new':return 'Kontrola-д ирсэн'+no;case 'review':return 'нягтлан хянаж байна'+no;case 'taken':return 'төлбөрийн хүсэлт болсон'+no;
+    case 'approved':return 'шилжүүлэхээр зөвшөөрсөн'+no;case 'paid':return '✓ шилжүүлсэн'+no+(f.paidAt?' · '+String(f.paidAt).slice(0,10):'');case 'returned':return '↩ нягтлан буцаасан: '+(f.comment||'');
+    case 'rejected':case 'cancel':return '✗ татгалзсан'+(f.comment?': '+f.comment:'');case 'none':return '—'}return f.st||''}
+function rqStTxt(r){const k=r.kind||'return',s=r._q?'q':r.status;if(s==='q')return ['⏳ Илгээж байна (интернэт хүлээж байна)','b30'];
+  const M={return:{pending:['Самбар шийдвэрлэхийг хүлээж байна','b30'],approved:['✓ Зөвшөөрсөн — «Буцаалт» цэснээс гүйцээнэ үү',''],done:['✓ Буцаалт хийгдсэн',''],rejected:['✗ Татгалзсан','man']},
+    exchange:{pending:['Хийгдсэн — нягтлан баталгаажуулахыг хүлээж байна','b30'],approved:['✓ Баталгаажсан',''],rejected:['⚠ Тодруулга шаардсан','man']},
+    paychange:{pending:['Хүлээгдэж байна — төлбөр өөрчлөгдөөгүй','b30'],approved:['✓ Баталсан — төлбөр өөрчлөгдсөн',''],rejected:['✗ Татгалзсан — өөрчлөгдөөгүй','man']},
+    overpay:{pending:['Самбар зөвшөөрөхийг хүлээж байна','b30'],approved:['✓ Зөвшөөрсөн — нягтлан шилжүүлнэ',''],rejected:['✗ Татгалзсан','man']}};
+  return (M[k]||M.return)[s]||[s||'','']}
+const rqAmt=r=>{const k=r.kind||'return';return k==='return'?-(r.total||0):k==='exchange'?(r.diff||0):k==='paychange'?(r.total||0):k==='overpay'?(r.over||0):0};
+const rqLt=x=>{const d=new Date(x);return isNaN(d)?'':dstr(d).replace(/\//g,'-')+' '+tstr(d).slice(0,5)};
+function rqSeenGet(){try{return JSON.parse(localStorage.getItem('vivipos_rqseen_'+S.user.store)||'null')}catch(e){return null}}
+function rqSeenAll(){if(!S.user)return;const m={};requests.filter(r=>r.store===S.user.store).forEach(r=>m[r.uid]=r.status);try{localStorage.setItem('vivipos_rqseen_'+S.user.store,JSON.stringify(m))}catch(e){}rqBadge()}
+function rqBadge(){if(!S.user||!$('rqN'))return;const st=S.user.store,L=requests.filter(r=>r.store===st);let seen=rqSeenGet();if(!seen){rqSeenAll();return}
+  const n=L.filter(r=>((r.kind||'return')==='return'&&r.status==='approved')||((r.status==='approved'||r.status==='rejected')&&seen[r.uid]!==r.status)).length;
+  $('rqN').textContent=n;$('rqN').classList.toggle('hide',!n)}
+function openMyReq(){if(!S.user)return;const t=now(),a=new Date(t);a.setDate(a.getDate()-30);
+  openModal('<h2>📨 Хүсэлтүүд · '+esc(STORES[S.user.store])+'</h2><div class="small">Энэ дэлгүүрээс самбар руу илгээсэн хүсэлтүүд (буцаалт, солилт, төлбөр засах, илүү төлбөр) хаана явж байгаа, үйлчлүүлэгчид дансаар буцаах мөнгө шилжсэн эсэх.</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0"><input type="date" id="mq1" style="width:auto" value="'+ymd(a)+'"><span>—</span><input type="date" id="mq2" style="width:auto" value="'+ymd(t)+'"><button id="mqClr">Шүүлтүүр арилгах</button><span id="mqS" class="small"></span></div>'+
+    '<div id="mqL" style="overflow:auto;max-height:62vh"></div><div class="rowbtn"><button id="mqX">Хаах</button></div>');
+  $('mbox').classList.add('wide');$('mqX').onclick=closeModal;$('mq1').onchange=$('mq2').onchange=myReqLoad;$('mqClr').onclick=()=>{RQX.st={f:{},sort:null};myReqDraw()};
+  $('mqL').onclick=e=>{const b=e.target.closest('[data-act]');if(!b)return;e.stopPropagation();closeModal();b.dataset.act==='ret'?openReturn():openKf()};
+  rqSeenAll();myReqLoad()}
+async function myReqLoad(){const d1=$('mq1').value,lim=new Date(Date.now()-30*864e5);
+  if(d1&&new Date(d1)<lim&&!RQX.old&&fb.ready&&fb.user&&navigator.onLine){$('mqS').textContent='Хуучин хүсэлтүүдийг уншиж байна…';
+    try{RQX.old=(await fb.db.collection('pos_requests').where('store','==',S.user.store).get()).docs.map(d=>d.data())}catch(e){$('mqS').textContent='Хуучин хүсэлтийг уншиж чадсангүй: '+(e&&e.code||e)}}
+  myReqDraw()}
+function myReqRows(){const st=S.user.store,d1=($('mq1').value||'0000-00-00').replace(/-/g,'/'),d2=($('mq2').value||'9999-99-99').replace(/-/g,'/'),inR=x=>{const d=dstr(new Date(x));return d>=d1&&d<=d2};
+  const M=new Map();(RQX.old||[]).concat(requests).forEach(r=>{if(r.store===st)M.set(r.uid,r)});reqq.forEach(r=>{if(r.store===st&&!M.has(r.uid))M.set(r.uid,{...r,_q:1})});
+  const used=new Set(),rows=[];
+  [...M.values()].filter(r=>inR(r.created)).forEach(r=>{const k=r.kind||'return',S0=rqStTxt(r);
+    const f=k==='overpay'?KFA.find(x=>x._id===r.uid):(k==='return'||k==='exchange')&&!r._q?KFA.find(x=>!used.has(x._id)&&x.ref===r.ref&&(x.kind||'return')===k):null;if(f)used.add(f._id);
+    rows.push({uid:r.uid,at:r.created,date:rqLt(r.created),kind:RQKN[k]||k,ref:r.ref||'',cashier:r.cashier||'',amt:rqAmt(r),st:S0[0],stc:S0[1],fin:finTxt(f),finR:!!f&&f.st==='returned'&&!f.queue,note:r.note||r.reason||'',act:k==='return'&&r.status==='approved'?'ret':''})});
+  KFA.filter(f=>!used.has(f._id)&&(f.amount||0)>0&&inR(f.iso||f.at)).forEach(f=>rows.push({uid:f._id,at:f.iso||f.at,date:rqLt(f.iso||f.at),kind:RQKN.fin,ref:f.saleId||'',cashier:'',amt:f.amount||0,st:'— (зөвшөөрөл шаардаагүй)',stc:'',fin:finTxt(f),finR:f.st==='returned'&&!f.queue,note:f.comment||'',act:''}));
+  return rows}
+const MQC=[['date','Огноо'],['kind','Төрөл'],['ref','Баримт'],['cashier','Кассчин'],['amt','Дүн',1],['st','Төлөв (самбар)'],['fin','Дансаар шилжүүлэх (Kontrola)'],['note','Тайлбар']];
+function myReqDraw(){if(!$('mqL'))return;const all=myReqRows(),st=RQX.st,pass=(r,skip)=>Object.entries(st.f).every(([k,set])=>k===skip||set.has(hfKey(r[k])));
+  let L=all.filter(r=>pass(r));const so=st.sort||['at',-1];L.sort((a,b)=>so[1]*hfCmp(a[so[0]],b[so[0]]));
+  $('mqS').textContent=L.length+' / '+all.length+' хүсэлт'+(Object.keys(st.f).length?' (шүүсэн)':'');
+  $('mqL').innerHTML=all.length?'<table class="htab"><thead><tr>'+MQC.map(c=>'<th'+(c[2]?' class="n"':'')+'><button class="hfb'+(st.f[c[0]]?' on':'')+'" data-c="'+c[0]+'">'+esc(c[1])+' <span>'+(st.sort&&(st.sort[0]===c[0]||c[0]==='date'&&st.sort[0]==='at')?(st.sort[1]>0?'▲':'▼'):'')+(st.f[c[0]]?'⛃':'▾')+'</span></button></th>').join('')+'</tr></thead><tbody>'+
+    L.map(r=>'<tr><td class="nw">'+esc(r.date)+'</td><td class="nw">'+esc(r.kind)+'</td><td class="nw">'+esc(r.ref)+'</td><td>'+esc(r.cashier)+'</td><td class="n"><b>'+fmt(r.amt)+'</b></td>'+
+      '<td><span class="badge '+r.stc+'">'+esc(r.st)+'</span>'+(r.act?' <button data-act="ret" class="pri" style="padding:2px 10px;min-height:0">Гүйцээх ›</button>':'')+'</td>'+
+      '<td class="small">'+esc(r.fin)+(r.finR?' <button data-act="kf" style="padding:2px 10px;min-height:0">Данс засах ›</button>':'')+'</td><td class="small">'+esc(r.note)+'</td></tr>').join('')+'</tbody>'+
+    '<tfoot><tr><td class="n"><b>Нийт</b></td><td></td><td></td><td></td><td class="n"><b>'+fmt(L.reduce((a,r)=>a+(+r.amt||0),0))+'</b></td><td></td><td></td><td></td></tr></tfoot></table>'+(L.length?'':'<div class="empty" style="padding:16px">Шүүлтүүрт тохирох хүсэлт алга</div>')
+    :'<div class="empty" style="padding:20px">Энэ хугацаанд хүсэлт алга</div>';
+  $('mqL').querySelectorAll('.hfb').forEach(b=>b.onclick=e=>{e.stopPropagation();const k=b.dataset.c,cnt=new Map();all.filter(r=>pass(r,k)).forEach(r=>{const v=hfKey(r[k]);cnt.set(v,(cnt.get(v)||0)+1)});
+    const vals=[...cnt.keys()].sort(hfCmp),cur=st.f[k],sel=new Set(cur?[...cur].filter(v=>cnt.has(v)):vals);
+    hfPopup(b,'<b>'+esc(b.textContent.replace(/[▾▲▼⛃]/g,'').trim())+'</b><div class="hfs"><button data-s="1">A→Я, 1→9 ▲</button><button data-s="-1">Я→A, 9→1 ▼</button></div><input id="hfQ" placeholder="Хайх…"><label class="hfa"><input type="checkbox" id="hfAll"> (Бүгдийг сонгох)</label><div class="hfl" id="hfL"></div><div class="hfs"><button id="hfC">Арилгах</button><button id="hfO" class="pri">OK</button></div>',box=>{
+      const list=()=>{const q=$('hfQ').value.trim().toLowerCase(),V=vals.filter(v=>!q||v.toLowerCase().includes(q)).slice(0,800);
+        $('hfL').innerHTML=V.map(v=>'<label><input type="checkbox" value="'+esc(v)+'"'+(sel.has(v)?' checked':'')+'> '+esc(v)+' <span class="small">('+cnt.get(v)+')</span></label>').join('');$('hfAll').checked=V.length&&V.every(v=>sel.has(v));
+        $('hfL').querySelectorAll('input').forEach(x=>x.onchange=()=>{x.checked?sel.add(x.value):sel.delete(x.value);$('hfAll').checked=V.every(v=>sel.has(v))});
+        $('hfAll').onchange=()=>{V.forEach(v=>$('hfAll').checked?sel.add(v):sel.delete(v));list()}};
+      $('hfQ').oninput=()=>{const q=$('hfQ').value.trim().toLowerCase();if(q){sel.clear();vals.filter(v=>v.toLowerCase().includes(q)).forEach(v=>sel.add(v))}list()};list();$('hfQ').focus();
+      box.querySelectorAll('[data-s]').forEach(x=>x.onclick=()=>{hfClose();st.sort=[k==='date'?'at':k,+x.dataset.s];myReqDraw()});
+      $('hfC').onclick=()=>{hfClose();delete st.f[k];myReqDraw()};$('hfO').onclick=()=>{hfClose();if(sel.size===vals.length)delete st.f[k];else st.f[k]=new Set(sel);myReqDraw()};
+      $('hfQ').onkeydown=e=>{if(e.key==='Enter')$('hfO').click();if(e.key==='Escape')hfClose()}})})}
 /* ---- VIVI Kontrola: нягтлан дансаар буцаах хүсэлтийг буцаасан/татгалзсан бол касс дээр мэдэгдэнэ; кассчин дансыг засаад дахин илгээнэ ---- */
 let KF=[];
 function kfListen(){if(kfListen.u||!(fb.ready&&fb.user))return;const st=curAcc();if(!st)return;
-  kfListen.u=fb.db.collection('pos_fin').where('store','==',st).onSnapshot(q=>{const old=new Set(KF.map(f=>f._id+f.st));
+  kfListen.u=fb.db.collection('pos_fin').where('store','==',st).onSnapshot(q=>{const old=new Set(KF.map(f=>f._id+f.st));KFA=q.docs.map(d=>({...d.data(),_id:d.id}));try{if($('mqL'))myReqDraw()}catch(e){}
     KF=q.docs.map(d=>({...d.data(),_id:d.id})).filter(f=>f.store===st&&((f.st==='returned'&&!f.queue)||((f.st==='rejected'||f.st==='cancel')&&!f.ackTill))).sort((a,b)=>(a.iso||'')<(b.iso||'')?1:-1);
     if(KF.some(f=>!old.has(f._id+f.st))&&kfListen.seen){try{CHAT.beep()}catch(e){}flash('⚠ Нягтлан үйлчлүүлэгчийн мөнгө буцаах хүсэлтийг '+(KF[0].st==='returned'?'буцаасан — дансыг засна уу':'татгалзсан')+' («⚠ Kontrola» товч)')}
     kfListen.seen=true;$('kfBtn').classList.toggle('hide',!KF.length);$('kfN').textContent=KF.length;if($('kfList'))kfDraw()},()=>{})}
@@ -1952,7 +2014,7 @@ function openKf(){openModal('<h2>⚠ Kontrola — үйлчлүүлэгчид м�
     const acct=($('kfA'+i).value||'').replace(/[\s-]/g,'').toUpperCase(),holder=$('kfH'+i).value.trim(),bank=$('kfB'+i).value,m=$('kfM'+i);
     if(!/^(\d{8,20}|MN\d{18})$/.test(acct)){m.textContent='Дансны дугаар буруу — 8–20 оронтой тоо эсвэл MN IBAN';return}if(holder.length<3){m.textContent='Эзэмшигчийн нэрийг бичнэ үү';return}
     b.disabled=true;try{await ref.update({queue:true,qBy:who,qAt:t,fix:{bank,acct,holder}});flash('✓ Дансыг засаж нягтланд дахин илгээлээ')}catch(er){b.disabled=false;m.textContent='Илгээсэнгүй: '+(er.code||er)}}}
-$('kfBtn').onclick=()=>{if(!(fb.ready&&fb.user)){flash('Үүлэнд холбогдсон байх шаардлагатай');return}openKf()};
+$('rqBtn').onclick=openMyReq;$('kfBtn').onclick=()=>{if(!(fb.ready&&fb.user)){flash('Үүлэнд холбогдсон байх шаардлагатай');return}openKf()};
 const chatOpen=()=>!chatBox.classList.contains('hide');
 function chatBadge(){const n=chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).length;$('chatN').textContent=n;$('chatN').classList.toggle('hide',!n)}
 function chatDraw(){CHAT.draw($('chatThread'),curAcc(),chatMsgs,'till')}
