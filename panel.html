@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="21.5">
+<meta name="vivi-ver" content="21.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -1525,6 +1525,8 @@ function drawSumK(){const DL=sumDays().filter(D=>!gSt||D.store===gSt),T=f=>DL.re
   const SMD=DL.filter(D=>D.src==='smart');
   $('kpi').innerHTML=[['Цэвэр борлуулалт',money(sale+ret),1],['Баримт',n],['Дундаж баримт',money(n?sale/n:0)],['Борлуулсан тоо',T('sq')+' ш'],['Буцаалт',nr+' · '+money(-ret)],['И-баримт өгсөн',T('eb')],['Ашиг (өртөгтэй мөрөөр)',ni?money(a-c)+(a?' · '+Math.round((a-c)/a*100)+'%':'')+(m<ni?' ('+m+'/'+ni+')':''):'—']]
     .map(k=>'<div class="k'+(k[2]?' main':'')+'"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join('')+
+    (SUMM&&SUMM.hdErr?'<div class="small" style="grid-column:1/-1;padding:6px 10px;background:#fff4e5;border-radius:8px;color:#9a3412">⚠ Smart-ын дэлгэрэнгүй өгөгдлийг уншиж чадсангүй ('+esc(SUMM.hdErr)+'). Firestore-ын дүрэмд pos_hday, pos_hitem байгаа эсэхийг шалгана уу.</div>':'')+
+    (SMD.some(D=>D.lite)?'<div class="small" style="grid-column:1/-1;padding:6px 10px;background:#fff4e5;border-radius:8px;color:#9a3412">⚠ Зарим сарын Smart-ын өгөгдөл зөвхөн нийт дүнгээр байна ('+[...new Set(SMD.filter(D=>D.lite).map(D=>D.date.slice(0,7)))].sort().join(', ')+') — баримтын тоо, борлуулагч алга. Тухайн файлыг «Smart-ын түүх»-ээр дахин оруулбал бүрэн гарна.</div>':'')+
     (SMD.length?'<div class="small" style="grid-column:1/-1;padding:6px 10px;background:var(--soft);border-radius:8px">📥 <b>Smart-ын өгөгдөл</b> орсон: '+new Set(SMD.map(D=>D.date)).size+' өдөр ('+[...new Set(SMD.map(D=>STN[D.store]||D.store))].join(', ')+') — '+money(SMD.reduce((x,D)=>x+(+D.sale||0)+(+D.ret||0),0))+'. Smart-д цаг, касс, И-баримтын мэдээлэл байхгүй; «Кассчин» = Smart-ын «Борлуулагч» (бөглөөгүй бол «—»).</div>':'');
   const G=()=>new Map(),add=(M,k,nn,v)=>{const x=M.get(k)||M.set(k,{k,n:0,v:0}).get(k);x.n+=nn;x.v+=v},srt=M=>[...M.values()].sort((x,y)=>y.v-x.v),max=g=>Math.max(1,...g.map(x=>x.v));
   const bars=(g,name)=>tbl([name,'Баримт','Дүн'],g.map(x=>'<tr><td>'+esc(x.k)+'<div class="bar"><i style="width:'+Math.max(0,x.v)/max(g)*100+'%"></i></div></td><td class="n">'+x.n+'</td><td class="n"><b>'+money(x.v)+'</b></td></tr>'));
@@ -3892,10 +3894,16 @@ async function hpaySave(PL){const now=new Date().toISOString();
       await ref.set({...old,days:OD,upd:now,by:auth.currentUser.email||''})}}}
 // «Тойм»: POS-гүй өдөр×дэлгүүрт Smart-ын нэгтгэл (POS үргэлж давуу)
 async function sumHist(my){if(my.A>my.P)return;const ms=[];for(let mo=my.A.slice(0,7).replace('/','-');mo<=my.P.slice(0,7).replace('/','-');mo=nextM(mo))ms.push(mo);
-  await Promise.all(ms.filter(mo=>!HDC.has(mo)).map(async mo=>{try{HDC.set(mo,(await db.collection('pos_hday').where('m','==',mo).get()).docs.map(d=>d.data()))}catch(e){HDC.set(mo,[])}}));
-  const pos=new Set(my.pd.concat(my.raw).map(x=>String(x.date)+'_'+x.store)),out=[];
-  ms.forEach(mo=>(HDC.get(mo)||[]).forEach(doc=>Object.entries(doc.days||{}).forEach(([d,v])=>{if(d<my.A||d>my.P)return;const st=doc.st||hSt(doc.loc);if(pos.has(d+'_'+st))return;
+  my.hdErr='';
+  await Promise.all(ms.filter(mo=>!HDC.has(mo)).map(async mo=>{try{HDC.set(mo,(await db.collection('pos_hday').where('m','==',mo).get()).docs.map(d=>d.data()))}catch(e){my.hdErr=e&&(e.code||e.message)||String(e)}}));
+  const H={};await Promise.all(ms.map(async mo=>{try{H[mo]=await histMonth(mo)}catch(e){H[mo]={}}}));
+  const pos=new Set(my.pd.concat(my.raw).map(x=>String(x.date)+'_'+x.store)),out=[],have=new Set();
+  ms.forEach(mo=>(HDC.get(mo)||[]).forEach(doc=>Object.entries(doc.days||{}).forEach(([d,v])=>{have.add(d+'_'+doc.loc);if(d<my.A||d>my.P)return;const st=doc.st||hSt(doc.loc);if(pos.has(d+'_'+st))return;
     out.push(Object.assign(DSA.empty(d.replace(/\//g,'-')+'_x'),v,{date:d,store:st,src:'smart',sloc:doc.loc}))})));
+  // pos_hday-гүй өдөр: pos_hist-ийн дэлгүүрийн дүн (баримтын тоо, борлуулагчгүй)
+  ms.forEach(mo=>Object.entries(H[mo]||{}).forEach(([k,v])=>{const d=k.replace(/-/g,'/');if(d<my.A||d>my.P)return;
+    Object.entries(v.st||{}).forEach(([loc,x])=>{if(have.has(d+'_'+loc))return;const st=hSt(loc);if(pos.has(d+'_'+st))return;
+      out.push(Object.assign(DSA.empty(k+'_x'),{date:d,store:st,src:'smart',lite:1,sloc:loc,sale:+x[1]||0,ret:0,n:0,nr:0,sq:+x[0]||0,qty:+x[0]||0,hc:+x[2]||0,hk:+x[3]||0,hl:1,hlc:(+x[2]>0?1:0),cashier:{}}))})}));
   my.hd=out}
 function stOrd(L){const x=[...new Set(L.map(s=>s.store))].filter(s=>s&&!ST_ORDER.includes(s)).sort();return ST_ORDER.concat(x)}
 $('hsFile').onchange=e=>{const F=[...e.target.files];e.target.value='';if(F.length)histImport(F,'s')};
