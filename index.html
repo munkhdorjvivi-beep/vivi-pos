@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.0">
+<meta name="vivi-ver" content="9.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -102,6 +102,7 @@ tr.ret td{color:var(--red)}
 .hfb{font:inherit;font-size:11px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);background:none;border:0;padding:8px;cursor:pointer;width:100%;text-align:inherit;white-space:normal;line-height:1.25;min-height:0}
 .hfb span{opacity:.6;margin-left:2px}.hfb:hover{background:#eef}.hfb.on{color:var(--blue);background:#e1edfa}.hfb.on span{opacity:1}
 tr.hrec{cursor:pointer}tr.hrec:hover td{background:#f3f6fb}tr.hrec.on td{background:#e1edfa;font-weight:600}.hcar{color:var(--mut);display:inline-block;width:12px}
+.hpr{padding:2px 7px;min-height:0;font-size:15px;line-height:1.2;border-radius:6px}
 tr.hdet>td{background:#f8f9fb;padding:6px 10px 10px 26px}.hin{width:100%;border-collapse:collapse;font-size:13px}.hin th{font-size:11px;color:var(--mut);text-align:left;padding:3px 6px;text-transform:uppercase}.hin td{padding:4px 6px;border-top:1px solid var(--line)}.hin tr.hit td{background:#fff3c4}
 .htab tfoot td{border-top:2px solid var(--line);padding:7px 8px}
 .hfpop{position:fixed;z-index:200;width:290px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.25);padding:10px;font-size:13px}
@@ -259,7 +260,8 @@ const APP_VER=document.querySelector('meta[name=vivi-ver]').content;document.que
 let device=store.get('device',{store:'',reg:''});
 // 6.1: баримт нэг хувь хэвлэх нь анхдагч — хуучин «2 хувь» тохиргоог нэг удаа 1 болгоно (дараа нь Тохиргоо → Төхөөрөмжөөс өөрчилж болно)
 if(device.cpv!==1){device.copies=1;device.cpv=1;store.set('device',device)}
-let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false},store.get('cfg',{})),requests=[];
+let cfg=Object.assign({returnDays:14,returnLimit:100000,returnPin:false,payFixHours:24},store.get('cfg',{})),requests=[];
+const pfH=()=>{const h=Number(cfg.payFixHours);return cfg.payFixHours==null||cfg.payFixHours===''||!(h>=0)?24:h};
 // Хүргэлтийн бүс, үнийг самбараас (Касс, ажилтан → Хүргэлтийн төлбөр) өөрчилнө
 const DLV_DEF=[{n:'А бүс',p:8000},{n:'Б бүс',p:10000},{n:'Алслагдсан бүс',p:12000}];
 const dlvZones=()=>(Array.isArray(cfg.delivery)&&cfg.delivery.length?cfg.delivery:DLV_DEF).filter(z=>z&&z.n&&z.p>0);
@@ -841,6 +843,10 @@ function printNext(){
   window.addEventListener('afterprint',next);setTimeout(next,gap+3000);
   try{window.print()}catch(e){next()}
 }
+// түүхээс дурын баримтыг дахин хэвлэх (ХУУЛБАР гэж хэвлэгдэнэ)
+function histPrint(uid){const s0=H.sm&&H.sm.get(uid);if(!s0)return flash('Баримт олдсонгүй');
+  const s={...s0,storeName:s0.storeName||STORES[s0.store]||'',time:s0.time||'',payments:s0.payments||[],lines:s0.lines||[]};
+  try{printDocs([receiptHtml(s,true,'')]);log('reprint',{id:s.id,from:'history'});flash('Хэвлэж байна: '+s.id)}catch(e){flash('Хэвлэж чадсангүй: '+(e&&e.message||e))}}
 function reprint(){const s=lastSale||sales.filter(x=>S.user&&x.store===S.user.store&&x.reg===S.user.reg).slice(-1)[0];if(!s)return flash('Хэвлэх баримт алга');printDocs([receiptHtml(s,true,'')]);log('reprint',{id:s.id})}
 function printDocs(docs){printQ.push(...docs);if(!printing)printNext()}
 let lastSale=null;
@@ -1306,7 +1312,10 @@ function exchPay(){
 }
 function openPayFix(){
   if(S.exch)return flash('Эхлээд солилтоо дуусгана уу');
-  pickReceipt('Төлбөрийн хэлбэр засах — баримт сонгох (буцаалт орно)',payFix,{ret:true});
+  const H0=pfH();pickReceipt('Төлбөрийн хэлбэр засах — баримт сонгох (буцаалт орно)'+(H0?' · сүүлийн '+H0+' цаг':''),s=>{
+    const h=(Date.now()-new Date(s.iso||(s.date+'T'+(s.time||'00:00'))).getTime())/36e5;
+    if(H0&&h>H0){$('pm2').innerHTML='<b style="color:var(--red)">'+esc(s.id)+' — '+Math.floor(h)+' цагийн өмнөх баримт. Төлбөрийн хэлбэрийг зөвхөн '+H0+' цагийн дотор засна.</b>';log('paychange_late',{ref:s.id,hours:Math.floor(h),limit:H0});return}
+    payFix(s)},{ret:true});
 }
 function payFix(s){
   const pend=requests.find(r=>r.kind==='paychange'&&r.saleUid===s.uid&&r.status==='pending')||reqq.find(r=>r.kind==='paychange'&&r.saleUid===s.uid);
@@ -1388,8 +1397,8 @@ async function histLoad(){
     catch(e){src='Зөвхөн энэ касс — үүлээс уншиж чадсангүй ('+(e&&e.code||e)+')'}
   }else src='Зөвхөн энэ касс — үүлэнд холбогдоогүй / офлайн';
   if(!$('hl'))return; // цонх хаагдсан
-  H.rows=[];H.recs=[];H.src=src;H.range=d0+' – '+d1;
-  [...map.values()].filter(s=>H.all||mine(s)).sort((x,y)=>(x.iso||'')<(y.iso||'')?1:-1).forEach(s=>{const typeT=s.type==='return'?'Буцаалт':'Борлуулалт',uid=s.uid||s.id;
+  H.rows=[];H.recs=[];H.sm=new Map();H.src=src;H.range=d0+' – '+d1;
+  [...map.values()].filter(s=>H.all||mine(s)).sort((x,y)=>(x.iso||'')<(y.iso||'')?1:-1).forEach(s=>{const typeT=s.type==='return'?'Буцаалт':'Борлуулалт',uid=s.uid||s.id;H.sm.set(uid,s);
     const L=(s.lines||[]).map(l=>{const i=IDX.get(l.code),c=i!=null?CAT[i]:null;return {uid,date:s.date,time:(s.time||'').slice(0,5),no:s.id,type:s.type,typeT,reg:s.reg,cashier:s.cashier||'',code:l.code,bc:c&&c[1]?String(c[1]):l.code,model:c&&c[7]||'',size:c&&c[8]||'',
       name:l.name,sup:l.sup||'',base:l.base||0,unit:l.unit||0,qty:l.qty,disc:(l.base||0)*l.qty-l.sum,sum:l.sum,promo:l.pname||''}});
     H.rows.push(...L);H.recs.push({uid,date:s.date,time:(s.time||'').slice(0,5),no:s.id,type:s.type,typeT,reg:s.reg,cashier:s.cashier||'',nl:L.length,qty:L.reduce((a,l)=>a+(+l.qty||0),0),disc:L.reduce((a,l)=>a+(+l.disc||0),0),
@@ -1427,16 +1436,16 @@ function histDraw(){
     ln=r=>'<tr'+(r.type==='return'?' class="ret"':'')+'>'+cols.map(c=>'<td class="'+(c[2]?'n':'nw')+'">'+(c[0]==='unit'&&r.base>r.unit?fmt(r.unit)+'<div class="small"><s>'+fmt(r.base)+'</s></div>':c[0]==='sum'?'<b>'+fmt(r.sum)+'</b>':cell(r,c))+'</td>').join('')+'</tr>',
     w=$('hq').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const body=L.slice(0,lim).map((r,i)=>{if(!rec)return ln(r);const k=r.no+'|'+r.uid,op=H.open.has(k);
-    return '<tr class="hrec'+(r.type==='return'?' ret':'')+(op?' on':'')+'" data-k="'+esc(k)+'">'+cols.map((c,j)=>'<td class="'+(c[2]?'n':'nw')+'">'+(j===0?'<span class="hcar">'+(op?'▾':'▸')+'</span> ':'')+(c[0]==='sum'?'<b>'+fmt(r.sum)+'</b>':cell(r,c))+'</td>').join('')+'</tr>'+
-      (op?'<tr class="hdet"><td colspan="'+cols.length+'"><table class="hin"><thead><tr><th>Баркод · модель</th><th>Бараа</th><th class="n">Тоо</th><th class="n">Үнэ</th><th class="n">Хөнгөлөлт</th><th class="n">Дүн</th></tr></thead><tbody>'+
+    return '<tr class="hrec'+(r.type==='return'?' ret':'')+(op?' on':'')+'" data-k="'+esc(k)+'">'+cols.map((c,j)=>'<td class="'+(c[2]?'n':'nw')+'">'+(j===0?'<span class="hcar">'+(op?'▾':'▸')+'</span> ':'')+(c[0]==='sum'?'<b>'+fmt(r.sum)+'</b>':cell(r,c))+'</td>').join('')+'<td class="nw"><button class="hpr" data-pu="'+esc(r.uid)+'" title="Баримт хэвлэх (хуулбар)">🖨</button></td></tr>'+
+      (op?'<tr class="hdet"><td colspan="'+(cols.length+1)+'"><table class="hin"><thead><tr><th>Баркод · модель</th><th>Бараа</th><th class="n">Тоо</th><th class="n">Үнэ</th><th class="n">Хөнгөлөлт</th><th class="n">Дүн</th></tr></thead><tbody>'+
         r.lines.map(l=>{const hit=w.length&&w.every(x=>(l.code+' '+l.bc+' '+l.model+' '+l.name).toLowerCase().includes(x));return '<tr'+(hit?' class="hit"':'')+'><td class="nw">'+esc(l.bc)+'<div class="small">'+esc(l.model)+(l.size?' · '+esc(l.size):'')+'</div></td><td>'+esc(l.name)+(l.promo?'<div class="small">'+esc(l.promo)+'</div>':'')+'</td><td class="n">'+l.qty+'</td><td class="n">'+fmt(l.unit)+(l.base>l.unit?'<div class="small"><s>'+fmt(l.base)+'</s></div>':'')+'</td><td class="n">'+fmt(l.disc)+'</td><td class="n"><b>'+fmt(l.sum)+'</b></td></tr>'}).join('')+
         '</tbody></table>'+(r.pay?'<div class="small" style="margin-top:4px">Төлбөр: '+esc(r.pay)+'</div>':'')+'</td></tr>':'')}).join('');
-  $('hl').innerHTML=H.rows.length?'<table class="htab"><thead><tr>'+cols.map(c=>'<th'+(c[2]?' class="n"':'')+'><button class="hfb'+(st.f[c[0]]?' on':'')+'" data-c="'+c[0]+'">'+esc(c[1])+' <span>'+(st.sort&&st.sort[0]===c[0]?(st.sort[1]>0?'▲':'▼'):'')+(st.f[c[0]]?'⛃':'▾')+'</span></button></th>').join('')+'</tr></thead><tbody>'+body+'</tbody>'+
-    (L.length?'<tfoot><tr>'+cols.map((c,j)=>'<td class="n"><b>'+(j===0?'Нийт':c[2]&&!/^(base|unit)$/.test(c[0])?fmt(L.reduce((a,r)=>a+(+r[c[0]]||0),0)):'')+'</b></td>').join('')+'</tr></tfoot>':'')+'</table>'+
+  $('hl').innerHTML=H.rows.length?'<table class="htab"><thead><tr>'+cols.map(c=>'<th'+(c[2]?' class="n"':'')+'><button class="hfb'+(st.f[c[0]]?' on':'')+'" data-c="'+c[0]+'">'+esc(c[1])+' <span>'+(st.sort&&st.sort[0]===c[0]?(st.sort[1]>0?'▲':'▼'):'')+(st.f[c[0]]?'⛃':'▾')+'</span></button></th>').join('')+(rec?'<th></th>':'')+'</tr></thead><tbody>'+body+'</tbody>'+
+    (L.length?'<tfoot><tr>'+cols.map((c,j)=>'<td class="n"><b>'+(j===0?'Нийт':c[2]&&!/^(base|unit)$/.test(c[0])?fmt(L.reduce((a,r)=>a+(+r[c[0]]||0),0)):'')+'</b></td>').join('')+(rec?'<td></td>':'')+'</tr></tfoot>':'')+'</table>'+
     (!L.length?'<div class="empty" style="padding:20px">Шүүлтүүрт тохирох '+(rec?'баримт':'мөр')+' алга</div>':'')+(L.length>lim?'<div class="small" style="padding:8px 12px">Эхний '+lim+' '+(rec?'баримт':'мөр')+'. Бүгдийг Excel-ээр татна уу ('+fmt(L.length)+').</div>':'')
     :'<div class="empty" style="padding:30px">Энэ хугацаанд тохирох борлуулалт алга</div>';
   if($('hclr'))$('hclr').onclick=()=>{st.f={};st.sort=null;histDraw()};
-  $('hl').querySelectorAll('tr.hrec').forEach(tr=>tr.onclick=()=>{const k=tr.dataset.k;H.open.has(k)?H.open.delete(k):H.open.add(k);histDraw()});
+  $('hl').querySelectorAll('tr.hrec').forEach(tr=>tr.onclick=e=>{const pb=e.target.closest('.hpr');if(pb){e.stopPropagation();histPrint(pb.dataset.pu);return}const k=tr.dataset.k;H.open.has(k)?H.open.delete(k):H.open.add(k);histDraw()});
   $('hl').querySelectorAll('.hfb').forEach(b=>b.onclick=e=>{e.stopPropagation();const k=b.dataset.c,cnt=new Map();histRows(k).forEach(r=>{const v=hfKey(r[k]);cnt.set(v,(cnt.get(v)||0)+1)});
     const vals=[...cnt.keys()].sort(hfCmp),cur=st.f[k],sel=new Set(cur?[...cur].filter(v=>cnt.has(v)):vals);
     hfPopup(b,'<b>'+esc(b.textContent.replace(/[▾▲▼⛃]/g,'').trim())+'</b><div class="hfs"><button data-s="1">A→Я, 1→9 ▲</button><button data-s="-1">Я→A, 9→1 ▼</button></div><input id="hfQ" placeholder="Хайх…"><label class="hfa"><input type="checkbox" id="hfAll"> (Бүгдийг сонгох)</label><div class="hfl" id="hfL"></div><div class="hfs"><button id="hfC">Арилгах</button><button id="hfO" class="pri">OK</button></div>',box=>{
@@ -1515,7 +1524,7 @@ function openSettings(tab){
   if(tab==='promo')body='<div class="list"><table><thead><tr><th>Нэр</th><th>Төрөл</th><th>Хамрах бараа</th><th>Хугацаа</th><th>Төлөв</th></tr></thead><tbody>'+(promos.map((p,i)=>{const s=PST[promoState(p)];return '<tr data-i="'+i+'"><td><b>'+esc(p.name)+'</b></td><td class="nw">'+(p.type==='pair'?'1+1'+(p.samePct?' · ижил үнэ −'+p.samePct+'%':''):p.type==='gift'?'Бэлэг · 0 ₮':p.type==='plist'?'Үнийн жагсаалт · '+Object.keys(p.prices||{}).length+' бараа':p.type==='price'?'Тогтмол үнэ '+fmt(p.price)+' ₮':p.type==='amount'?'−'+fmt(p.amount)+' ₮':'−'+p.pct+'%')+'</td><td class="small">'+esc(scopeText(p))+(p.stores.length?' · '+p.stores.map(s=>STORES[s]).join(', '):'')+'</td><td class="nw">'+(p.start||'…')+' → '+(p.end||'хугацаагүй')+'</td><td><span class="badge '+s[1]+'">'+s[0]+'</span></td></tr>'}).join('')||'<tr><td class="small">Урамшуулал алга</td></tr>')+'</tbody></table></div><div class="small" style="margin-top:8px">Урамшууллыг хяналтын самбараас (panel) нэмж, засна. Энд зөвхөн харагдана.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
   else body='<div class="list"><table><thead><tr><th>Нэр</th><th>Эрх</th><th>Дэлгүүр</th><th>Төлөв</th></tr></thead><tbody>'+users.map((u,i)=>'<tr data-i="'+i+'"><td><b>'+esc(u.name)+'</b></td><td>'+ROLEN[u.role]+'</td><td class="small">'+(u.stores.length?u.stores.map(s=>STORES[s]).join(', '):'Бүх дэлгүүр')+'</td><td><span class="badge '+(u.active?'':'man')+'">'+(u.active?'Идэвхтэй':'Идэвхгүй')+'</span>'+(u.pin==='1111'?' <span class="badge b30">анхны ПИН</span>':'')+'</td></tr>').join('')+'</tbody></table></div><div class="small" style="margin-top:8px">Ажилтан, ПИН-ийг хяналтын самбараас (panel) нэмж, засна. Энд зөвхөн харагдана.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
   if(tab==='dev')body='<div class="small">Энэ компьютерийг нэг дэлгүүр, нэг кассад бэхэлж, баримтын хувийн тоог тохируулна. Бэхэлсэн бол нэвтрэх үед дэлгүүр, касс сонгох боломжгүй. Тохиргоо зөвхөн энэ компьютер дээр хадгалагдана.</div><div class="frm"><div><label>Дэлгүүр</label><select id="v_st"><option value="">— бэхлэхгүй —</option>'+STL.map(x=>'<option value="'+x[0]+'">'+esc(x[1])+'</option>').join('')+'</select></div><div><label>Касс №</label><select id="v_rg">'+[1,2,3,4,5,6].map(n=>'<option>'+n+'</option>').join('')+'</select></div><div><label>Баримт хэвлэх хувь</label><select id="v_cp"><option>1</option><option>2</option><option>3</option></select></div></div><div class="frm"><div><label>Хувь хоорондын хүлээлт (секунд)</label><select id="v_gap"><option value="1500">1,5</option><option value="2500">2,5</option><option value="4000">4</option><option value="6000">6</option></select></div></div><label class="inl"><input type="checkbox" id="v_oj"> Бүх хувийг нэг даалгавраар хэвлэх (хайчлахгүй, нэг урт цаас)</label><div id="c_msg" class="small" style="color:var(--ok);min-height:18px"></div><div class="rowbtn"><button class="pri" id="v_ok">Хадгалах</button><button id="sX">Хаах</button></div>';
-  if(tab==='ret')body='<table><tr><td>Буцаалт, солилт хийх хугацаа</td><td class="n"><b>'+cfg.returnDays+' хоног</b></td></tr><tr><td>Хүсэлт шаардах дүнгийн босго</td><td class="n"><b>'+fmt(cfg.returnLimit)+' ₮</b></td></tr><tr><td>Энгийн буцаалтад менежерийн ПИН</td><td class="n"><b>'+(cfg.returnPin?'Тийм':'Үгүй')+'</b></td></tr></table><div class="small" style="margin-top:8px">Буцаалтын тохиргоог хяналтын самбараас (panel) өөрчилнө.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
+  if(tab==='ret')body='<table><tr><td>Буцаалт, солилт хийх хугацаа</td><td class="n"><b>'+cfg.returnDays+' хоног</b></td></tr><tr><td>Хүсэлт шаардах дүнгийн босго</td><td class="n"><b>'+fmt(cfg.returnLimit)+' ₮</b></td></tr><tr><td>Энгийн буцаалтад менежерийн ПИН</td><td class="n"><b>'+(cfg.returnPin?'Тийм':'Үгүй')+'</b></td></tr><tr><td>Төлбөрийн хэлбэр засах хугацаа</td><td class="n"><b>'+(pfH()?pfH()+' цаг':'хязгааргүй')+'</b></td></tr></table><div class="small" style="margin-top:8px">Буцаалтын тохиргоог хяналтын самбараас (panel) өөрчилнө.</div><div class="rowbtn"><button id="sX">Хаах</button></div>';
   openModal('<h2>Тохиргоо</h2><div class="tabs"><button data-t="promo" class="'+(tab==='promo'?'on':'')+'">Урамшуулал (харах)</button><button data-t="users" class="'+(tab==='users'?'on':'')+'">Ажилтнууд (харах)</button><button data-t="ret" class="'+(tab==='ret'?'on':'')+'">Буцаалт (харах)</button><button data-t="dev" class="'+(tab==='dev'?'on':'')+'">Энэ касс</button></div>'+(users.some(u=>u.active&&u.role!=='cashier'&&(u.pin==='9999'||u.pin==='1111'))?'<div class="small" style="color:var(--red);font-weight:650;margin-top:8px">Анхаар: менежер/админы ПИН анхны утгаараа (9999) байна. Хяналтын самбараас солино уу.</div>':'')+'<div class="small" style="margin:8px 0">'+(fb.user?'Тохиргоо үүлэнд хадгалагдаж, холбогдсон бүх кассад зэрэг үйлчилнэ.':'Үүлэнд холбоогүй тул тохиргоо зөвхөн энэ касс дээр хадгалагдана.')+'</div>'+body);
   $('mbox').querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>openSettings(b.dataset.t));
   $('sX').onclick=()=>{closeModal();render()};
