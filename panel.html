@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="22.3">
+<meta name="vivi-ver" content="22.4">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -4018,12 +4018,48 @@ const HAGG=`function hAgg(a,kind,ORION){const N=s=>String(s==null?'':s).toLowerC
     for(const l in IT)for(const d in IT[l])for(const c in IT[l][d]){const z=IT[l][d][c];z[0]=Math.round(z[0]*1000)/1000;z[1]=r2(z[1]);z[2]=r2(z[2])}
     return {D,rows,skip,HD:rr(HD),IT,NM,rcpt:hasRk}}
   return kind==='p'?{D,rows,skip,PL:rr(PL)}:{D,rows,skip}}`;
-function histParse(buf,kind){return new Promise((ok,no)=>{let w;const src=`importScripts('${XLSX_URL}');${HAGG};onmessage=e=>{try{const wb=XLSX.read(e.data.buf,{type:'array',cellDates:false,dense:true,cellFormula:false,cellHTML:false,cellText:false,cellStyles:false});let best=null;
-    for(const n of wb.SheetNames){const r=hAgg(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true}),e.data.kind,e.data.orion);if(!r.err&&(!best||r.rows>best.rows))best=r;else if(!best)best=r}postMessage({ok:1,r:best})}catch(err){postMessage({ok:0,err:String(err&&err.message||err)})}}`;
+// Том xlsx (V8-ийн мөрийн 512 МБ хязгаараас том sheet.xml) — ZIP + XML-ийг урсгалаар уншина. Хөтчийн worker-т toString()-оор орно.
+function xsLib(){
+  const ent=s=>s.indexOf('&')<0?s:s.replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g,(m,c)=>c==='amp'?'&':c==='lt'?'<':c==='gt'?'>':c==='quot'?'"':c==='apos'?"'":String.fromCodePoint(c[1]==='x'?parseInt(c.slice(2),16):+c.slice(1)));
+  function zipDir(u8){const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);let e=-1;for(let i=u8.length-22;i>=Math.max(0,u8.length-70000);i--)if(dv.getUint32(i,true)===0x06054b50){e=i;break}
+    if(e<0)return null;const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const td=new TextDecoder(),out=[];
+    for(let k=0;k<n;k++){if(dv.getUint32(p,true)!==0x02014b50)return null;const m=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),us=dv.getUint32(p+24,true),nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+      const name=td.decode(u8.subarray(p+46,p+46+nl));out.push({name,m,cs,us,lo});p+=46+nl+xl+cl}
+    out.forEach(f=>{const q=f.lo,nl=dv.getUint16(q+26,true),xl=dv.getUint16(q+28,true);f.data=u8.subarray(q+30+nl+xl,q+30+nl+xl+f.cs)});return out}
+  async function*inflate(f){if(f.m===0){yield f.data;return}const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(f.data).catch(()=>{});w.close().catch(()=>{});const r=ds.readable.getReader();for(;;){const {value,done}=await r.read();if(done)break;yield value}}
+  async function*text(f){const td=new TextDecoder();for await(const c of inflate(f))yield td.decode(c,{stream:true});const t=td.decode();if(t)yield t}
+  async function sst(f){if(!f)return [];let s='';for await(const t of text(f))s+=t;const out=[],re=/<si>([\s\S]*?)<\/si>|<si\/>/g,rt=/<t[^>]*>([\s\S]*?)<\/t>/g;let m;
+    while((m=re.exec(s))){if(m[1]==null){out.push('');continue}let v='',x;rt.lastIndex=0;while((x=rt.exec(m[1])))v+=x[1];out.push(ent(v))}return out}
+  const colIx=a=>{let n=0;for(let i=0;i<a.length;i++){const c=a.charCodeAt(i);if(c<65||c>90)break;n=n*26+c-64}return n-1};
+  function row(seg,S){const a=[];const re=/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;let m,ix=0;
+    while((m=re.exec(seg))){const at=m[1],rr=/\br="([A-Z]+)\d*"/.exec(at),t=/\bt="(\w+)"/.exec(at);if(rr)ix=colIx(rr[1]);const body=m[2];
+      if(body!=null){const T=t?t[1]:'n';let v=null;if(T==='inlineStr'){let x,s='';const q=/<t[^>]*>([\s\S]*?)<\/t>/g;while((x=q.exec(body)))s+=x[1];v=ent(s)}
+        else{const vv=/<v>([\s\S]*?)<\/v>/.exec(body);if(vv){const r=vv[1];v=T==='s'?S[+r]:T==='str'?ent(r):T==='b'?r==='1':T==='e'?null:+r}}
+        if(v!=null&&v!=='')a[ix]=v}ix++}return a}
+  async function sheet(f,S,prog){const rows=[];let buf='',n=0;for await(const t of text(f)){buf+=t;let p=0;
+      for(;;){const s=buf.indexOf('<row',p);if(s<0){p=Math.max(p,buf.length-8);break}const gt=buf.indexOf('>',s);if(gt<0){p=s;break}
+        const rn=/\br="(\d+)"/.exec(buf.slice(s,gt));const R=rn?+rn[1]:rows.length+1;
+        if(buf.charCodeAt(gt-1)===47){while(rows.length<R)rows.push([]);p=gt+1;continue}
+        const e=buf.indexOf('</row>',gt);if(e<0){p=s;break}while(rows.length<R-1)rows.push([]);rows.push(row(buf.slice(gt+1,e),S));p=e+6;if(++n%50000===0&&prog)prog(n)}
+      buf=buf.slice(p)}return rows}
+  // xlsx бүх ажлын хуудсыг [ [мөр...] ] хэлбэрээр (sheet_to_json header:1-тэй ижил)
+  async function read(u8,prog){const Z=zipDir(u8);if(!Z)throw new Error('xlsx (zip) биш');const g=n=>Z.find(f=>f.name===n);const S=await sst(g('xl/sharedStrings.xml'));
+    const W=Z.filter(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f.name)).sort((a,b)=>parseInt(a.name.slice(19))-parseInt(b.name.slice(19)));const out=[];for(const f of W)out.push(await sheet(f,S,prog));return out}
+  const big=u8=>{try{const Z=zipDir(u8);return !!Z&&Z.some(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f.name)&&(f.us>250e6||f.us===0xFFFFFFFF))}catch(e){return false}};
+  return {read,big,zipDir}}
+function histParse(buf,kind,onProg){return new Promise((ok,no)=>{let w;const src=`importScripts('${XLSX_URL}');${HAGG};${xsLib.toString()};
+  onmessage=async e=>{try{let best=null;const pick=L=>{for(const a of L){const r=hAgg(a,e.data.kind,e.data.orion);if(!r.err&&(!best||r.rows>best.rows))best=r;else if(!best)best=r}};
+    const u8=new Uint8Array(e.data.buf),X=xsLib(),DS=typeof DecompressionStream!=='undefined',big=X.big(u8);
+    if(big&&!DS)throw new Error('Файл хэт том — Chrome-ын шинэ хувилбараар оруулна уу');
+    if(big)pick(await X.read(u8,n=>postMessage({prog:n})));
+    else{const wb=XLSX.read(e.data.buf,{type:'array',cellDates:false,dense:true,cellFormula:false,cellHTML:false,cellText:false,cellStyles:false});
+      pick(wb.SheetNames.map(n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true})));
+      if(best&&best.err&&DS){try{const b0=best;best=null;pick(await X.read(u8));if(!best||best.err)best=b0}catch(_){}}}
+    postMessage({ok:1,r:best})}catch(err){postMessage({ok:0,err:String(err&&err.message||err)})}}`;
   const fallback=async()=>{await xlsx();const H=new Function(HAGG+';return hAgg')();const wb=XLSX.read(buf,{type:'array',cellDates:false});let best=null;for(const n of wb.SheetNames){const r=H(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true}),kind,ORION);if(!r.err&&(!best||r.rows>best.rows))best=r;else if(!best)best=r}return best};
   try{w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})))}catch(e){return fallback().then(ok,no)}
   const t=setTimeout(()=>{w.terminate();no(new Error('Файл хэт удаан уншигдлаа'))},300000);
-  w.onmessage=e=>{clearTimeout(t);w.terminate();e.data.ok?ok(e.data.r):fallback().then(ok,no)};w.onerror=()=>{clearTimeout(t);w.terminate();fallback().then(ok,no)};
+  w.onmessage=e=>{if(e.data.prog){if(onProg)onProg(e.data.prog);return}clearTimeout(t);w.terminate();e.data.ok?ok(e.data.r):/хэт том/.test(e.data.err||'')?no(new Error(e.data.err)):fallback().then(ok,no)};w.onerror=()=>{clearTimeout(t);w.terminate();fallback().then(ok,no)};
   w.postMessage({buf:buf.slice(0),kind,orion:ORION})})}
 const HIST={};  // сар → {days}
 const HISTP={};  // сар → хэсгийн тоо
@@ -4038,7 +4074,7 @@ async function histPut(mo,days){const enc=new TextEncoder(),P=[];let cur={},sz=0
   await db.collection('pos_hist').doc(mo).set({days:P[0],parts:P.length,updated:now,by});
   for(let i=P.length;i<old;i++)await db.collection('pos_hist').doc(mo+'_p'+i).delete();HISTP[mo]=P.length;HIST[mo]=days}
 async function histImport(files,kind){const m=$('hsMsg');let tot=0,days=0;
-  try{for(const f of files){m.textContent=f.name+' — уншиж байна…';const r=await histParse(await fileBuf(f),kind);if(!r||r.err)throw new Error(f.name+': '+(r&&r.err||'уншиж чадсангүй'));
+  try{for(const f of files){m.textContent=f.name+' — уншиж байна…';const r=await histParse(await fileBuf(f),kind,n=>m.textContent=f.name+' — '+fmtN(n)+' мөр уншлаа…');if(!r||r.err)throw new Error(f.name+': '+(r&&r.err||'уншиж чадсангүй'));
       const byM={};Object.entries(r.D).forEach(([d,v])=>(byM[d.slice(0,7)]=byM[d.slice(0,7)]||{})[d]=v);
       for(const [mo,D] of Object.entries(byM)){m.textContent=f.name+' — '+mo+' хадгалж байна…';const cur=await histMonth(mo,true);
         Object.entries(D).forEach(([d,v])=>{const o=cur[d]||{};if(kind==='s'){o.st=v.st;o.ss=v.ss;o.grp=v.grp}else o.pay=v.pay;cur[d]=o;days++});
@@ -4052,17 +4088,23 @@ async function histImport(files,kind){const m=$('hsMsg');let tot=0,days=0;
 /* pos_hday/{YYYY-MM}_{дэлгүүр}: {m,loc,st,parts,days:{'YYYY/MM/DD':{sale,ret,n,nr,sq,qty,base,disc,hc,hk,hl,hlc,cashier,pays,payn}}} — «Тойм»-д POS-гүй өдрийн нэгтгэл
    pos_hitem/{YYYY-MM}_{дэлгүүр}_{p}: {m,loc,st,p,nm:{код:нэр},days:{огноо:{код:[тоо,цэвэр,өртөг]}}} — ~700 КБ-аар хуваана */
 var HDC=new Map(),POS0=null;
-function hKey(loc){const c=smartLoc(loc);return (LOC[c]?c:String(loc).trim()).replace(/[\/\s.#$\[\]]+/g,'-').slice(0,60)||'x'}
+// дэлгүүрийн кодоор зөвхөн «цэвэр» нэр (Food city, Драгон …); «Food city -Гутал» мэт дэд байршил өөрийн нэрээр — нэг нэгнээ дарахгүй
+const H_PURE=['foodcity','драгон','dragon','нийслэл','niislel','онлайндэлгүүр','онлайн','online','эцсийнхэрэглэгчфэйшн','агуулах'];
+function hPure(loc,c){const l=String(loc||'').toLowerCase().replace(/[^a-zа-яёөү0-9]+/g,'');return (LOC[c]&&String(LOC[c]).toLowerCase().replace(/[^a-zа-яёөү0-9]+/g,'')===l)||H_PURE.includes(l)}
+function hKey(loc){const c=smartLoc(loc);return (LOC[c]&&hPure(loc,c)?c:String(loc).trim()).replace(/[\/\s.#$\[\]]+/g,'-').slice(0,60)||'x'}
 function hSt(loc){const c=smartLoc(loc);return LOC[c]?c:String(loc).trim()}
 async function hdaySave(HD,IT,NM,m,fname){const by=auth.currentUser.email||'',now=new Date().toISOString();
+  let A0='9',B0='0';Object.values(HD).forEach(DD=>Object.keys(DD).forEach(d=>{d=d.replace(/-/g,'/');if(d<A0)A0=d;if(d>B0)B0=d}));const inR=d=>d>=A0&&d<=B0;   // файлын хүрээ
   for(const [loc,DD] of Object.entries(HD)){const byM={};Object.entries(DD).forEach(([d,v])=>{(byM[d.slice(0,7)]=byM[d.slice(0,7)]||{})[d.replace(/-/g,'/')]=v});
     for(const [mo,days] of Object.entries(byM)){const id=mo+'_'+hKey(loc);m.textContent=fname+' — '+(STN[hSt(loc)]||loc)+' '+mo+'…';
-      const ref=db.collection('pos_hday').doc(id),old=(await ref.get()).data()||{},OD=old.days||{};
-      Object.entries(days).forEach(([d,v])=>{const o=OD[d]||{};v.pays=o.pays||{};v.payn=o.payn||{};OD[d]=v});
+      const ref=db.collection('pos_hday').doc(id),old=(await ref.get()).data()||{},OLD=old.days||{},OD={};
+      Object.entries(OLD).forEach(([d,v])=>{if(!inR(d))OD[d]=v});   // хүрээн доторх хуучин өдөр (өмнөх буруу нийлүүлэлт) бүрэн солигдоно
+      Object.entries(days).forEach(([d,v])=>{const o=OLD[d]||{};v.pays=o.pays||{};v.payn=o.payn||{};OD[d]=v});
       // бараа: хуучин хэсгүүдийг уншиж нийлүүлээд дахин хуваана
       const IDY={},oldN=+old.parts||0,names={};
       for(let p=0;p<oldN;p++){const x=(await db.collection('pos_hitem').doc(id+'_'+p).get()).data();if(x){Object.assign(IDY,x.days||{});Object.assign(names,x.nm||{})}}
-      const NI=(IT[loc]||{});Object.keys(days).forEach(d=>{const k=d.replace(/\//g,'-');if(NI[k])IDY[d]=NI[k];else delete IDY[d]});
+      Object.keys(IDY).forEach(d=>{if(inR(d))delete IDY[d]});
+      const NI=(IT[loc]||{});Object.keys(days).forEach(d=>{const k=d.replace(/\//g,'-');if(NI[k])IDY[d]=NI[k]});
       Object.values(IDY).forEach(J=>Object.keys(J).forEach(c=>{if(NM[c])names[c]=NM[c]}));
       const parts=[];let cur={days:{},nm:{}},sz=0;
       Object.keys(IDY).sort().forEach(d=>{const J=IDY[d];let add=JSON.stringify(J).length+20;Object.keys(J).forEach(c=>{if(!cur.nm[c]&&names[c])add+=(names[c].length*2+c.length+8)});
