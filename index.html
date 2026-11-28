@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.4">
+<meta name="vivi-ver" content="9.5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -103,6 +103,7 @@ tr.ret td{color:var(--red)}
 .hfb span{opacity:.6;margin-left:2px}.hfb:hover{background:#eef}.hfb.on{color:var(--blue);background:#e1edfa}.hfb.on span{opacity:1}
 tr.hrec{cursor:pointer}tr.hrec:hover td{background:#f3f6fb}tr.hrec.on td{background:#e1edfa;font-weight:600}.hcar{color:var(--mut);display:inline-block;width:12px}
 #mqL th:nth-child(5),#mqL td:nth-child(5){display:table-cell!important}#mqL td{vertical-align:top}
+table.den{margin:6px 0}table.den td{padding:2px 6px}table.den input{min-height:34px;text-align:right}
 .hpr{padding:2px 7px;min-height:0;font-size:15px;line-height:1.2;border-radius:6px}
 tr.hdet>td{background:#f8f9fb;padding:6px 10px 10px 26px}.hin{width:100%;border-collapse:collapse;font-size:13px}.hin th{font-size:11px;color:var(--mut);text-align:left;padding:3px 6px;text-transform:uppercase}.hin td{padding:4px 6px;border-top:1px solid var(--line)}.hin tr.hit td{background:#fff3c4}
 .htab tfoot td{border-top:2px solid var(--line);padding:7px 8px}
@@ -1114,21 +1115,31 @@ function cashOp(type){
 }
 function xReport(){const list=shiftSales(),pm=sumPays(list),body=shiftBody(list,pm);
   printDocs(['<div class="c big">X ТАЙЛАН</div><div class="c">'+esc(STORES[S.user.store])+' · Касс '+S.user.reg+' · '+esc(S.user.name)+'</div><div class="c">'+dstr(now())+' '+tstr(now())+' (ээлж хаагаагүй)</div><div class="hr"></div>'+body]);log('x_report',{shift:S.shift.id,expected:cashNow()});flash('X тайлан хэвлэлээ')}
+// Монголын дэвсгэрт (бэлэн мөнгө тоолох)
+const DENOMS=[20000,10000,5000,1000,500,100,50,20,10];
+const $q=s=>document.querySelector('#mbox '+s)||{set textContent(v){}};
+function denRows(den){if(!den||!Object.keys(den).length)return '';return '<tr><td colspan="2"><b>Дэвсгэртээр</b></td></tr>'+DENOMS.filter(d=>den[d]).map(d=>'<tr><td>'+fmt(d)+' × '+den[d]+'</td><td class="n">'+fmt(d*den[d])+'</td></tr>').join('')}
 function closeShift(){
   if(S.cart.length)return flash('Эхлээд одоогийн баримтаа дуусгана уу');
-  openModal('<h2>Ээлж хаах</h2><div class="small">Кассанд байгаа бэлэн мөнгөө тоолж оруулна уу. Системийн дүн дараа нь харагдана.</div><label>Тоолсон бэлэн мөнгө (₮)</label><input id="cc1" inputmode="numeric" autofocus><div class="rowbtn"><button id="cb">Болих</button><button class="pri" id="co1">Хаах</button></div>',true);
+  openModal('<h2>Ээлж хаах</h2><div class="small">Кассанд байгаа бэлэн мөнгөө <b>дэвсгэрт бүрээр</b> тоолж ширхэгийг нь оруулна уу (эхний бэлэн мөнгө орно). Системийн дүн дараа нь харагдана.</div>'+
+    '<table class="den">'+DENOMS.map(d=>'<tr><td class="n">'+fmt(d)+' ₮</td><td>×</td><td><input data-den="'+d+'" inputmode="numeric" placeholder="0" style="width:90px"></td><td class="n" data-dsum="'+d+'"></td></tr>').join('')+'</table>'+
+    '<label>Тоолсон бэлэн мөнгө (₮)</label><input id="cc1" inputmode="numeric" readonly style="font-weight:700;background:var(--soft)"><div class="rowbtn"><button id="cb">Болих</button><button class="pri" id="co1">Хаах</button></div>',true);
+  {const dsum=()=>{let t=0;document.querySelectorAll('#mbox [data-den]').forEach(i=>{const d=+i.dataset.den,n=Math.max(0,Math.floor(num(i.value)));t+=d*n;$q('[data-dsum="'+d+'"]').textContent=n?fmt(d*n):''});$('cc1').value=document.querySelector('#mbox [data-den]').value!==''||t?String(t):''};
+   document.querySelectorAll('#mbox [data-den]').forEach(i=>{i.oninput=dsum;i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const L=[...document.querySelectorAll('#mbox [data-den]')],k=L.indexOf(i);(L[k+1]||$('co1')).focus()}}});setTimeout(()=>{const f=document.querySelector('#mbox [data-den]');if(f)f.focus()},50)}
   $('cb').onclick=closeModal;
   $('co1').onclick=async()=>{
-    if($('cc1').value.trim()==='')return;$('co1').disabled=true;
+    {const any=[...document.querySelectorAll('#mbox [data-den]')].some(i=>i.value.trim()!=='');if(!any){flash('Дэвсгэрт бүрийн ширхэгийг оруулна уу (байхгүй бол 0)');return}}
+    const den={};document.querySelectorAll('#mbox [data-den]').forEach(i=>{const n=Math.max(0,Math.floor(num(i.value)));if(n)den[i.dataset.den]=n});
+    if($('cc1').value.trim()==='')$('cc1').value='0';$('co1').disabled=true;
     {const h=shiftClosedLocal(S.shift.id)||await shiftClosedCloud(S.shift.id);if(h){shiftDrop(h,'close');return}}
     // Z-д энэ компьютер дээрх баримт + үүлэнд байгаа энэ ээлжийн баримт (уид-аар давхардуулахгүй) — нэг нь дутуу байсан ч Z бүрэн байна
     let list=shiftSales();try{if(fb.ready&&fb.user&&navigator.onLine){const q=await Promise.race([fb.db.collection('pos_sales').where('shift','==',S.shift.id).get(),new Promise(r=>setTimeout(()=>r(null),5000))]);
       if(q){const have=new Set(list.map(x=>x.uid)),add=q.docs.map(d=>d.data()).filter(x=>x&&x.uid&&!have.has(x.uid)&&x.shift===S.shift.id);if(add.length){log('shift_close_cloud_add',{id:S.shift.id,n:add.length,sum:add.reduce((a,x)=>a+(+x.total||0),0)});list=list.concat(add)}}}}catch(e){}
     const counted=num($('cc1').value),exp=S.shift.float+cashOf(list)+opsSum('in')-opsSum('out'),diff=counted-exp,pm=sumPays(list),cin=opsSum('in'),cout=opsSum('out'),dep=shOps().filter(o=>o.kind==='deposit').reduce((a,o)=>a+o.amount,0);
-    const sh={...S.shift,store:S.user.store,reg:S.user.reg,closedBy:S.user.name,closed:now().toISOString(),counted,expected:exp,diff,receipts:list.filter(s=>s.type==='sale').length,total:list.reduce((a,s)=>a+s.total,0),pays:pm,cashSales:cashOf(list),cashIn:cin,cashOut:cout,deposit:dep,ops:shOps()};
+    const sh={...S.shift,store:S.user.store,reg:S.user.reg,closedBy:S.user.name,closed:now().toISOString(),den,counted,expected:exp,diff,receipts:list.filter(s=>s.type==='sale').length,total:list.reduce((a,s)=>a+s.total,0),pays:pm,cashSales:cashOf(list),cashIn:cin,cashOut:cout,deposit:dep,ops:shOps()};
     const hist=store.get('shifts',[]);hist.push(sh);store.set('shifts',hist);shiftOut(sh);store.set('shift_'+S.user.store+'-'+S.user.reg,null);
     log('shift_close',{id:sh.id,counted,expected:exp,diff});try{if(sales.some(s=>!s.synced))backupDl('auto')}catch(e){}
-    const body=shiftBody(list,pm,'<tr><td>Тоолсон</td><td class="n">'+fmt(counted)+'</td></tr><tr><td><b>Зөрүү</b></td><td class="n"><b style="color:'+(diff?'var(--red)':'var(--ok)')+'">'+fmt(diff)+'</b></td></tr>');
+    const body=shiftBody(list,pm,denRows(den)+'<tr><td>Тоолсон</td><td class="n">'+fmt(counted)+'</td></tr><tr><td><b>Зөрүү</b></td><td class="n"><b style="color:'+(diff?'var(--red)':'var(--ok)')+'">'+fmt(diff)+'</b></td></tr>');
     {const H=store.get('shifts',[]);const i=H.findIndex(x=>x.id===sh.id&&x.closed===sh.closed);if(i>=0){H[i].zbody=body;H[i].storeName=STORES[S.user.store];store.set('shifts',H.slice(-200))}}
     openModal('<h2>Z тайлан — ээлж хаагдлаа</h2>'+body+'<div class="rowbtn"><button id="zp">Хэвлэх</button><button class="pri" id="zo">Дуусгах</button></div>',true);
     $('zp').onclick=()=>{printDocs(['<div class="c big">Z ТАЙЛАН</div><div class="c">'+esc(STORES[S.user.store])+' · Касс '+S.user.reg+' · '+esc(S.user.name)+'</div><div class="c">'+dstr(now())+' '+tstr(now())+'</div><div class="hr"></div>'+body])};
@@ -1141,7 +1152,7 @@ function zBodyOf(sh){if(sh.zbody)return sh.zbody;const tr=(a,b,st)=>'<tr><td>'+a
   (sh.ops||[]).forEach(o=>{byK[o.kind]=(byK[o.kind]||0)+(o.type==='out'?-o.amount:o.amount)});
   return '<table>'+tr('Ээлж',esc(sh.id))+tr('Баримтын тоо',sh.receipts||0)+tr('Нийт борлуулалт',fmt(sh.total||0))+Object.entries(sh.pays||{}).map(([k,v])=>tr(esc(k),fmt(v))).join('')+
     '<tr><td colspan="2"><b>Бэлэн мөнгө</b></td></tr>'+tr('Эхний бэлэн мөнгө',fmt(sh.float||0))+tr('Бэлэн борлуулалт (буцаалт хассан)',fmt(sh.cashSales||0))+Object.entries(byK).map(([k,v])=>tr(esc(CASH_KIND[k]||k),(v>0?'+':'')+fmt(v))).join('')+
-    tr('<b>Кассанд байх ёстой</b>','<b>'+fmt(sh.expected||0)+'</b>')+tr('Тоолсон',fmt(sh.counted||0))+tr('<b>Зөрүү</b>','<b>'+fmt(sh.diff||0)+'</b>')+'</table>'}
+    tr('<b>Кассанд байх ёстой</b>','<b>'+fmt(sh.expected||0)+'</b>')+denRows(sh.den)+tr('Тоолсон',fmt(sh.counted||0))+tr('<b>Зөрүү</b>','<b>'+fmt(sh.diff||0)+'</b>')+'</table>'}
 function zPrint(sh){const c=new Date(sh.closed),o=sh.opened?new Date(sh.opened):null;
   printDocs(['<div class="c big">Z ТАЙЛАН</div><div class="c">(ДАХИН ХЭВЛЭСЭН)</div><div class="c">'+esc(sh.storeName||STORES[sh.store]||sh.store||'')+' · Касс '+esc(sh.reg||'')+' · '+esc(sh.closedBy||'')+'</div>'+
     (o?'<div class="c">Нээсэн: '+dstr(o)+' '+tstr(o)+'</div>':'')+'<div class="c">Хаасан: '+dstr(c)+' '+tstr(c)+'</div><div class="c small">Хэвлэсэн: '+dstr(now())+' '+tstr(now())+'</div><div class="hr"></div>'+zBodyOf(sh)]);
