@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="24.0">
+<meta name="vivi-ver" content="24.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -2378,7 +2378,7 @@ function wpInit(){if(!$('wpSel').dataset.on){$('wpSel').dataset.on=1;$('wpSel').
     $('wpAddP').onclick=()=>{wpCur().rules.push({id:'r'+Date.now().toString(36),t:'pct',scope:{t:'all',v:[]},pct:10,on:true});wpEdit()};$('wpAddB').onclick=()=>{wpCur().rules.push({id:'r'+Date.now().toString(36),t:'b1g1',scope:{t:'sup',v:[]},extra:0,on:true});wpEdit()};
     $('wpFile').onchange=wpImport;$('wpFixClr').onclick=()=>{if(confirm('Тогтмол үнийг бүгдийг арилгах уу?')){wpCur().fix={};wpEdit()}};$('wpSave').onclick=wpSave;$('wpDel').onclick=wpDel;
     $('wpTest').oninput=wpTest;$('wsCoS').onclick=wsCoSave;$('wsCoL').innerHTML=wsLocs().map(k=>'<option value="'+k+'">'+esc(LOC[k])+'</option>').join('')}
-  loadPCat().catch(()=>{});wpFill();const C=WS.cfg||{};[['wsCoN','name'],['wsCoR','reg'],['wsCoA','addr'],['wsCoP','phone'],['wsCoE','email'],['wsCoB','bank'],['wsCoAc','acc'],['wsCoH','holder'],['wsCoD','days'],['wsCoNt','note']].forEach(([k,f])=>{if(document.activeElement!==$(k))$(k).value=C[f]!=null?C[f]:(k==='wsCoN'?'Вивекавикториа ХХК':'')});$('wsCoL').value=C.loc||'AG'}
+  loadPCat().then(()=>{wpLists();wpTest()}).catch(()=>{});wpFill();const C=WS.cfg||{};[['wsCoN','name'],['wsCoR','reg'],['wsCoA','addr'],['wsCoP','phone'],['wsCoE','email'],['wsCoB','bank'],['wsCoAc','acc'],['wsCoH','holder'],['wsCoD','days'],['wsCoNt','note']].forEach(([k,f])=>{if(document.activeElement!==$(k))$(k).value=C[f]!=null?C[f]:(k==='wsCoN'?'Вивекавикториа ХХК':'')});$('wsCoL').value=C.loc||'AG'}
 function wpCur(){if(!WS.pe){const p=WS.pl.find(p=>p.id===$('wpSel').value);WS.pe=p?JSON.parse(JSON.stringify(p)):{id:'',name:'Шинэ бодлого',rules:[],fix:{}}}return WS.pe}
 function wpFill(){if(!$('wpSel'))return;const cur=$('wpSel').value||(WS.pe&&WS.pe.id)||'';$('wpSel').innerHTML=(WS.pl.length?'':'<option value="">— бодлого алга —</option>')+WS.pl.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
   if(WS.pl.some(p=>p.id===cur))$('wpSel').value=cur;if(!WS.pe||(WS.pe.id&&WS.pe.id!==$('wpSel').value))WS.pe=null;wpEdit()}
@@ -2386,18 +2386,26 @@ function wpEdit(){const P=wpCur(),ro=!can('ws.price');$('wpN').value=P.name||'';
   const SN={all:'Бүх бараа',sup:'Нийлүүлэгч',grp:'Бүлэг',code:'Код'};
   $('wpRules').innerHTML=P.rules.length?P.rules.map((r,i)=>'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px'+(r.on===false?';opacity:.5':'')+'"><b>'+(r.t==='pct'?'% Хөнгөлөлт':'1+1')+'</b>'+
     '<select data-rs="'+i+'" class="inp" style="width:auto">'+Object.entries(SN).map(([k,v])=>'<option value="'+k+'"'+((r.scope||{}).t===k?' selected':'')+'>'+v+'</option>').join('')+'</select>'+
-    ((r.scope||{}).t!=='all'?'<span>'+((r.scope.v||[]).map((v,j)=>'<span class="chip">'+esc(v)+' <a href="#" data-rv="'+i+'|'+j+'">✕</a></span>').join(' ')||'<span class="small hot">хоосон</span>')+'</span><input data-ra="'+i+'" class="inp" list="'+((r.scope||{}).t==='sup'?'itSL':(r.scope||{}).t==='grp'?'itGL':'')+'" placeholder="нэмэх + Enter" style="width:200px">':'')+
+    ((r.scope||{}).t!=='all'?'<span data-rc="'+i+'">'+wpChips(r,i)+'</span><input data-ra="'+i+'" class="inp" list="'+((r.scope||{}).t==='sup'?'wsSupL':(r.scope||{}).t==='grp'?'wsGrpL':'')+'" placeholder="бичих / жагсаалтаас сонгох" style="width:240px">':'')+
     (r.t==='pct'?'<label class="small">−<input data-rp="'+i+'" class="inp" value="'+(r.pct||0)+'" inputmode="decimal" style="width:60px">%</label>':'<label class="small">төлөх хэсэгт нэмэлт −<input data-rx="'+i+'" class="inp" value="'+(r.extra||0)+'" inputmode="decimal" style="width:60px">%</label>')+
     '<label class="small" style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-ro="'+i+'"'+(r.on!==false?' checked':'')+'> идэвхтэй</label><button class="btn" data-rd="'+i+'" style="padding:0 8px">✕</button></div>').join(''):'<div class="small">Дүрэм алга — кассын үнээр (эсвэл тогтмол үнээр)</div>';
   const W=$('wpRules');W.querySelectorAll('[data-rs]').forEach(e=>e.onchange=()=>{P.rules[+e.dataset.rs].scope={t:e.value,v:[]};wpEdit()});
-  W.querySelectorAll('[data-ra]').forEach(e=>e.onkeydown=ev=>{if(ev.key!=='Enter')return;ev.preventDefault();const v=e.value.trim();if(!v)return;const r=P.rules[+e.dataset.ra];r.scope.v=[...new Set((r.scope.v||[]).concat([v]))];wpEdit();const n=$('wpRules').querySelector('[data-ra="'+e.dataset.ra+'"]');if(n)n.focus()});
-  W.querySelectorAll('[data-rv]').forEach(a=>a.onclick=ev=>{ev.preventDefault();const [i,j]=a.dataset.rv.split('|').map(Number);P.rules[i].scope.v.splice(j,1);wpEdit()});
+  wpLists();W.querySelectorAll('[data-ra]').forEach(e=>{e.onkeydown=ev=>{if(ev.key!=='Enter')return;ev.preventDefault();if(wpAddV(P,e)){wpEdit();const n=$('wpRules').querySelector('[data-ra="'+e.dataset.ra+'"]');if(n)n.focus()}};e.onchange=()=>{if(wpAddV(P,e)){const c=W.querySelector('[data-rc="'+e.dataset.ra+'"]');if(c)c.innerHTML=wpChips(P.rules[+e.dataset.ra],+e.dataset.ra)}}});
+  W.onclick=(ev=>{const a=ev.target.closest('[data-rv]');if(!a)return;ev.preventDefault();const [i,j]=a.dataset.rv.split('|').map(Number);P.rules[i].scope.v.splice(j,1);wpEdit()});
   W.querySelectorAll('[data-rp]').forEach(e=>e.oninput=()=>{P.rules[+e.dataset.rp].pct=Math.min(100,Math.max(0,+String(e.value).replace(',','.')||0));wpTest()});
   W.querySelectorAll('[data-rx]').forEach(e=>e.oninput=()=>{P.rules[+e.dataset.rx].extra=Math.min(100,Math.max(0,+String(e.value).replace(',','.')||0));wpTest()});
   W.querySelectorAll('[data-ro]').forEach(e=>e.onchange=()=>{P.rules[+e.dataset.ro].on=e.checked;wpEdit()});W.querySelectorAll('[data-rd]').forEach(e=>e.onclick=()=>{P.rules.splice(+e.dataset.rd,1);wpEdit()});
   const F=Object.entries(P.fix||{});$('wpFixN').textContent=F.length?F.length.toLocaleString('en-US')+' бараанд тогтмол үнэ':'тогтмол үнэ алга';
   xtable('wpFixT','wpfix',['Код','Бараа','Кассын үнэ','Бөөний үнэ'],F.map(([c,v])=>{const it=itRow(c)||{};return [c,it.name||'',it.price||null,+v]}),{limit:300});
   ['wpAddP','wpAddB','wpFile','wpFixClr','wpSave','wpN'].forEach(k=>$(k).disabled=ro);$('wpDel').hidden=!(isBoss()&&P.id);wpTest()}
+// хамрах хүрээнд утга нэмэх: Enter, жагсаалтаас сонгох, талбараас гарах, «Хадгалах» — аль ч үед; нийлүүлэгч/бүлгийн нэрийг каталогийн бичлэгтэй тааруулна
+function wpAddV(P,e){const v=e.value.trim(),r=P.rules[+e.dataset.ra];if(!v||!r)return false;const t=(r.scope||{}).t,K=t==='sup'?5:t==='grp'?6:-1;let x=v;
+  if(K>=0&&PCAT){const S=[...new Set(PCAT.map(a=>String(a[K]||'').trim()).filter(Boolean))],m=S.find(a=>a===v)||S.find(a=>a.toLowerCase()===v.toLowerCase())||S.filter(a=>a.toLowerCase().includes(v.toLowerCase()));
+    if(typeof m==='string')x=m;else if(m&&m.length===1)x=m[0];else{$('wpMsg').innerHTML='<span class="hot">«'+esc(v)+'» '+(m&&m.length?'— '+m.length+' нэр таарч байна, жагсаалтаас сонгоно уу':'каталогт алга')+'</span>';return false}}
+  else if(t==='code'&&PCATi&&PCATi.has(v))x=PCAT[PCATi.get(v)][0];
+  r.scope.v=[...new Set((r.scope.v||[]).concat([x]))];e.value='';$('wpMsg').textContent='';return true}
+function wpChips(r,i){return (r.scope.v||[]).map((v,j)=>'<span class="chip">'+esc(v)+' <a href="#" data-rv="'+i+'|'+j+'">✕</a></span>').join(' ')||'<span class="small hot">хоосон</span>'}
+function wpLists(){if(!PCAT||$('wsSupL'))return;const mk=(id,K)=>{const d=document.createElement('datalist');d.id=id;d.innerHTML=[...new Set(PCAT.map(a=>String(a[K]||'').trim()).filter(Boolean))].sort().map(v=>'<option value="'+esc(v)+'">').join('');document.body.appendChild(d)};mk('wsSupL',5);mk('wsGrpL',6)}
 function wpTest(){const q=$('wpTest').value.trim();if(!q||!PCATi){$('wpTestR').textContent='';return}const i=PCATi.get(q);if(i==null){$('wpTestR').textContent='олдсонгүй';return}const it=itRow(PCAT[i][0]),L=[{code:it.code,name:it.name,sup:it.sup,grp:it.grp,qty:2,cash:Math.round(+it.price||0)}];const T=wsPriceCart(L,wpCur());
   $('wpTestR').innerHTML=esc(it.name)+' · '+esc(it.sup)+' / '+esc(it.grp)+' · кассын '+money(it.price)+' → <b>'+money(L[0].unit)+'</b> '+esc(L[0].rule||'')+' · 2 ширхэг: '+money(T.total)}
 async function wpImport(){const f=$('wpFile').files[0];if(!f)return;await xlsx();await loadPCat().catch(()=>{});const wb=XLSX.read(await fileBuf(f),{type:'array'}),P=wpCur();let n=0,bad=0;
@@ -2405,8 +2413,8 @@ async function wpImport(){const f=$('wpFile').files[0];if(!f)return;await xlsx()
       const ci=r.findIndex(x=>/^(код|барааны код|баркод|bar ?code|code)$/.test(x)||x.includes('код')),pi=(()=>{let j=r.findIndex(x=>x.includes('бөөний'));if(j<0)j=r.findIndex(x=>/^(үнэ|price|wholesale)$/.test(x)||x.includes('үнэ'));return j})();
       if(ci<0||pi<0||ci===pi)continue;A.slice(h+1).forEach(row=>{const c=String(row[ci]==null?'':row[ci]).trim(),p=Math.round(+String(row[pi]==null?'':row[pi]).replace(/[^\d.]/g,'')||0);if(!c||!p)return;const k=PCATi&&PCATi.has(c)?PCAT[PCATi.get(c)][0]:c;if(PCATi&&!PCATi.has(c))bad++;P.fix[k]=p;n++});break}if(n)break}
   $('wpFile').value='';$('wpMsg').innerHTML=n?'<span class="chip">'+n+' мөр уншлаа</span>'+(bad?' · <span class="hot">'+bad+' код каталогт алга</span>':'')+' — «Хадгалах» дарна уу':'<span class="hot">«Код» ба «Үнэ» багана олдсонгүй</span>';wpEdit()}
-async function wpSave(){const P=wpCur(),em=auth.currentUser.email||'',at=new Date().toISOString();if(!P.name.trim())return $('wpMsg').innerHTML='<span class="hot">Нэр</span>';
-  if(P.rules.some(r=>(r.scope||{}).t!=='all'&&!(r.scope.v||[]).length))return $('wpMsg').innerHTML='<span class="hot">Хамрах хүрээ хоосон дүрэм байна</span>';
+async function wpSave(){const P=wpCur(),em=auth.currentUser.email||'',at=new Date().toISOString();let bad=false;$('wpRules').querySelectorAll('[data-ra]').forEach(e=>{if(e.value.trim()&&!wpAddV(P,e))bad=true});if(bad)return;if(!P.name.trim())return $('wpMsg').innerHTML='<span class="hot">Нэр</span>';
+  if(P.rules.some(r=>(r.scope||{}).t!=='all'&&!(r.scope.v||[]).length))return $('wpMsg').innerHTML='<span class="hot">Дүрэмд нийлүүлэгч / бүлэг / код сонгоогүй байна (улаан «хоосон»)</span>';
   const id=P.id||('PL'+Date.now().toString(36)),doc={id,name:P.name.trim(),rules:P.rules,fix:P.fix||{},updated:at,by:em};if(JSON.stringify(doc).length>900000)return $('wpMsg').innerHTML='<span class="hot">Тогтмол үнэ хэт олон (1 МБ)</span>';
   try{await db.collection('pos_ws_price').doc(id).set(doc);await auditCfg('ws_price',{by:em,id,name:doc.name,rules:doc.rules.length,fix:Object.keys(doc.fix).length}).catch(()=>{});WS.pe=null;if(!WS.pl.some(p=>p.id===id))WS.pl.push(doc);$('wpSel').innerHTML+='';wpFill();$('wpSel').value=id;wpFill();$('wpMsg').innerHTML='<span class="chip">✓ Хадгаллаа</span>'}catch(e){$('wpMsg').innerHTML='<span class="hot">'+esc(e.code||e.message||e)+'</span>'}}
 async function wpDel(){const P=wpCur();if(!P.id||!isBoss())return;const used=WS.cust.filter(c=>c.plist===P.id).length;if(!confirm('«'+P.name+'» бодлогыг устгах уу?'+(used?'\n'+used+' харилцагч энэ бодлоготой — кассын үнэ рүү шилжинэ.':'')))return;try{await db.collection('pos_ws_price').doc(P.id).delete();WS.pe=null}catch(e){alert(e.code||e.message||e)}}
