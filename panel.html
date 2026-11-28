@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="23.0">
+<meta name="vivi-ver" content="23.1">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -2007,18 +2007,18 @@ function isInit(){isWatch();const t=iso(new Date());if(!$('isA').value){$('isB')
   const SL=['FC','DR','NS','ON','YV'].filter(k=>LOC[k]).concat(Object.keys(LOC).filter(k=>!['FC','DR','NS','ON','YV','AG','DF','FW'].includes(k)));
   if(!$('isSt').options.length){$('isSt').innerHTML=SL.map(k=>'<option value="'+k+'">'+esc(STN[k]||k)+'</option>').join('');$('isFS').innerHTML='<option value="">Бүх дэлгүүр</option>'+SL.map(k=>'<option value="'+k+'">'+esc(STN[k]||k)+'</option>').join('');
     $('isFT').innerHTML='<option value="">Бүх төлөв</option>'+Object.entries(IS_ST).filter(([k])=>k!=='cancel').map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('');
-    moneyInp($('isAmt'));['isA','isB'].forEach(id=>$(id).onchange=()=>{const [f,x]=rangeFix($('isA').value,$('isB').value,id==='isA'?'f':'t');$('isA').value=f;$('isB').value=x;isDraw()});
+    moneyInp($('isAmt'));['isAmt','isNo'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();isFind()}}));['isA','isB'].forEach(id=>$(id).onchange=()=>{const [f,x]=rangeFix($('isA').value,$('isB').value,id==='isA'?'f':'t');$('isA').value=f;$('isB').value=x;isDraw()});
     $('isFS').onchange=$('isFT').onchange=$('isX').onchange=isDraw;$('isXl').onclick=isXl;$('isFind').onclick=isFind;$('isSend').onclick=isSend;$('isSt').onchange=isCashFill}
   $('isNew').hidden=!(can('cash.iss')||(ME&&ME.admin));isCashFill();isDraw()}
 function isCashFill(){const st=$('isSt').value,cur=$('isCash').value,L=(users||[]).filter(u=>u&&u.name&&(u.role==='admin'||!(u.stores||[]).length||(u.stores||[]).includes(st)));
   $('isCash').innerHTML='<option value="">— сонгох —</option>'+L.map(u=>'<option value="'+esc(u.id)+'"'+(u.id===cur?' selected':'')+'>'+esc(u.name)+'</option>').join('')}
 async function isFind(){const d=$('isD').value,st=$('isSt').value,a=Math.round(+String($('isAmt').value).replace(/\D/g,'')||0),no=$('isNo').value.trim(),el=$('isHits');if(!d)return;el.textContent='Хайж байна…';
   try{const q=await db.collection('pos_sales').where('date','==',d.replace(/-/g,'/')).get();
-    const L=q.docs.map(x=>x.data()).filter(x=>x.store===st&&(no?String(x.id)===no:true)).map(x=>{const pm=(x.payments||[]).filter(p=>!a||Math.round(+p.amount||0)===a||Math.round(Math.abs(+x.total||0))===a);return {x,pm}}).filter(o=>no||!a||o.pm.length).slice(0,30);
-    el.innerHTML=L.length?'<div class="small">'+L.length+' баримт олдлоо — сонгоно уу:</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+L.map((o,i)=>{const x=o.x,p=(o.pm[0]||(x.payments||[])[0]||{});return '<button class="btn" data-ish="'+i+'" style="text-align:left">№'+esc(x.id)+' · '+esc(x.time||'')+' · касс '+esc(x.reg||'')+' · '+esc(x.cashier||'')+' · '+esc(p.form||'')+' '+money(p.amount||x.total)+(x.type==='return'?' · буцаалт':'')+'</button>'}).join('')+'</div>'
+    const L=q.docs.map(x=>x.data()).filter(x=>x.store===st&&(no?String(x.id)===no:true)).map(x=>{const pm=(x.payments||[]).filter(p=>!a||Math.round(+p.amount||0)===a||Math.round(Math.abs(+x.total||0))===a);return {x,pm}}).filter(o=>no||!a||o.pm.length).sort((p,q)=>String(p.x.time||'')<String(q.x.time||'')?-1:1);const ALL=L.length;L.splice(60);
+    el.innerHTML=L.length?'<div class="small">'+(ALL>L.length?'<b class="hot">'+ALL+' баримт — эхний '+L.length+'-г харууллаа. Дүн эсвэл баримтын №-ээр нарийсгана уу.</b>':ALL+' баримт олдлоо')+' — сонгоно уу (дүн, хэлбэр, цаг автоматаар бөглөгдөнө):</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+L.map((o,i)=>{const x=o.x,p=(o.pm[0]||(x.payments||[])[0]||{});return '<button class="btn" data-ish="'+i+'" style="text-align:left">№'+esc(x.id)+' · '+esc(x.time||'')+' · касс '+esc(x.reg||'')+' · '+esc(x.cashier||'')+' · '+esc(p.form||'')+' '+money(p.amount||x.total)+(x.type==='return'?' · буцаалт':'')+'</button>'}).join('')+'</div>'
       :'<div class="small hot">Таарах баримт олдсонгүй — касс, кассчин, цагийг гараар бөглөнө үү.</div>';
     el.querySelectorAll('[data-ish]').forEach(b=>b.onclick=()=>{const o=L[+b.dataset.ish],x=o.x,p=(o.pm[0]||(x.payments||[])[0]||{});ISV='';
-      $('isReg').value=x.reg||'';$('isTm').value=(x.time||'').slice(0,5);$('isForm').value=p.form||'';$('isNo').value=x.id||'';if(!$('isAmt').value)$('isAmt').value=grp3(Math.round(+p.amount||x.total||0));
+      $('isReg').value=x.reg||'';$('isTm').value=(x.time||'').slice(0,5);$('isForm').value=p.form||'';$('isNo').value=x.id||'';$('isAmt').value=grp3(Math.round(Math.abs(+p.amount||+x.total||0)));
       if(x.cashierId&&![...$('isCash').options].some(o=>o.value===x.cashierId))$('isCash').insertAdjacentHTML('beforeend','<option value="'+esc(x.cashierId)+'">'+esc(x.cashier||x.cashierId)+'</option>');
       $('isCash').value=x.cashierId||'';$('isCash').dataset.name=x.cashier||'';$('isHits').dataset.sale=JSON.stringify({uid:x.uid||'',no:x.id||'',iso:x.iso||'',total:x.total||0});
       el.querySelectorAll('[data-ish]').forEach(y=>y.classList.toggle('pri',y===b))})}
