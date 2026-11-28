@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.5">
+<meta name="vivi-ver" content="9.6">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -141,7 +141,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
 <body>
 <div id="top" class="hide">
   <b>VIVI</b><span class="ver">POS <span class="appver"></span></span><span class="tag" id="tStore"></span><span class="tag" id="tCash"></span><span class="tag" id="tShift"></span>
-  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="rqBtn" class="tag chatb" title="Самбар руу илгээсэн хүсэлтүүд хаана явж байна" style="background:#1d4ed8;color:#fff">📨 Хүсэлт<span id="rqN" class="chn hide"></span></button><button id="kfBtn" class="tag chatb hide" title="Нягтлан буцаасан / татгалзсан шилжүүлэг (үйлчлүүлэгчид мөнгө буцаах)" style="background:#c1121f;color:#fff">⚠ Kontrola<span id="kfN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="offBar" class="hide"></span><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
+  <span class="sp"></span><button id="gdBtn" class="tag chatb hide" title="Урамшууллын удирдамж" style="background:#1f4fa3;color:#fff">📜 Удирдамж<span id="gdN" class="chn hide"></span></button><button id="isBtn" class="tag chatb hide" title="Нягтлангаас ирсэн тулгалтын асуудал (72 цаг)" style="background:#c1121f;color:#fff">🧾 Тулгалт<span id="isN" class="chn"></span></button><button id="cntBtn" class="tag chatb hide" title="Оффисоос ирсэн тооллогын даалгавар" style="background:#b45309;color:#fff">📋 Тооллого<span id="cntN" class="chn"></span></button><button id="rqBtn" class="tag chatb" title="Самбар руу илгээсэн хүсэлтүүд хаана явж байна" style="background:#1d4ed8;color:#fff">📨 Хүсэлт<span id="rqN" class="chn hide"></span></button><button id="kfBtn" class="tag chatb hide" title="Нягтлан буцаасан / татгалзсан шилжүүлэг (үйлчлүүлэгчид мөнгө буцаах)" style="background:#c1121f;color:#fff">⚠ Kontrola<span id="kfN" class="chn"></span></button><button id="chatBtn" class="tag chatb" title="Оффистой чат">💬 Чат<span id="chatN" class="chn hide"></span></button><span id="offBar" class="hide"></span><span id="tSync" class="tag">Прототип · өгөгдөл энэ компьютерт</span><span id="clock"></span>
 </div>
 
 <div id="login">
@@ -389,7 +389,7 @@ async function cloudInit(){
   try{
     if(!window.firebase)for(const m of ['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+FB_VER+'/firebase-'+m+'-compat.js');
     firebase.initializeApp(FB_CONFIG);fb.auth=firebase.auth();fb.db=firebase.firestore();fb.ready=true;
-    fb.auth.onAuthStateChanged(u=>{fb.user=u;movStop();devStop();chatStop();cntStop();gdStop();accBind();cloudStatus();if(u){cloudListen();cloudSync()}});
+    fb.auth.onAuthStateChanged(u=>{fb.user=u;movStop();devStop();chatStop();cntStop();gdStop();isStop();accBind();cloudStatus();if(u){cloudListen();cloudSync()}});
   }catch(e){fb.err=String(e&&e.message||e)}
   cloudStatus();
 }
@@ -516,7 +516,7 @@ async function cloudSync(){
 function cloudSoon(){clearTimeout(cloudSoon.h);cloudSoon.h=setTimeout(()=>{fb.err='';cloudSync()},400);cloudStatus()}
 function shiftOut(sh){shiftq=shiftq.filter(q=>q.id!==sh.id);shiftq.push(JSON.parse(JSON.stringify(sh)));store.set('shiftq',shiftq);cloudSoon()}
 function cloudListen(){
-  if(cloudListen.on)return;cloudListen.on=true;kfListen();movListen();itxListen();devListen();chatListen();cntListen();gdListen();
+  if(cloudListen.on)return;cloudListen.on=true;kfListen();movListen();itxListen();devListen();chatListen();cntListen();gdListen();isListen();
   // Явуулын кассын одоогийн аян (самбараас тохируулна)
   fb.db.collection('pos_config').doc('trip').onSnapshot(d=>{const v=d.exists?String(d.data().name||'').trim():'';if(v!==TRIP){TRIP=v;store.set('trip',v);if(S.user)header()}},()=>{});
   fb.db.collection('pos_config').doc('partners').onSnapshot(d=>{try{const L=d.exists?JSON.parse(d.data().d||'[]'):null;if(L&&L.length){PARTNERS=L;PIDX=new Map(L.map(p=>[String(p[1]).toLowerCase(),p[0]]));store.set('partners',L)}}catch(e){}},()=>{});
@@ -1671,7 +1671,7 @@ $('lGo').onclick=async()=>{await jrReady;
       $('rbA').onclick=async()=>{if(!await askPin('Хоёр дахь кассанд нэвтрэх','admin'))return;closeModal();loginOk=u.id;loginOkBy={by:askPin.by,dev:o.dev,reg:o.reg};$('lGo').click()};return}}
   const ovr=loginOk===u.id?loginOkBy:null;loginOk=null;
   S.user={store:device.store,reg:$('lReg').value,name:u.name,uid:u.id,role:u.role};$('lPin').value='';$('lMsg').textContent='';
-  S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',ovr?{override:ovr}:{});devBeat();counterSync(S.user.store,S.user.reg);header();permButtons();setTimeout(gdAfterLogin,700);
+  S.shift=store.get('shift_'+S.user.store+'-'+S.user.reg,null);log('login',ovr?{override:ovr}:{});devBeat();counterSync(S.user.store,S.user.reg);header();permButtons();setTimeout(gdAfterLogin,700);setTimeout(isAfterLogin,1200);
   if(S.shift&&shiftClosedLocal(S.shift.id)){shiftDrop(shiftClosedLocal(S.shift.id),'login_local');return}
   if(S.shift){show('sale');render();$('scan').focus();shiftStaleCheck().then(x=>{if(!x&&shiftGuard())shiftHandover()})}else{show('shiftopen');$('sFloat').select()}
 };
@@ -1902,6 +1902,52 @@ function gdShow(g){const mine=gdMine(g);
 /* ---------- 📋 Тооллогын даалгавар (pos_counts): оффис хасах үлдэгдэлтэй загварыг тоолуулна ----------
    Касс тухайн загварын бүх хэмжээг дэлгүүр, агуулахаас олж уншуулна (системийн тоог харуулахгүй — сохор тооллого),
    «Тоолж дууслаа» дарахад тоо нь оффис руу очно; зөрүүг оффис тооцоолж засна. */
+
+/* ==== 🧾 Кассын тулгалтын асуудал (pos_cashiss): самбараас тодорхой касс, кассчинд; 72 цагийн дотор
+   «Тайлбар өгөх» (зурагтай) эсвэл «Дутууг хүлээн зөвшөөрөх» → ПИН + гарын үсэг → авлага ==== */
+let ISS=[];const IS_HOW={cash:'💵 Бэлнээр (кассанд)',salary:'🧾 Цалингаас суутгах'};
+function isStop(){(isListen.u||(()=>{}))();isListen.u=null;ISS=[];isBadge()}
+function isListen(){if(isListen.u||!(fb.ready&&fb.user))return;const st=curAcc();if(!st)return;
+  isListen.u=fb.db.collection('pos_cashiss').where('store','==',st).onSnapshot(s=>{const was=isMineN();ISS=s.docs.map(d=>({...d.data(),_id:d.id})).filter(x=>x.status==='open'||x.status==='sign').sort((a,b)=>a.created<b.created?-1:1);isBadge();
+    if(S.user&&isMineN()>was&&!modalOpen()){flash('🧾 Нягтлангаас тулгалтын асуудал ирлээ');isAfterLogin()}},()=>{isListen.u=null})}
+const isHere=()=>ISS.filter(x=>S.user&&String(x.reg)===String(S.user.reg));
+const isMine=x=>S.user&&((x.cuid&&x.cuid===S.user.uid)||(!x.cuid&&x.cashier===S.user.name));
+const isMineN=()=>S.user?ISS.filter(isMine).length:0;
+function isBadge(){const b=$('isBtn');if(!b)return;const L=S.user?ISS.filter(x=>isMine(x)||String(x.reg)===String(S.user.reg)):[];b.classList.toggle('hide',!L.length);$('isN').textContent=L.length||''}
+function isAfterLogin(){isBadge();const L=ISS.filter(isMine);if(L.length&&!modalOpen())isShow(L[0])}
+function openIs(){if(!S.user)return flash('Эхлээд нэвтэрнэ үү');const L=ISS.filter(x=>isMine(x)||String(x.reg)===String(S.user.reg));if(!L.length)return flash('Асуудал алга');if(L.length===1)return isShow(L[0]);
+  openModal('<h2>🧾 Тулгалтын асуудал</h2>'+L.map((t,i)=>'<button class="'+(isMine(t)?'red':'blue')+'" data-is="'+i+'" style="display:block;width:100%;text-align:left;margin-bottom:8px;padding:12px 14px">'+esc(t.date+' '+(t.time||''))+' · '+esc(t.form||'')+' '+fmt(t.amt)+' ₮ · '+esc(t.cashier)+'<div class="small" style="color:#fff;opacity:.9">'+(t.status==='sign'?'✍ гарын үсэг хүлээж буй':'⏳ '+isLeft(t))+'</div></button>').join('')+'<div class="rowb"><button id="isX">Хаах</button></div>');
+  $('isX').onclick=closeModal;document.querySelectorAll('[data-is]').forEach(b=>b.onclick=()=>isShow(L[+b.dataset.is]))}
+function isLeft(t){const h=Math.round((new Date(t.due)-now())/3600e3);return h>0?h+' цаг үлдсэн':'хугацаа хэтэрсэн'}
+function isHead(t){return '<div style="padding:10px 12px;background:#fdecea;border-radius:10px;margin-bottom:10px"><div><b>'+esc(t.date)+' '+esc(t.time||'')+'</b> · касс '+esc(t.reg)+' · <b>'+esc(t.cashier)+'</b></div><div>'+esc(t.form||'')+' · баримт №'+esc((t.sale||{}).no||'—')+' · <b style="font-size:20px">'+fmt(t.amt)+' ₮</b></div><div>«'+esc(t.text)+'»</div><div class="small">Нягтлан: '+esc(t.byName||'')+' · '+(t.status==='sign'?'<b>✍ Авлага — гарын үсэг зурна уу</b>'+(t.dec&&t.dec.note?' · шалтгаан: «'+esc(t.dec.note)+'»':''):'хариу өгөх хугацаа: '+isLeft(t))+'</div></div>'}
+function isShow(t){if(!t)return;const mine=isMine(t);
+  if(!mine){openModal('<h2>🧾 Тулгалтын асуудал</h2>'+isHead(t)+'<div>Энэ асуудлыг зөвхөн <b>'+esc(t.cashier)+'</b> өөрийн ПИН-ээр нэвтэрч шийдвэрлэнэ.</div><div class="rowb"><button id="isX">Хаах</button></div>');$('isX').onclick=closeModal;return}
+  openModal('<h2>🧾 Тулгалтын асуудал</h2>'+isHead(t)+'<div class="rowb" style="flex-wrap:wrap;gap:8px">'+(t.status==='open'?'<button class="blue" id="isAns">💬 Тайлбар өгөх (зурагтай)</button>':'')+'<button class="red" id="isAdm">✍ '+(t.status==='sign'?'Гарын үсэг зурах':'Дутууг хүлээн зөвшөөрөх')+'</button><button id="isX">Дараа</button></div>');
+  $('isX').onclick=closeModal;if($('isAns'))$('isAns').onclick=()=>isAnswer(t);$('isAdm').onclick=()=>isSign(t)}
+async function isPack(f){const url=URL.createObjectURL(f),im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);return c.toDataURL('image/jpeg',.72)}
+function isAnswer(t){openModal('<h2>💬 Тайлбар</h2>'+isHead(t)+'<label>Юу болсныг тайлбарлана уу</label><textarea id="isT" rows="4" style="width:100%" placeholder="жишээ: үйлчлүүлэгч буцаалт хийсэн — буцаалтын маягтын зураг хавсаргав"></textarea>'+
+    '<label style="margin-top:8px">Нотлох зураг (заавал биш) — буцаалтын маягт, QPay, шилжүүлгийн баримт</label><input type="file" id="isF" accept="image/*" capture="environment"><div id="isP" class="small"></div><div id="isM" class="small" style="color:var(--red);min-height:18px"></div>'+
+    '<div class="rowb"><button id="isB2">← Буцах</button><button class="blue" id="isGo">Илгээх</button></div>');
+  let IMG='';$('isB2').onclick=()=>isShow(t);$('isF').onchange=async()=>{const f=$('isF').files[0];if(!f)return;$('isP').textContent='Зураг бэлдэж байна…';try{IMG=await isPack(f);$('isP').innerHTML='<img src="'+IMG+'" style="max-height:120px;border-radius:6px"> '+Math.round(IMG.length*.75/1024)+' КБ'}catch(e){IMG='';$('isP').textContent='Зураг уншигдсангүй'}};
+  $('isGo').onclick=async()=>{const tx=$('isT').value.trim();if(!tx)return $('isM').textContent='Тайлбараа бичнэ үү';if(!(fb.ready&&fb.user&&navigator.onLine))return $('isM').textContent='Интернэт шаардлагатай';$('isGo').disabled=true;$('isM').textContent='Илгээж байна…';
+    try{const at=now().toISOString();let n=0;if(IMG){for(let i=0;i<IMG.length;i+=700000){await fb.db.collection('pos_cashiss_img').doc(t._id+'_'+n).set({id:t._id,i:n,d:IMG.slice(i,i+700000)});n++}}
+      await fb.db.collection('pos_cashiss').doc(t._id).update({status:'answered',ans:{at,name:S.user.name,uid:S.user.uid||'',reg:S.user.reg||'',text:tx,img:{n}},hist:(t.hist||[]).concat([{at,by:S.user.name,act:'answer',note:tx}])});
+      log('cashiss_answer',{id:t._id,amt:t.amt});closeModal();flash('✓ Тайлбар илгээгдлээ — нягтлан шийднэ')}catch(e){$('isGo').disabled=false;$('isM').textContent='Алдаа: '+(e&&e.code||e)}}}
+function isSign(t){openModal('<h2>✍ Дутууг хүлээн зөвшөөрөх</h2>'+isHead(t)+'<div style="padding:8px 10px;border:1px solid var(--line);border-radius:8px">Би, <b>'+esc(S.user.name)+'</b>, '+esc(t.date)+'-ны '+esc(t.form||'')+' гүйлгээний <b>'+fmt(t.amt)+' ₮</b> дутууг хүлээн зөвшөөрч, доорх хэлбэрээр төлөхөө баталж байна.</div>'+
+    '<div style="display:flex;gap:14px;margin:8px 0">'+Object.entries(IS_HOW).map(([k,v],i)=>'<label style="display:flex;gap:6px;align-items:center"><input type="radio" name="isH" value="'+k+'"'+(i?'':' checked')+'> '+v+'</label>').join('')+'</div>'+
+    '<label>Гарын үсэг (хуруу / хулганаар)</label><canvas id="isC" width="560" height="160" style="width:100%;max-width:560px;height:160px;border:1px dashed #888;border-radius:8px;background:#fff;touch-action:none"></canvas><div><button id="isCl" style="padding:4px 10px">Арилгах</button></div>'+
+    '<label style="margin-top:8px">Таны ПИН</label><input id="isPin" type="password" inputmode="numeric" style="max-width:160px"><div id="isM" class="small" style="color:var(--red);min-height:18px"></div>'+
+    '<div class="rowb"><button id="isB2">← Буцах</button><button class="red" id="isGo">✍ Гарын үсэг зурж батлах</button></div>');
+  const c=$('isC'),g=c.getContext('2d');let dn=false,ink=0;g.lineWidth=2.4;g.lineCap='round';g.strokeStyle='#111';
+  const P=e=>{const r=c.getBoundingClientRect();return [(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]};
+  c.onpointerdown=e=>{dn=true;c.setPointerCapture(e.pointerId);const [x,y]=P(e);g.beginPath();g.moveTo(x,y)};c.onpointermove=e=>{if(!dn)return;const [x,y]=P(e);g.lineTo(x,y);g.stroke();ink++};c.onpointerup=c.onpointercancel=()=>{dn=false};
+  $('isCl').onclick=()=>{g.clearRect(0,0,c.width,c.height);ink=0};$('isB2').onclick=()=>isShow(t);
+  $('isGo').onclick=async()=>{const m=x=>$('isM').textContent=x,u=users.find(x=>x.id===S.user.uid);if(ink<8)return m('Гарын үсгээ зурна уу');if(!u||$('isPin').value!==u.pin)return m('ПИН буруу');if(!(fb.ready&&fb.user&&navigator.onLine))return m('Интернэт шаардлагатай');
+    $('isGo').disabled=true;m('Хадгалж байна…');const at=now().toISOString(),how=(document.querySelector('input[name=isH]:checked')||{}).value||'cash';
+    try{const sign={at,name:S.user.name,uid:S.user.uid||'',reg:S.user.reg||'',how,img:c.toDataURL('image/png')},debt=Object.assign({amt:t.amt,why:'admit',at},t.debt||{},{sign});
+      await fb.db.collection('pos_cashiss').doc(t._id).update({status:'debt',debt,hist:(t.hist||[]).concat([{at,by:S.user.name,act:t.status==='sign'?'sign':'admit',amt:t.amt,note:IS_HOW[how]}])});
+      log('cashiss_sign',{id:t._id,amt:t.amt,how});closeModal();flash('✓ Гарын үсэг зурлаа — авлага бүртгэгдэв')}catch(e){$('isGo').disabled=false;m('Алдаа: '+(e&&e.code||e))}}}
+
 let CNTT=[];
 function cntStop(){(cntListen.u||(()=>{}))();cntListen.u=null;CNTT=[];cntBadge()}
 function cntListen(){if(cntListen.u||!(fb.ready&&fb.user))return;const st=curAcc();if(!st)return;
@@ -2039,7 +2085,7 @@ const chatOpen=()=>!chatBox.classList.contains('hide');
 function chatBadge(){const n=chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).length;$('chatN').textContent=n;$('chatN').classList.toggle('hide',!n)}
 function chatDraw(){CHAT.draw($('chatThread'),curAcc(),chatMsgs,'till')}
 function chatRead(){const st=curAcc();chatMsgs.filter(m=>m.from==='panel'&&!m.readTill).forEach(m=>{m.readTill=true;CHAT.col(st).doc(m.id).update({readTill:true,readTillAt:new Date().toISOString()}).catch(()=>{})});chatBadge()}
-$('cntBtn').onclick=openCnt;$('gdBtn').onclick=openGd;$('chatBtn').onclick=()=>{if(chatOpen()){chatBox.classList.add('hide');$('scan').focus();return}
+$('cntBtn').onclick=openCnt;$('isBtn').onclick=openIs;$('gdBtn').onclick=openGd;$('chatBtn').onclick=()=>{if(chatOpen()){chatBox.classList.add('hide');$('scan').focus();return}
   if(!(fb.ready&&fb.user)){flash('Чат ашиглахын тулд касс үүлэнд холбогдсон байх ёстой');return}
   if(!curAcc()){flash('Энэ компьютер «'+fb.user.email+'» бүртгэлээр холбогдсон. Чат зөвхөн дэлгүүрийн kasa-…@ бүртгэлээр ажиллана — «Үүлээс салгах» → kasa-'+String(device.store||'xx').toLowerCase()+'@vivi-pos-test.mn-ээр холбоно уу');return}
   chatListen();chatBox.classList.remove('hide');$('chatSt').textContent=STORES[curAcc()]||'';chatDraw();chatRead();chatComp.focus()};
