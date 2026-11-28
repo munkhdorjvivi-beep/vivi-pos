@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="21.8">
+<meta name="vivi-ver" content="22.0">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS хяналт</title>
 <style>
@@ -302,7 +302,7 @@ main textarea{max-width:100%}
   <div class="card" data-csub="aud" hidden><h2>Хяналт: кассчны үйлдэл</h2><div class="scroll" id="cAud"></div></div>
   <div class="card" data-csub="dep" hidden><h2>💰 Бэлэн мөнгө тушаалт</h2>
     <div class="small" style="margin:-4px 0 8px">① Кассчин ээлж хаахдаа бэлэн мөнгөө <b>дэвсгэртээр</b> тоолно. ② Дэлгүүрийн менежер банк руу явахын өмнө доорх <b>тушаагаагүй ээлжүүдийг</b> сонгож дахин тоолоод хадгална (зөрүү гарвал тайлбар). ③ Банкинд тушаасны дараа <b>баримтын зургийг</b> тэр тушаалтад хавсаргана — утсаараа самбараа нээж 📷 (доорх холбоос / QR).</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="dpSt" class="inp" style="width:auto"></select><input type="date" id="dpA" class="inp" style="width:auto"><span>—</span><input type="date" id="dpB" class="inp" style="width:auto"><button id="dpGo" class="btn pri">Харах</button><button id="dpXl" class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)">Excel татах</button><span id="dpMsg" class="small"></span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="dpSt" class="inp" style="width:auto"></select><input type="date" id="dpA" class="inp" style="width:auto"><span>—</span><input type="date" id="dpB" class="inp" style="width:auto"><label class="small" style="display:flex;gap:4px;align-items:center" title="Касс 9.5-аас өмнө (дэвсгэртгүй) хаасан ээлжүүд — дэвтрээр тушаасан байх магадлалтай"><input type="checkbox" id="dpOld"> Хуучин ээлжүүдийг харуулах</label><button id="dpGo" class="btn pri">Харах</button><button id="dpXl" class="btn" style="background:var(--ink);color:#fff;border-color:var(--ink)">Excel татах</button><span id="dpMsg" class="small"></span></div>
     <div id="dpBank"></div>
     <h3 style="margin:14px 0 4px;font-size:14px">Тушаагаагүй ээлжүүд</h3><div id="dpPend" class="scroll"></div><div id="dpSelBar" style="margin-top:8px"></div>
     <div id="dpCount"></div>
@@ -1388,7 +1388,7 @@ const SCN={};function scanBad(v,key,dup){const o0=SCN[key]||(SCN[key]={});if(isQ
 let BUSY=0;function busy(on,txt){BUSY=Math.max(0,BUSY+(on?1:-1));if(on&&txt)$('busyT').textContent=txt;$('busy').classList.toggle('hide',!BUSY)}
 async function withBusy(txt,fn){busy(1,txt);try{return await fn()}finally{busy(0)}}
 function listen(){RANGE_LOADED=rangeKey();setTimeout(rangePend,0);let first=true;busy(1,'Борлуулалтын өгөгдөл ачаалж байна…');const done=()=>{if(first){first=false;busy(0)}};setTimeout(done,20000);
-  if(!reqOn){reqOn=true;try{if(dpCan())dpWatch()}catch(e){}pos0Load().then(()=>{if(POS0&&$('d1').value===$('d2').value&&$('d1').value.replace(/-/g,'/')<POS0)listen()});rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchPlists();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();if(can('cost'))watchSup();ssWatch();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
+  if(!reqOn){reqOn=true;try{if(dpCan()){dpWatch();dpOpenPending()}}catch(e){}pos0Load().then(()=>{if(POS0&&$('d1').value===$('d2').value&&$('d1').value.replace(/-/g,'/')<POS0)listen()});rqhListen();watchCat();if(can('cost'))loadCost();watchPromos();watchPlists();watchUsers();watchCfg();watchSm();watchDel();watchItems();if(can('vch'))watchVch();watchGd();watchBonus();watchDevs();watchPart();watchFin();watchLppCost();if(can('cost'))watchSup();ssWatch();setTimeout(watchDiff,1500);watchMov();watchTrip();if(can('chat'))watchChat();if(ME&&ME.admin)watchPU();if(stPosP()){watchNchk();watchCnts();watchNegMeta()}if(can('rep.hist'))setTimeout(histCov,1500);if(can('promo')||can('rep'))watchCal();showOpen();db.collection('pos_requests').where('status','==','pending').onSnapshot(s=>{reqs=s.docs.map(d=>d.data());drawReq()},e=>{reqOn=false})}
   unsub.forEach(f=>f());unsub=[];
   const a=$('d1').value,b=$('d2').value>=$('d1').value?$('d2').value:$('d1').value;
   const A=a.replace(/-/g,'/'),B=b.replace(/-/g,'/'),t1=new Date(a+'T00:00:00').toISOString(),t2=new Date(b+'T23:59:59.999').toISOString();
@@ -1941,7 +1941,10 @@ function rpSub(k){document.querySelectorAll('section[data-panel="rep"] [data-rsu
 $('subtabs').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st;if(CURTAB==='stock')stSub(k);else if(CURTAB==='rep')rpSub(k);else if(CURTAB==='cash')csSub(k);else if(CURTAB==='items')itSub(k);else if(CURTAB==='till')tlSub(k);window.scrollTo(0,0)};
 function csSub(k){document.querySelectorAll('section[data-panel="cash"] [data-csub]').forEach(c=>c.hidden=c.dataset.csub!==k);try{localStorage.setItem('vivipanel_sub_cash',k)}catch(e){}subMark('cash',k);if(k==='z')setTimeout(zInit,0)}
 /* ==== 💰 Бэлэн мөнгө тушаалт: pos_cashdep {id,store,created,by,byName,shifts:[…],expect,den,counted,diff,reason,status:'counted'|'banked',bank:{amount,date,note,by,at,img:{n,type,w,h,bytes}}} ==== */
-var DP_OPEN=(()=>{const h=location.hash||'';if(h.indexOf('#dep:')===0){try{history.replaceState(null,'','#dep')}catch(e){}return decodeURIComponent(h.slice(5))}return ''})();
+var DP_OPEN=(()=>{const h=location.hash||'';if(h.indexOf('#dep:')===0){const id=decodeURIComponent(h.slice(5));try{localStorage.setItem('vivipanel_depopen',JSON.stringify({id,t:Date.now()}))}catch(e){}try{history.replaceState(null,'','#dep')}catch(e){}return id}
+  try{const x=JSON.parse(localStorage.getItem('vivipanel_depopen')||'null');if(x&&Date.now()-x.t<30*60e3)return x.id}catch(e){}return ''})();
+// нэвтэрсний дараа (өөр таб, хаяг алдагдсан ч) хүлээгдэж буй тушаалт руу шууд
+function dpOpenPending(){if(DP_OPEN&&dpCan()&&!/^#dep/.test(location.hash||''))setTimeout(()=>showTab('dep',true),300)}
 const DEN=[20000,10000,5000,1000,500,100,50,20,10];
 const DP={sh:[],dep:[],sel:new Set(),cnt:null,bank:'',view:'',img:{}};
 function dpCan(){return can('cash')||can('cash.dep')}
@@ -1949,17 +1952,17 @@ const dpKey=h=>h.id+'|'+(h.closed||''),dpTake=h=>Math.round((+h.counted||0)-(+h.
 const denAdd=(a,b)=>{const o={...a};Object.entries(b||{}).forEach(([k,v])=>o[k]=(o[k]||0)+(+v||0));return o},denTxt=d=>DEN.filter(x=>(d||{})[x]).map(x=>nfx(x)+'×'+d[x]).join(', ');
 const dpLink=id=>location.origin+location.pathname+'#dep:'+encodeURIComponent(id);
 function depInit(){if(!$('dpA').value){$('dpB').value=iso(new Date());$('dpA').value=addD(iso(new Date()),-13)}
-  if(!$('dpSt').options.length){$('dpSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+['FC','DR','NS','ON','YV'].map(k=>'<option value="'+k+'">'+esc(k==='ON'?'Онлайн дэлгүүр':LOC[k]||k)+'</option>').join('');if(['FC','DR','NS','ON','YV'].includes(gSt))$('dpSt').value=gSt;$('dpSt').onchange=()=>{DP.sel.clear();DP.cnt=null;depDraw()}}
+  if(!$('dpSt').options.length){$('dpSt').innerHTML='<option value="">Бүх дэлгүүр</option>'+['FC','DR','NS','ON','YV'].map(k=>'<option value="'+k+'">'+esc(k==='ON'?'Онлайн дэлгүүр':LOC[k]||k)+'</option>').join('');if(['FC','DR','NS','ON','YV'].includes(gSt))$('dpSt').value=gSt;$('dpSt').onchange=$('dpOld').onchange=()=>{DP.sel.clear();DP.cnt=null;depDraw()}}
   $('dpGo').onclick=depLoad;$('dpXl').onclick=()=>xtXlsx('dplist','Бэлэн_мөнгө_тушаалт_'+$('dpA').value+'_'+$('dpB').value,'Тушаалт');depLoad()}
 async function depLoad(){const A=$('dpA').value,B=$('dpB').value;if(!A||!B)return;$('dpMsg').textContent='Ачаалж байна…';
   try{const a=new Date(A+'T00:00:00').toISOString(),b=new Date(B+'T23:59:59.999').toISOString(),M=new Map();
     const [s1,s2]=await Promise.all([db.collection('pos_shifts').where('closed','>=',a).where('closed','<=',b).get(),db.collection('pos_cashdep').where('created','>=',new Date(new Date(a).getTime()-30*864e5).toISOString()).get()]);
     s1.docs.forEach(d=>{const h=d.data();if(h.closed)M.set(dpKey(h),h)});DP.sh=[...M.values()];DP.dep=s2.docs.map(d=>({...d.data(),_id:d.id}));
-    if(DP_OPEN){const x=DP.dep.find(r=>r._id===DP_OPEN);if(x){DP.bank=x._id;if(x.store&&$('dpSt').value!==x.store)$('dpSt').value=''}else{const d=await db.collection('pos_cashdep').doc(DP_OPEN).get();if(d.exists){DP.dep.push({...d.data(),_id:d.id});DP.bank=d.id}}DP_OPEN=''}
+    if(DP_OPEN){try{localStorage.removeItem('vivipanel_depopen')}catch(e){}const x=DP.dep.find(r=>r._id===DP_OPEN);if(x){DP.bank=x._id;if(x.store&&$('dpSt').value!==x.store)$('dpSt').value=''}else{const d=await db.collection('pos_cashdep').doc(DP_OPEN).get();if(d.exists){DP.dep.push({...d.data(),_id:d.id});DP.bank=d.id}}DP_OPEN=''}
     $('dpMsg').textContent='';depDraw();if(DP.bank)setTimeout(()=>{const e=$('dpBank');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},50)}
   catch(e){$('dpMsg').innerHTML='<span class="hot">'+esc(e.code||e.message||e)+'</span>'}}
 function dpPending(){const st=$('dpSt').value,done=new Set(DP.dep.flatMap(r=>(r.shifts||[]).map(x=>x.k)));
-  return DP.sh.filter(h=>(!st||h.store===st)&&!done.has(dpKey(h))&&dpTake(h)>0).sort((a,b)=>a.closed<b.closed?1:-1)}
+  const old=$('dpOld')&&$('dpOld').checked;return DP.sh.filter(h=>(!st||h.store===st)&&!done.has(dpKey(h))&&dpTake(h)>0&&(old||h.den)).sort((a,b)=>a.closed<b.closed?1:-1)}
 function depDraw(){if(!$('dpPend'))return;const P=dpPending(),A=$('dpA').value,B=$('dpB').value;
   // тушаагаагүй ээлжүүд
   const rows=P.map(h=>{const r=['',lt(h.closed),STN[h.store]||h.store,'Касс '+(h.reg||''),h.closedBy||'',+h.counted||0,+h.float||0,dpTake(h),denTxt(h.den)||'— (дэвсгэртгүй)'];r.k=dpKey(h);return r});
@@ -2003,7 +2006,11 @@ function dpCountDraw(){const el=$('dpCount');if(!el)return;const C=DP.cnt;if(!C)
 // банкны баримт: зураг (утасны камер) → JPEG 1600px → ~700 КБ хэсгүүд
 function dpImgPack(file){return new Promise((ok,no)=>{const fr=new FileReader();fr.onerror=no;fr.onload=()=>{const im=new Image();im.onerror=()=>no(new Error('Зураг уншигдсангүй'));im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k),cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(im,0,0,w,h);ok({url:cv.toDataURL('image/jpeg',0.72),w,h})};im.src=fr.result};fr.readAsDataURL(file)})}
 async function dpImgGet(id,n){if(DP.img[id])return DP.img[id];let s='';for(let i=0;i<n;i++){const d=await db.collection('pos_cashdep_img').doc(id+'_'+i).get();if(d.exists)s+=d.data().d||''}return DP.img[id]=s}
-function dpBankDraw(){const el=$('dpBank');if(!el)return;const r=DP.dep.find(x=>x._id===DP.bank);if(!r){el.innerHTML='';return}const b=r.bank||{},L=dpLink(r._id);
+function dpBankDraw(){const el=$('dpBank');if(!el)return;const r=DP.dep.find(x=>x._id===DP.bank);
+  if(!r){const st=$('dpSt').value,W=DP.dep.filter(x=>x.status!=='banked'&&(!st||x.store===st)).sort((a,b)=>a.created<b.created?1:-1);
+    el.innerHTML=W.length?'<div style="margin-top:10px;padding:10px 12px;background:#fff4e5;border-radius:12px"><b>⏳ Банкны баримт хүлээж буй тушаалт</b><div class="small">Банкинд тушаасны дараа доорхоос сонгоод баримтын зургийг хавсаргана (утсаар нээсэн бол камер шууд).</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">'+
+      W.map(x=>'<button class="btn pri" data-dpw="'+esc(x._id)+'" style="text-align:left">📷 '+esc(STN[x.store]||x.store)+' · '+esc(lt(x.created))+' · '+money(x.counted)+'</button>').join('')+'</div></div>':'';
+    el.querySelectorAll('[data-dpw]').forEach(b=>b.onclick=()=>{DP.bank=b.dataset.dpw;DP.view='';dpBankDraw()});return}const b=r.bank||{},L=dpLink(r._id);
   el.innerHTML='<div style="margin-top:10px;padding:10px 12px;border:2px solid '+(r.status==='banked'?'var(--line)':'var(--red)')+';border-radius:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+esc(STN[r.store]||r.store)+' · '+esc(lt(r.created))+' · тоолсон '+money(r.counted)+(r.diff?' <span class="hot">(зөрүү '+money(r.diff)+')</span>':'')+'</b><button class="btn" id="dpBX">✕</button></div>'+
     '<div class="small">'+(r.shifts||[]).map(s=>esc(s.cashier+' · Касс '+s.reg+' · '+money(s.take))).join(' · ')+' · тоолсон: '+esc(r.byName||r.by)+' · '+esc(denTxt(r.den))+'</div>'+
     (r.status==='banked'?'<div style="margin-top:6px">✓ Банкинд тушаасан: <b>'+money(b.amount)+'</b> · '+esc(b.date||'')+' · '+esc(b.by||'')+(b.note?' · '+esc(b.note):'')+'</div><div id="dpImg" class="small" style="margin-top:6px">Зураг ачаалж байна…</div>'
@@ -2026,7 +2033,7 @@ function dpBankDraw(){const el=$('dpBank');if(!el)return;const r=DP.dep.find(x=>
       catch(e){$('dpBS').disabled=false;m(e.code||e.message||e)}}}}
 // улаан тоо: тушаагаагүй ээлж (14 хоног) + банкны баримтгүй тушаалт
 let DPW=null;function dpWatch(){if(DPW)return;const since=new Date(Date.now()-14*864e5).toISOString();let S=[],D=[];
-  const go=()=>{const done=new Set(D.flatMap(r=>(r.shifts||[]).map(x=>x.k)));badge('till','dep',S.filter(h=>h.closed&&dpTake(h)>0&&!done.has(dpKey(h))).length+D.filter(r=>r.status!=='banked').length)};
+  const go=()=>{const done=new Set(D.flatMap(r=>(r.shifts||[]).map(x=>x.k)));badge('till','dep',S.filter(h=>h.closed&&h.den&&dpTake(h)>0&&!done.has(dpKey(h))).length+D.filter(r=>r.status!=='banked').length)};
   DPW=[db.collection('pos_shifts').where('closed','>=',since).onSnapshot(q=>{S=q.docs.map(d=>d.data());go()},()=>{}),db.collection('pos_cashdep').where('created','>=',new Date(Date.now()-60*864e5).toISOString()).onSnapshot(q=>{D=q.docs.map(d=>d.data());go()},()=>{})]}
 function dpBadge(){}
 /* ==== 🧾 Z тайлан: хаасан ээлжүүд (pos_shifts), огнооны хүрээгээр; Excel, A4 хүснэгт, 80 мм Z баримт ==== */
