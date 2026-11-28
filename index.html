@@ -2,7 +2,7 @@
 <html lang="mn">
 <head>
 <meta charset="utf-8">
-<meta name="vivi-ver" content="9.6">
+<meta name="vivi-ver" content="9.7">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VIVI POS</title>
 <style>
@@ -136,6 +136,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
   #receipt .pb{break-after:page;page-break-after:always;height:0}
   @page{margin:2mm;size:80mm auto}
 }
+#cart td.qtyc{cursor:pointer;white-space:nowrap}#cart td.qtyc .qed{opacity:.35;font-size:12px}#cart td.qtyc:hover{background:#eef4ff}#cart td.qtyc:hover .qed{opacity:1}
 </style>
 </head>
 <body>
@@ -177,7 +178,7 @@ input:disabled{background:var(--soft);color:var(--mut)}
     </div>
     <button class="pri" id="bPay">Төлбөр <kbd>F5</kbd></button>
     <div class="grp"><h3>Сонгосон мөр</h3><div class="g">
-      <button id="bPlus">Тоо +1 <kbd>+</kbd></button><button id="bMinus">Тоо −1 <kbd>−</kbd></button>
+      <button id="bPlus">Тоо +1 <kbd>+</kbd></button><button id="bMinus">Тоо −1 <kbd>−</kbd></button><button id="bQty" style="grid-column:1/-1">✎ Тоо оруулах <kbd>*</kbd></button>
       <button id="bD5">Хөнгөлөлт 5% <kbd>F4</kbd></button><button id="bDel" class="warn">Мөр устгах <kbd>Del</kbd></button>
     </div></div>
     <div class="grp"><h3>Баримт</h3><div class="g">
@@ -642,7 +643,7 @@ function render(){
     if(l.disc)b+='<span class="badge man">гараар −'+l.disc+'%</span>';if(l.noStk)b+='<span class="badge" style="background:#fde4e6;color:#b00020">⚠ системд үлдэгдэлгүй — хэмжээ/өнгө шалгах</span>';
     if(l.giftAvail&&!l.gift)b+='<button class="gbtn" data-gift="'+i+'">🎁 Бэлэг болгох</button>';
     else if(l.gift&&l.giftOn)b+='<button class="gbtn on" data-gift="'+i+'">↩ Худалдаа болгох</button>';
-    return '<tr class="'+(i===S.sel?'sel':'')+'" data-i="'+i+'"><td>'+(i+1)+'</td><td>'+esc(l.name)+'<div class="small">'+esc(l.code)+(l.promoName&&!l.pct?' · '+esc(l.promoName):'')+'</div>'+b+'</td><td class="n">'+l.qty+'</td><td class="n">'+fmt(l.price)+(l.base>l.price?'<div class="small"><s>'+fmt(l.base)+'</s></div>':'')+'</td><td class="n">'+fmt(l.price*l.qty-l.total)+'</td><td class="n"><b>'+fmt(l.total)+'</b></td></tr>'}).join('')
+    return '<tr class="'+(i===S.sel?'sel':'')+'" data-i="'+i+'"><td>'+(i+1)+'</td><td>'+esc(l.name)+'<div class="small">'+esc(l.code)+(l.promoName&&!l.pct?' · '+esc(l.promoName):'')+'</div>'+b+'</td><td class="n qtyc" data-q="'+i+'" title="Дарж тоог оруулна (*)">'+l.qty+' <span class="qed">✎</span></td><td class="n">'+fmt(l.price)+(l.base>l.price?'<div class="small"><s>'+fmt(l.base)+'</s></div>':'')+'</td><td class="n">'+fmt(l.price*l.qty-l.total)+'</td><td class="n"><b>'+fmt(l.total)+'</b></td></tr>'}).join('')
     ||'<tr><td colspan="6" class="empty">Баркод уншуулж эхэлнэ үү<div class="small">эсвэл барааны нэр, кодоор хайна</div></td></tr>';
   $('tQty').textContent=t.qty;$('tBase').textContent=fmt(t.base);$('tDisc').textContent=fmt(t.disc);$('total').textContent=fmt(t.total);
   exchBar();$('pCnt').textContent=parked.length?'('+parked.length+')':'';$('bD5').classList.toggle('on5',S.cart.some(l=>l.d5));custCart(t);
@@ -650,6 +651,7 @@ function render(){
   return t;
 }
 $('cart').addEventListener('click',e=>{
+  const q=e.target.closest('[data-q]');if(q){e.stopPropagation();S.sel=+q.dataset.q;render();return qtyAsk()}
   const g=e.target.closest('[data-gift]');
   if(g){e.stopPropagation();const i=+g.dataset.gift,l=S.cart[i];if(!l)return;
     if(!l.giftOn){ // бусад ижил барааг тусдаа мөрөнд үлдээж, бэлгийг 1 ширхгээр салгана
@@ -691,6 +693,13 @@ function chgQty(d,ok){const l=S.cart[S.sel];if(!l)return;if(l.code==='DELIVERY'&
   if(d>0&&l.qty===1&&!l.qtyOk&&!ok){openModal('<h2>Тоо ×'+(l.qty+d)+'</h2><div style="font-size:16px;margin:6px 0 10px">«'+esc(l.name)+'»</div><div class="small" style="margin-bottom:10px">Бүх ширхэг <span style="font-weight:700">ИЖИЛ хэмжээ, өнгө (нэг баркод)</span> мөн үү? Ялгаатай бол тоо нэмэхгүй — ширхэг бүрийг тусад нь уншуулна уу.</div><div class="rowbtn"><button id="qN">Үгүй — тусад нь уншуулна</button><button class="ok" id="qY" autofocus>Тийм, бүгд ижил (Enter)</button></div>',true);
     $('qN').onclick=closeModal;$('qY').onclick=()=>{l.qtyOk=true;log('qty_same_confirm',{code:l.code,name:l.name});closeModal();chgQty(d,true)};return}
   l.qty+=d;if(d>0)stkWarn(l);if(d<0)log('qty_minus',{code:l.code,name:l.name,price:l.price,parked:!!S.fromPark});render()}
+// ✎ тоог гараар: 100 ш гэх мэт — нэмэх үед «бүгд ижил баркод уу» гэж нэг удаа асууна; баркод андуурч уншуулахаас хамгаална
+function qtyAsk(){const l=S.cart[S.sel];if(!l)return flash('Эхлээд бараа уншуулна уу');if(l.code==='DELIVERY')return flash('Хүргэлт нэг баримтад нэг удаа');
+  openModal('<h2>✎ Тоо оруулах</h2><div style="font-size:16px;margin:4px 0 10px">«'+esc(l.name)+'» <span class="small">'+esc(l.code)+'</span></div><label>Тоо (одоо '+l.qty+')</label><input id="qtyN" inputmode="numeric" value="'+l.qty+'" autofocus style="font-size:28px;max-width:180px;text-align:right"><div id="qtyM" class="small" style="color:var(--red);min-height:18px"></div><div class="rowbtn"><button id="qtyX">Болих</button><button class="ok" id="qtyOk">OK (Enter)</button></div>',true);
+  const go=()=>{const v=String($('qtyN').value).replace(/\s/g,'');if(!/^\d+$/.test(v))return $('qtyM').textContent='Зөвхөн тоо оруулна';const n=+v;
+    if(n>9999)return $('qtyM').textContent='Хэт их тоо — баркод андуурч уншуулсан уу?';if(n===l.qty)return closeModal();
+    if(n>=500&&!confirm(n+' ширхэг — зөв үү?'))return;closeModal();if(n<1){if(confirm('«'+l.name+'» мөрийг устгах уу?'))delLine();return}chgQty(n-l.qty)};
+  $('qtyX').onclick=closeModal;$('qtyOk').onclick=go;$('qtyN').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go()}}}
 function delLine(){const l=S.cart[S.sel];if(!l)return;log('line_delete',{code:l.code,name:l.name,qty:l.qty,price:l.price,parked:!!S.fromPark});S.cart.splice(S.sel,1);S.sel=Math.min(S.sel,S.cart.length-1);render()}
 function disc5(){
   if(!S.cart.length)return flash('Эхлээд бараа уншуулна уу');
@@ -1726,7 +1735,7 @@ function logout(){if(S.cart.length)return flash('Эхлээд баримтаа �
 /* ---------- wiring ---------- */
 $('scan').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();onScan()}};
 $('bSearch').onclick=()=>openSearch($('scan').value.trim());
-$('bPay').onclick=openPay;$('bPlus').onclick=()=>chgQty(1);$('bMinus').onclick=()=>chgQty(-1);$('bDel').onclick=delLine;
+$('bPay').onclick=openPay;$('bPlus').onclick=()=>chgQty(1);$('bQty').onclick=()=>qtyAsk();$('bMinus').onclick=()=>chgQty(-1);$('bDel').onclick=delLine;
 $('bHist').onclick=openHist;$('bDlv').onclick=addDelivery;$('bMov').onclick=()=>openMov();$('bCash').onclick=openCash;$('bExch').onclick=openExch;$('bPfix').onclick=openPayFix;$('bOver').onclick=openOver;$('bStk').onclick=openStock;$('bPark').onclick=park;$('bRep1').onclick=reprint;$('bD5').onclick=disc5;$('bParked').onclick=showParked;$('bRet').onclick=openReturn;$('bRep').onclick=report;$('bClear').onclick=clearCart;$('bClose').onclick=closeShift;$('bOut').onclick=logout;$('bSet').onclick=settings;$('bCust').onclick=openCust;
 document.addEventListener('keydown',e=>{
   if($('sale').classList.contains('hide'))return;
@@ -1755,6 +1764,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='ArrowDown'){e.preventDefault();S.sel=Math.min(S.cart.length-1,S.sel+1);render()}
   else if(k==='ArrowUp'){e.preventDefault();S.sel=Math.max(0,S.sel-1);render()}
   else if((k==='+'||k==='-')&&$('scan').value===''){e.preventDefault();chgQty(k==='+'?1:-1)}
+  else if(k==='*'&&$('scan').value===''){e.preventDefault();qtyAsk()}
   else if(document.activeElement!==$('scan')&&k.length===1&&!e.ctrlKey&&!e.altKey)$('scan').focus();
 });
 setInterval(()=>{$('clock').textContent=tstr(now()).slice(0,5)},1000);
